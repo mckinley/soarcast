@@ -236,3 +236,44 @@ Started: $(date)
 - Input type="number" with min/max provides browser-side validation, but always validate in onChange handler too
 - Info cards (bg-muted/50) at bottom of settings pages clarify scope/limitations (e.g., "notifications are visual only in v1")
 ---
+## 2026-03-04 - US-009
+- Implemented seed data initialization with 3 default PNW flying sites
+- Created seed.ts module that auto-populates sites.json on first run if empty
+- Updated getSites() action to call initializeSeedData() before reading sites
+- Created comprehensive error boundaries (error.tsx and global-error.tsx) for graceful error handling
+- Built styled 404 page (not-found.tsx) with navigation back to dashboard or sites
+- Enhanced metadata in layout.tsx with comprehensive SEO tags, Open Graph, and Twitter Card support
+- Created favicon using Next.js 15 icon.tsx API with paraglider emoji
+- Added SVG favicon in public directory as fallback
+- Completely rewrote README.md with:
+  * Project description and feature overview
+  * Tech stack documentation
+  * Getting started guide with installation steps
+  * Project structure explanation
+  * Data storage and weather API details
+  * Scoring algorithm breakdown
+  * Deployment instructions for Vercel and other platforms
+
+**Files changed:**
+- src/lib/seed.ts - New seed data initialization module
+- src/app/sites/actions.ts - Added initializeSeedData() call to getSites()
+- src/app/error.tsx - New error boundary component with try again functionality
+- src/app/global-error.tsx - New global error boundary for critical failures
+- src/app/not-found.tsx - New styled 404 page
+- src/app/layout.tsx - Enhanced metadata with comprehensive SEO and social tags
+- src/app/icon.tsx - New dynamic favicon using Next.js Icon API
+- public/favicon.svg - New SVG favicon asset
+- README.md - Complete rewrite with comprehensive project documentation
+- prd.json - Updated US-009 passes to true
+
+**Learnings for future iterations:**
+- Seed data pattern: Call initialization in the data access layer (getSites) rather than at app startup for better lazy-loading
+- initializeSeedData uses updateJSON's atomic read-modify-write to only seed if sites.length === 0, preventing duplicate seeds
+- Error boundaries: error.tsx catches errors in route segments, global-error.tsx catches errors in root layout (rarely used but required for completeness)
+- Next.js 15 icon.tsx API generates dynamic favicons at build time using ImageResponse from next/og
+- Metadata template pattern: Use title.template to automatically append site name to page titles (e.g., "Sites | SoarCast")
+- Open Graph and Twitter Card metadata improve sharing appearance on social platforms
+- 404 page should provide clear navigation options back to main app areas (dashboard, sites) rather than just a back button
+- README should document data storage location and persistence behavior for users deploying to different platforms
+- Error boundaries provide user-friendly reset() and navigation options rather than just displaying error details
+---
