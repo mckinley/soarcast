@@ -1,19 +1,127 @@
-# Ralph Progress Log — SoarCast v2
-Started: $(date)
+# Ralph Progress Log
+Started: Wed Mar  4 21:00:39 +07 2026
 ---
 
 ## Codebase Patterns
-- Next.js 15 App Router with src/ directory
-- shadcn/ui components installed via `npx shadcn@latest add <component>`
-- Tailwind CSS v4
-- Turso (libSQL) database with Drizzle ORM — schema in src/db/schema.ts, client in src/db/index.ts
-- NextAuth v5 (Auth.js) for authentication — config in src/auth.ts
-- Server actions for data mutations (use 'use server' directive)
-- TypeScript strict mode
-- Leaflet maps MUST be dynamically imported with next/dynamic ssr:false (Leaflet needs window/document)
-- Env vars: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
-- Open-Meteo API: no key needed, free, base URL https://api.open-meteo.com/v1/forecast
-- Wind direction circular mean: atan2(mean(sin(rads)), mean(cos(rads))) — NEVER simple arithmetic average
-- Data stored in Turso, NOT in filesystem. No data/ directory.
-- For demo/unauthenticated users: use hardcoded site coordinates, fetch weather without DB
+- Use Drizzle ORM with `drizzle-orm/libsql` for Turso database access
+- SQLite stores JSON as text - use `text('field', { mode: 'json' }).$type<T>()` for type-safe JSON columns
+- Use `crypto.randomUUID()` for generating primary keys in schema defaults
+- Drizzle config file should be excluded from tsconfig.json to avoid type conflicts with the CLI tool
+- Environment variables for Turso: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set
+- All database tables cascade delete when user is deleted (foreign key constraint)
+- NextAuth v5: Configuration lives in `src/auth.ts`, export `auth()` for server-side session access
+- NextAuth adapter requires exact schema: sessions table uses sessionToken as PK, verificationTokens has composite PK
+- Use `auth()` from src/auth.ts server-side, `useSession()` from next-auth/react client-side
+- Protected routes: Middleware redirects pages to sign-in, returns 401 for API routes
+- Data transform pattern: DB schema types differ from app types - create conversion functions (e.g., dbSiteToAppSite)
+- Always scope queries to authenticated user: `eq(table.userId, session.user.id)` in where clauses
+- Use `and()` from drizzle-orm to combine multiple where conditions
+- Upsert pattern for singleton user data: `.insert().onConflictDoUpdate({ target: table.userId, set: {...} })`
+- Upsert with composite key: `.onConflictDoUpdate({ target: [table.col1, table.col2], set: {...} })`
+- Unique constraints in Drizzle: Use `unique().on(table.col1, table.col2)` in table config callback
+- Generate migrations with `npx drizzle-kit generate` (auto-detects schema changes)
+
+---
+
+## 2026-03-04 21:05 - US-001
+- Implemented Turso + Drizzle Database Setup
+- Files changed:
+  - Added: package.json, package-lock.json (drizzle-orm, @libsql/client, drizzle-kit)
+  - Added: src/db/schema.ts (complete schema with NextAuth adapter tables + app tables)
+  - Added: src/db/index.ts (Turso client initialization with env validation)
+  - Added: drizzle.config.ts (migration configuration)
+  - Added: drizzle/0000_careless_james_howlett.sql (initial migration)
+  - Added: .env.example (all required environment variables)
+  - Modified: .gitignore (allow .env.example)
+  - Modified: tsconfig.json (exclude drizzle.config.ts)
+- **Learnings for future iterations:**
+  - Drizzle Kit's Config type doesn't match runtime config structure - exclude drizzle.config.ts from tsconfig
+  - For SQLite/Turso, use text columns with JSON mode for arrays and objects (no native JSON type)
+  - NextAuth requires specific table structure: users, accounts, sessions, verificationTokens
+  - Use `.$defaultFn(() => crypto.randomUUID())` for primary key generation in schema
+  - The storage.ts file still exists temporarily as other files depend on it (will be removed in US-003/004)
+  - Migration generation requires TURSO_DATABASE_URL and TURSO_AUTH_TOKEN env vars (can use placeholder values)
+---
+## 2026-03-04 21:15 - US-002
+- Implemented NextAuth Authentication with Google and GitHub OAuth
+- Files changed:
+  - Added: src/auth.ts (NextAuth v5 configuration with Drizzle adapter)
+  - Added: src/app/api/auth/[...nextauth]/route.ts (API route handlers)
+  - Added: src/app/auth/signin/page.tsx (custom sign-in page)
+  - Added: src/middleware.ts (route protection for /sites, /settings, API routes)
+  - Added: src/components/session-provider.tsx (client-side session provider)
+  - Added: src/components/ui/avatar.tsx (Avatar component for user display)
+  - Added: src/components/ui/dropdown-menu.tsx (dropdown menu for user menu)
+  - Added: src/types/next-auth.d.ts (type extensions for NextAuth session)
+  - Modified: src/app/layout.tsx (added SessionProvider wrapper)
+  - Modified: src/components/app-shell.tsx (added UserMenu with sign in/out)
+  - Modified: src/db/schema.ts (fixed schema to match adapter requirements)
+  - Modified: package.json (added next-auth, @auth/drizzle-adapter, Radix UI packages)
+  - Added: drizzle/0001_funny_ultragirl.sql (migration for schema fixes)
+- **Learnings for future iterations:**
+  - NextAuth v5 (Auth.js) uses a new architecture - config in auth.ts, not API routes
+  - The Drizzle adapter has strict schema requirements:
+    * sessions table must use sessionToken as primary key (not a separate id)
+    * verificationTokens table needs composite primary key on (identifier, token)
+  - Middleware.ts runs on all routes by default - use matcher config to exclude static files
+  - For API routes, return 401 JSON response instead of redirect when unauthenticated
+  - SessionProvider must be a client component, wrapping the layout
+  - useSession() hook from next-auth/react provides client-side session access
+  - Avatar component requires @radix-ui/react-avatar package
+  - DropdownMenu requires @radix-ui/react-dropdown-menu package
+  - The auth() function from src/auth.ts is used server-side to get current session
+---
+## 2026-03-04 21:20 - US-003
+- Migrated Site Management to Turso database
+- Files changed:
+  - Modified: src/app/sites/actions.ts (complete rewrite to use Drizzle queries)
+- **Learnings for future iterations:**
+  - Transform layer pattern: DB schema and app types differ, so create conversion functions (dbSiteToAppSite)
+  - DB schema stores lat/lng as text for precision, app expects numbers - use parseFloat() when reading
+  - DB schema uses Date objects for timestamps (timestamp_ms mode), app expects ISO strings - use toISOString()
+  - Always scope queries to authenticated user: `eq(sites.userId, session.user.id)` in where clauses
+  - Use `and()` combiner for multiple where conditions (e.g., checking both id and userId)
+  - Drizzle's `.returning()` method returns an array, destructure with `[result] = await db.insert(...).returning()`
+  - When building partial updates, create update object conditionally to avoid undefined fields
+  - Use `?? null` for optional fields (notes) when inserting, and `?? undefined` when transforming to app type
+  - Middleware already handles page-level auth redirects, but server actions should still validate session
+  - The sites page already uses the correct function signatures, no UI changes needed
+---
+## 2026-03-04 21:30 - US-004
+- Migrated Settings Management to Turso database
+- Files changed:
+  - Modified: src/app/settings/actions.ts (complete rewrite to use Drizzle queries)
+- **Learnings for future iterations:**
+  - **Upsert pattern**: Use `.insert().onConflictDoUpdate({ target: settings.userId, set: {...} })` for user-scoped singleton data
+  - **Schema vs App types mismatch**: DB has `siteNotifications` (JSON column), app expects `notifications.sitePreferences` - transform layer needed
+  - **Transformation function**: Created `dbSettingsToApp()` to convert DB row to app Settings type (similar to sites pattern)
+  - **Default row creation**: getSettings() automatically creates default row if none exists for the user
+  - **Partial updates**: For upsert, need to provide full values in insert clause, partial values in set clause
+  - **notifications.enabled field**: Not stored in DB yet (will come from push_subscriptions in US-010), currently hardcoded to false
+  - **User scoping**: All queries filtered by `eq(settings.userId, session.user.id)` - settings table has unique constraint on userId
+  - **Merge pattern for nested updates**: toggleSiteNotifications fetches current settings first, merges site preferences, then upserts
+  - Middleware handles page auth, but server actions still validate session for security in depth
+---
+## 2026-03-04 21:25 - US-005
+- Implemented Weather Fetching with Winds Aloft parameters and Turso caching
+- Files changed:
+  - Modified: src/types/index.ts (added upper-air fields to Forecast type: boundary_layer_height, wind_speed_850hPa, wind_direction_850hPa, convective_inhibition - all nullable arrays)
+  - Modified: src/lib/weather.ts (complete rewrite of caching to use Turso instead of JSON files, added new Open-Meteo API parameters)
+  - Modified: src/db/schema.ts (added unique constraint on forecastsCache for upsert pattern)
+  - Added: drizzle/0002_modern_night_thrasher.sql (migration for unique index on siteId + fetchDate)
+- **Learnings for future iterations:**
+  - **Upper-air parameters**: Open-Meteo provides boundary_layer_height, wind_speed_850hPa, wind_direction_850hPa, convective_inhibition
+    * These are critical for XC assessment: BLH = thermal depth, 850hPa = upper-level wind at ~1500m
+    * All upper-air params are nullable - gracefully default to null arrays if API doesn't return them
+  - **Turso caching pattern**: Use (siteId, fetchDate) as composite cache key with unique constraint
+    * Upsert pattern: `.onConflictDoUpdate({ target: [table.siteId, table.fetchDate], set: {...} })`
+    * Cache expiration checked in getForecast, not in SQL (simpler than date comparison in SQLite)
+  - **Drizzle unique constraints**: Use `unique().on(table.col1, table.col2)` syntax in table config callback
+    * This generates a unique index that drizzle-kit recognizes
+    * Don't use raw SQL templates for constraints - drizzle-kit won't detect schema changes
+  - **Forecast data storage**: Store entire Forecast object as JSON in data column
+    * Type as `unknown` in schema, cast to `Forecast` when reading
+    * Turso handles large JSON blobs efficiently (7-day hourly forecast ~30KB)
+  - **Date comparison in Drizzle**: Use `sql` template for operators not in standard set (e.g., `sql`${col} < ${value}`` for less-than)
+  - **Migration workflow**: `npx drizzle-kit generate` creates migration, no need for custom npm script
 ---

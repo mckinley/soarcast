@@ -22,7 +22,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Use drizzle-orm/libsql. Schema must include NextAuth tables (users, accounts, sessions) for the adapter. Use text columns with JSON for arrays/objects since SQLite has no native JSON type. Use crypto.randomUUID() for IDs."
     },
     {
@@ -41,7 +41,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Use next-auth v5 beta (Auth.js). The Drizzle adapter needs the schema tables from US-001. Use middleware matcher to protect routes. Sign-in page can use the default next-auth pages or a custom one."
     },
     {
@@ -59,7 +59,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Use auth() from src/auth.ts to get the current user session. idealWindDirections stored as JSON text in SQLite, parse/stringify when reading/writing."
     },
     {
@@ -75,7 +75,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Settings is a simple key-value per user. Use upsert pattern (insert on conflict update)."
     },
     {
@@ -93,7 +93,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Open-Meteo API params to add: boundary_layer_height,wind_speed_850hPa,wind_direction_850hPa,convective_inhibition. These are all available in the standard forecast endpoint. 850hPa is roughly 1500m altitude - relevant for XC flying."
     },
     {
