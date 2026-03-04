@@ -2,14 +2,18 @@
 
 import { revalidatePath } from 'next/cache';
 import { readJSON, updateJSON } from '@/lib/storage';
+import { initializeSeedData } from '@/lib/seed';
 import type { Site, SitesData } from '@/types';
 
 const SITES_FILE = 'sites.json';
 
 /**
- * Get all sites
+ * Get all sites (initializes seed data on first run)
  */
 export async function getSites(): Promise<Site[]> {
+  // Initialize seed data if no sites exist
+  await initializeSeedData();
+
   const data = await readJSON<SitesData>(SITES_FILE, { sites: [] });
   return data.sites;
 }

@@ -203,3 +203,36 @@ Started: $(date)
 - The hourly chart shows two metrics (wind and CAPE) stacked vertically with different colors - keeps it simple while showing the most important XC indicators
 - Wind gusts displayed alongside wind speed in hourly table - important safety information for pilots
 ---
+## 2026-03-04 - US-008
+- Implemented settings page with notification preference configuration
+- Created server actions in src/app/settings/actions.ts (getSettings, updateSettings, toggleSiteNotifications)
+- Built SettingsClient component with two main cards:
+  1. Global notification preferences (minimum score threshold, notification window in days)
+  2. Per-site notification toggles with switch controls
+- Installed shadcn switch component for toggle UI
+- Updated dashboard to pass settings and show notification indicators on qualifying days
+- Added shouldShowNotification() helper that checks: site enabled, within daysAhead window, meets score threshold
+- Enhanced ScoreCell component with optional pulsing bell icon indicator
+- Settings automatically revalidate dashboard when changed (revalidatePath)
+
+**Files changed:**
+- src/app/settings/actions.ts - New server actions for settings CRUD
+- src/app/settings/page.tsx - Updated to fetch and pass settings/sites to client component
+- src/components/settings-client.tsx - New client component with settings form
+- src/components/ui/switch.tsx - New shadcn switch component
+- src/app/page.tsx - Fetch and pass settings to DashboardClient
+- src/components/dashboard-client.tsx - Added settings prop, shouldShowNotification logic, pass flag to ScoreCell
+- src/components/score-cell.tsx - Added showNotification prop and bell icon indicator
+- prd.json - Updated US-008 passes to true
+
+**Learnings for future iterations:**
+- Settings defaults pattern: Use default values in server actions to ensure data exists even if file is empty/missing
+- Per-site preferences using Record<siteId, boolean> allows flexible toggling without schema changes
+- Site notification preferences default to true if not explicitly set, ensuring good UX for new sites
+- Notification logic: scoreIndex (not date index) determines if day is within notification window - compare against daysAhead setting
+- Visual indicators: Pulsing bell icon (animate-pulse + fill-primary) provides clear visual feedback without cluttering UI
+- Settings changes revalidate both /settings AND / (dashboard) to update indicators immediately
+- Switch component from shadcn provides accessible toggle with built-in state management
+- Input type="number" with min/max provides browser-side validation, but always validate in onChange handler too
+- Info cards (bg-muted/50) at bottom of settings pages clarify scope/limitations (e.g., "notifications are visual only in v1")
+---

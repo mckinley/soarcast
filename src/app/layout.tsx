@@ -16,8 +16,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SoarCast",
-  description: "Paragliding XC weather monitor",
+  title: {
+    default: 'SoarCast',
+    template: '%s | SoarCast',
+  },
+  description:
+    'Paragliding XC forecast monitor — track flying conditions at your favorite sites with 7-day weather forecasts and XC soaring scores.',
+  keywords: [
+    'paragliding',
+    'XC flying',
+    'weather forecast',
+    'soaring',
+    'thermals',
+    'flying sites',
+    'CAPE',
+    'wind conditions',
+  ],
+  authors: [{ name: 'SoarCast' }],
+  creator: 'SoarCast',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    title: 'SoarCast',
+    description: 'Paragliding XC forecast monitor for tracking flying conditions',
+    siteName: 'SoarCast',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SoarCast',
+    description: 'Paragliding XC forecast monitor for tracking flying conditions',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
