@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -64,6 +65,9 @@ export function SiteCard({ site, onUpdate, onDelete }: SiteCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex gap-2">
+        <Link href={`/sites/${site.id}`}>
+          <Button variant="default" size="sm">View Forecast</Button>
+        </Link>
         <SiteFormDialog
           site={site}
           trigger={<Button variant="outline" size="sm">Edit</Button>}
