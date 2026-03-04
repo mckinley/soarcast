@@ -112,7 +112,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Circular mean formula: avgDir = atan2(mean(sin(radians(dirs))), mean(cos(radians(dirs)))) converted back to degrees. BLH (boundary layer height) directly correlates with thermal depth - higher is better for XC. 850hPa wind (roughly 1500m) affects safety and drift."
     },
     {
@@ -130,7 +130,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Demo sites use hardcoded coordinates (no DB needed). Fetch weather live for demo sites. Show a banner for unauthenticated users: 'Sign in to add your own flying sites'."
     },
     {

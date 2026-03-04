@@ -125,3 +125,62 @@ Started: Wed Mar  4 21:00:39 +07 2026
   - **Date comparison in Drizzle**: Use `sql` template for operators not in standard set (e.g., `sql`${col} < ${value}`` for less-than)
   - **Migration workflow**: `npx drizzle-kit generate` creates migration, no need for custom npm script
 ---
+## 2026-03-04 21:35 - US-006
+- Fixed Scoring Algorithm with circular mean and upper-air parameters
+- Files changed:
+  - Modified: src/types/index.ts (added blh and upperWind to DayScore.factors)
+  - Modified: src/lib/scoring.ts (complete scoring overhaul)
+- **Learnings for future iterations:**
+  - **Circular mean for wind direction**: Wind directions are circular data (0° = 360°), so arithmetic mean fails at boundaries
+    * Formula: atan2(mean(sin(dirs)), mean(cos(dirs))) converted back to degrees
+    * This gives correct "center" direction (e.g., average of 10° and 350° = 0°, not 180°)
+  - **Boundary layer height (BLH)**: Height of mixing layer where thermals develop (0-3000m typical range)
+    * Higher BLH = deeper thermals = better XC potential
+    * Scoring: 0m=0, 500m=30, 1000m=60, 1500m=80, 2000m+=100
+  - **850hPa wind**: Pressure level at roughly 1500m altitude - critical for XC safety
+    * Shows wind at typical thermal top height
+    * Strong upper winds = drift, turbulence, dangerous conditions
+    * Scoring: <20km/h=100, 20-40=70, 40-60=40, 60-80=20, >80=0
+  - **Revised weights**: CAPE 25%, surface wind 20%, wind direction 15%, cloud cover 10%, precipitation 5%, BLH 15%, upper wind 10%
+    * Total = 100% (must always sum to 100%)
+  - **Null handling**: New parameters (BLH, 850hPa) can be null if API doesn't provide them
+    * Use neutral score (50) if missing - don't penalize missing data
+    * Filter null values before averaging: `.filter((v): v is number => v !== null)`
+  - **Score labels unchanged**: Poor 0-30, Fair 31-50, Good 51-70, Great 71-85, Epic 86-100
+  - Updated HourlyDataPoint interface to include all upper-air fields
+---
+## 2026-03-04 22:00 - US-007
+- Implemented Dashboard Updates with demo mode and enhanced score display
+- Files changed:
+  - Modified: src/app/actions.ts (added DEMO_SITES constant, updated getDashboardData and refreshAllForecasts to support unauthenticated users)
+  - Modified: src/app/page.tsx (added session check, pass isAuthenticated prop to DashboardClient)
+  - Modified: src/app/settings/actions.ts (updated getSettings to return defaults for unauthenticated users instead of throwing)
+  - Modified: src/components/dashboard-client.tsx (added isAuthenticated prop, added banner for unauthenticated users, updated empty state logic)
+  - Modified: src/components/score-detail-dialog.tsx (added BLH and 850hPa wind to score breakdown and hourly table, updated weights to match US-006)
+  - Added: src/app/loading.tsx (skeleton loading state for dashboard)
+- **Learnings for future iterations:**
+  - **Demo mode pattern**: Use hardcoded site constants (DEMO_SITES) instead of database queries for public/unauthenticated access
+    * Allows public visibility without database setup
+    * Weather data fetched live using the same caching infrastructure
+    * Demo sites don't have userIds (not stored in DB)
+  - **Authentication branching**: Check `session?.user?.id` in server actions to branch between authenticated and demo behavior
+    * getDashboardData: authenticated → user's sites, unauthenticated → DEMO_SITES
+    * getSettings: authenticated → DB query, unauthenticated → DEFAULT_SETTINGS
+    * This pattern allows same components/logic for both auth states
+  - **Client-side auth state**: Pass `isAuthenticated` boolean prop from server component to client component
+    * Use `await auth()` in server component (page.tsx) to get session
+    * Convert to boolean `!!session?.user?.id` for clean prop
+    * Avoids need for useSession() hook on client (simpler, faster)
+  - **Score detail dialog**: Updated to show all 7 factors from US-006 scoring algorithm
+    * Added BLH (Boundary Layer Height) and upperWind (850hPa) factors
+    * Updated weights: CAPE 25%, wind 20%, wind dir 15%, BLH 15%, upper wind 10%, cloud 10%, precip 5%
+    * Hourly table now includes BLH (m) and 850hPa wind (km/h) columns with null handling (show '-' if missing)
+  - **Loading states**: Next.js loading.tsx provides automatic Suspense boundary
+    * Created at app/loading.tsx for dashboard route
+    * Uses Skeleton component to show loading grid matching dashboard structure
+  - **Banner UI pattern**: For unauthenticated users, show informational banner at top with CTA
+    * Explains demo mode: "viewing demo sites with live weather data"
+    * Call to action: "Sign In to Add Your Sites" button linking to /auth/signin
+  - **Empty state nuance**: Only show "add first site" empty state for authenticated users with no sites
+    * Unauthenticated users always see demo sites (never empty)
+---
