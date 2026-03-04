@@ -54,6 +54,8 @@ function getHourlyDataForDay(forecast: Forecast, date: string) {
     cape: number | null;
     cloudCover: number;
     precipProbability: number;
+    blh: number | null;
+    wind850hPa: number | null;
   }[] = [];
 
   forecast.hourly.time.forEach((timeStr, index) => {
@@ -69,6 +71,8 @@ function getHourlyDataForDay(forecast: Forecast, date: string) {
         cape: forecast.hourly.cape[index],
         cloudCover: forecast.hourly.cloud_cover[index],
         precipProbability: forecast.hourly.precipitation_probability[index],
+        blh: forecast.hourly.boundary_layer_height?.[index] ?? null,
+        wind850hPa: forecast.hourly.wind_speed_850hPa?.[index] ?? null,
       });
     }
   });
@@ -136,6 +140,19 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                       dayHourly.length
                   )
                 : 0;
+            const avgBlh =
+              dayHourly.length > 0
+                ? Math.round(
+                    dayHourly.reduce((sum, h) => sum + (h.blh || 0), 0) / dayHourly.length
+                  )
+                : 0;
+            const avgWind850 =
+              dayHourly.length > 0
+                ? Math.round(
+                    dayHourly.reduce((sum, h) => sum + (h.wind850hPa || 0), 0) /
+                      dayHourly.length
+                  )
+                : 0;
 
             return (
               <Card
@@ -167,6 +184,18 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">CAPE:</span>
                     <span className="font-medium">{avgCape} J/kg</span>
+                  </div>
+
+                  {/* BLH */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">BLH:</span>
+                    <span className="font-medium">{avgBlh > 0 ? `${avgBlh}m` : '-'}</span>
+                  </div>
+
+                  {/* 850hPa Wind */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">850hPa Wind:</span>
+                    <span className="font-medium">{avgWind850 > 0 ? `${avgWind850} km/h` : '-'}</span>
                   </div>
 
                   {/* Cloud cover */}
@@ -205,31 +234,39 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
             <div className="p-6">
               {/* Hourly chart/table */}
               <div className="space-y-4">
-                {/* Wind speed and CAPE chart */}
+                {/* Wind speed, CAPE, and BLH chart */}
                 <div>
-                  <h3 className="text-sm font-medium mb-3">Wind Speed & CAPE</h3>
+                  <h3 className="text-sm font-medium mb-3">Wind Speed, CAPE & BLH</h3>
                   <div className="relative h-48 border rounded">
                     {/* Simple bar chart visualization */}
                     <div className="absolute inset-0 p-4 flex items-end justify-between gap-1">
                       {hourlyData.map((hour) => {
                         const windHeight = Math.min((hour.windSpeed / 60) * 100, 100);
                         const capeHeight = Math.min(((hour.cape || 0) / 2000) * 100, 100);
+                        const blhHeight = Math.min(((hour.blh || 0) / 3000) * 100, 100);
 
                         return (
                           <div
                             key={hour.hour}
                             className="flex-1 flex flex-col items-center gap-1"
-                            title={`${hour.hour}:00 - Wind: ${hour.windSpeed} km/h, CAPE: ${hour.cape || 0} J/kg`}
+                            title={`${hour.hour}:00 - Wind: ${hour.windSpeed} km/h, CAPE: ${hour.cape || 0} J/kg, BLH: ${hour.blh || 0}m`}
                           >
                             {/* CAPE bar (green) */}
-                            <div className="w-full relative" style={{ height: '45%' }}>
+                            <div className="w-full relative" style={{ height: '30%' }}>
                               <div
                                 className="absolute bottom-0 w-full bg-green-500/40 rounded-t"
                                 style={{ height: `${capeHeight}%` }}
                               />
                             </div>
+                            {/* BLH bar (purple) */}
+                            <div className="w-full relative" style={{ height: '30%' }}>
+                              <div
+                                className="absolute bottom-0 w-full bg-purple-500/40 rounded-t"
+                                style={{ height: `${blhHeight}%` }}
+                              />
+                            </div>
                             {/* Wind bar (blue) */}
-                            <div className="w-full relative" style={{ height: '45%' }}>
+                            <div className="w-full relative" style={{ height: '30%' }}>
                               <div
                                 className="absolute bottom-0 w-full bg-blue-500/40 rounded-t"
                                 style={{ height: `${windHeight}%` }}
@@ -244,7 +281,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                       })}
                     </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-blue-500/40 rounded" />
                       <span>Wind Speed (max 60 km/h scale)</span>
@@ -252,6 +289,10 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 bg-green-500/40 rounded" />
                       <span>CAPE (max 2000 J/kg scale)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-purple-500/40 rounded" />
+                      <span>BLH (max 3000m scale)</span>
                     </div>
                   </div>
                 </div>
@@ -265,6 +306,8 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                         <th className="text-left py-2 px-2">Wind</th>
                         <th className="text-left py-2 px-2">Gusts</th>
                         <th className="text-left py-2 px-2">CAPE</th>
+                        <th className="text-left py-2 px-2">BLH</th>
+                        <th className="text-left py-2 px-2">850hPa</th>
                         <th className="text-left py-2 px-2">Clouds</th>
                         <th className="text-left py-2 px-2">Precip</th>
                         <th className="text-left py-2 px-2">Temp</th>
@@ -282,6 +325,8 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                           </td>
                           <td className="py-2 px-2">{Math.round(hour.windGusts)} km/h</td>
                           <td className="py-2 px-2">{hour.cape ? Math.round(hour.cape) : 0} J/kg</td>
+                          <td className="py-2 px-2">{hour.blh !== null ? `${Math.round(hour.blh)}m` : '-'}</td>
+                          <td className="py-2 px-2">{hour.wind850hPa !== null ? `${Math.round(hour.wind850hPa)} km/h` : '-'}</td>
                           <td className="py-2 px-2">{Math.round(hour.cloudCover)}%</td>
                           <td className="py-2 px-2">{Math.round(hour.precipProbability)}%</td>
                           <td className="py-2 px-2">{Math.round(hour.temperature)}°C</td>
