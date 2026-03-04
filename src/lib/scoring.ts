@@ -5,11 +5,13 @@ import { Forecast, Site, DayScore } from '@/types';
 
 // Scoring weights (must sum to 100%)
 const WEIGHTS = {
-  CAPE: 0.3, // Thermal strength - most important
-  WIND_SPEED: 0.25, // Wind speed vs site max
-  WIND_DIRECTION: 0.2, // Wind direction match
-  CLOUD_COVER: 0.15, // Cloud cover
-  PRECIPITATION: 0.1, // Precipitation probability
+  CAPE: 0.25, // Thermal strength
+  WIND_SPEED: 0.2, // Wind speed vs site max
+  WIND_DIRECTION: 0.15, // Wind direction match
+  CLOUD_COVER: 0.1, // Cloud cover
+  PRECIPITATION: 0.05, // Precipitation probability
+  BLH: 0.15, // Boundary layer height (thermal depth)
+  UPPER_WIND: 0.1, // 850hPa wind (upper-level conditions)
 };
 
 // Flyable hours window (local time)
@@ -68,6 +70,10 @@ function groupHourlyDataByDay(hourly: Forecast['hourly']): DayData[] {
         cape: hourly.cape[index],
         precipProbability: hourly.precipitation_probability[index],
         pressure: hourly.pressure_msl[index],
+        boundaryLayerHeight: hourly.boundary_layer_height[index],
+        windSpeed850hPa: hourly.wind_speed_850hPa[index],
+        windDirection850hPa: hourly.wind_direction_850hPa[index],
+        convectiveInhibition: hourly.convective_inhibition[index],
       });
     }
   });
@@ -93,10 +99,16 @@ function scoreSingleDay(day: DayData, site: Site): DayScore {
   // Calculate average values for flyable hours
   const avgCape = calculateAverage(day.hours.map((h) => h.cape ?? 0));
   const avgWindSpeed = calculateAverage(day.hours.map((h) => h.windSpeed));
-  const avgWindDirection = calculateAverage(day.hours.map((h) => h.windDirection));
+  const avgWindDirection = calculateCircularMean(day.hours.map((h) => h.windDirection));
   const avgCloudCover = calculateAverage(day.hours.map((h) => h.cloudCover));
   const avgPrecipProb = calculateAverage(
     day.hours.map((h) => h.precipProbability)
+  );
+  const avgBLH = calculateAverage(
+    day.hours.map((h) => h.boundaryLayerHeight ?? null).filter((v): v is number => v !== null)
+  );
+  const avgUpperWind = calculateAverage(
+    day.hours.map((h) => h.windSpeed850hPa ?? null).filter((v): v is number => v !== null)
   );
 
   // Score each factor (0-100)
@@ -108,6 +120,8 @@ function scoreSingleDay(day: DayData, site: Site): DayScore {
   );
   const cloudCoverScore = scoreCloudCover(avgCloudCover);
   const precipScore = scorePrecipitation(avgPrecipProb);
+  const blhScore = scoreBoundaryLayerHeight(avgBLH);
+  const upperWindScore = scoreUpperWind(avgUpperWind);
 
   // Calculate weighted overall score
   const overallScore =
@@ -115,7 +129,9 @@ function scoreSingleDay(day: DayData, site: Site): DayScore {
     windSpeedScore * WEIGHTS.WIND_SPEED +
     windDirectionScore * WEIGHTS.WIND_DIRECTION +
     cloudCoverScore * WEIGHTS.CLOUD_COVER +
-    precipScore * WEIGHTS.PRECIPITATION;
+    precipScore * WEIGHTS.PRECIPITATION +
+    blhScore * WEIGHTS.BLH +
+    upperWindScore * WEIGHTS.UPPER_WIND;
 
   // Round to nearest integer
   const finalScore = Math.round(overallScore);
@@ -130,8 +146,46 @@ function scoreSingleDay(day: DayData, site: Site): DayScore {
       windDirection: Math.round(windDirectionScore),
       cloudCover: Math.round(cloudCoverScore),
       precipitation: Math.round(precipScore),
+      blh: Math.round(blhScore),
+      upperWind: Math.round(upperWindScore),
     },
   };
+}
+
+/**
+ * Scores boundary layer height (BLH)
+ * Higher BLH = deeper thermals = better XC potential
+ * Typical range: 0-3000m
+ * Uses neutral score (50) if no data available
+ */
+function scoreBoundaryLayerHeight(blh: number): number {
+  if (isNaN(blh) || blh === 0) return 50; // Neutral score if missing
+
+  if (blh <= 0) return 0;
+  if (blh >= 500) {
+    if (blh >= 2000) return 100;
+    if (blh >= 1500) return 80;
+    if (blh >= 1000) return 60;
+    return 30; // 500-1000m
+  }
+  // Linear interpolation for 0-500m
+  return (blh / 500) * 30;
+}
+
+/**
+ * Scores 850hPa wind speed
+ * Lower upper-level wind = safer XC flying
+ * Typical range: 0-100+ km/h
+ * Uses neutral score (50) if no data available
+ */
+function scoreUpperWind(windSpeed: number): number {
+  if (isNaN(windSpeed)) return 50; // Neutral score if missing
+
+  if (windSpeed < 20) return 100;
+  if (windSpeed < 40) return 70;
+  if (windSpeed < 60) return 40;
+  if (windSpeed < 80) return 20;
+  return 0; // >80 km/h - dangerous
 }
 
 /**
@@ -246,6 +300,32 @@ function calculateAverage(values: number[]): number {
 }
 
 /**
+ * Calculates circular mean for wind directions
+ * Properly handles the circular nature of angles (0° = 360°)
+ * Uses vector averaging: mean of sin/cos components converted back to angle
+ */
+function calculateCircularMean(directions: number[]): number {
+  if (directions.length === 0) return 0;
+
+  // Convert degrees to radians and calculate mean of sin/cos components
+  const sinSum = directions.reduce((sum, dir) => sum + Math.sin((dir * Math.PI) / 180), 0);
+  const cosSum = directions.reduce((sum, dir) => sum + Math.cos((dir * Math.PI) / 180), 0);
+
+  const sinMean = sinSum / directions.length;
+  const cosMean = cosSum / directions.length;
+
+  // Convert back to degrees using atan2
+  let meanDir = (Math.atan2(sinMean, cosMean) * 180) / Math.PI;
+
+  // Normalize to 0-360 range
+  if (meanDir < 0) {
+    meanDir += 360;
+  }
+
+  return meanDir;
+}
+
+/**
  * Calculates the smallest angle difference between two directions
  * Accounts for circular nature of compass (0 = 360)
  */
@@ -271,6 +351,8 @@ function createPoorScore(date: string): DayScore {
       windDirection: 0,
       cloudCover: 0,
       precipitation: 0,
+      blh: 0,
+      upperWind: 0,
     },
   };
 }
@@ -286,6 +368,10 @@ interface HourlyDataPoint {
   cape: number | null;
   precipProbability: number;
   pressure: number;
+  boundaryLayerHeight: number | null;
+  windSpeed850hPa: number | null;
+  windDirection850hPa: number | null;
+  convectiveInhibition: number | null;
 }
 
 interface DayData {

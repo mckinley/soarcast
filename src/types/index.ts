@@ -48,6 +48,8 @@ export interface DayScore {
     windDirection: number; // 0-100
     cloudCover: number; // 0-100
     precipitation: number; // 0-100
+    blh: number; // 0-100 (boundary layer height)
+    upperWind: number; // 0-100 (850hPa wind)
   };
 }
 

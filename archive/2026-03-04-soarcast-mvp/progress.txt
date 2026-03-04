@@ -1,0 +1,19 @@
+# Ralph Progress Log — SoarCast v2
+Started: $(date)
+---
+
+## Codebase Patterns
+- Next.js 15 App Router with src/ directory
+- shadcn/ui components installed via `npx shadcn@latest add <component>`
+- Tailwind CSS v4
+- Turso (libSQL) database with Drizzle ORM — schema in src/db/schema.ts, client in src/db/index.ts
+- NextAuth v5 (Auth.js) for authentication — config in src/auth.ts
+- Server actions for data mutations (use 'use server' directive)
+- TypeScript strict mode
+- Leaflet maps MUST be dynamically imported with next/dynamic ssr:false (Leaflet needs window/document)
+- Env vars: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+- Open-Meteo API: no key needed, free, base URL https://api.open-meteo.com/v1/forecast
+- Wind direction circular mean: atan2(mean(sin(rads)), mean(cos(rads))) — NEVER simple arithmetic average
+- Data stored in Turso, NOT in filesystem. No data/ directory.
+- For demo/unauthenticated users: use hardcoded site coordinates, fetch weather without DB
+---
