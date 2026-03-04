@@ -135,3 +135,37 @@ Started: $(date)
 - Days with no flyable hours default to score 0 (Poor) rather than erroring
 - The scoring algorithm is the single source of truth for XC potential - UI components will consume DayScore objects
 ---
+## 2026-03-04 - US-006
+- Implemented 7-day forecast dashboard with grid layout showing all sites
+- Created server actions in src/app/actions.ts for getDashboardData() and refreshAllForecasts()
+- Built ScoreCell component with color-coded score display (red→orange→yellow→lime→green based on 0-100 score)
+- Built ScoreDetailDialog component showing score breakdown with weighted factor bars and hourly data table
+- Built DashboardClient component with full grid UI, empty state, and refresh functionality
+- Dashboard auto-fetches forecasts on page load (using existing 6-hour cache from weather.ts)
+- Installed shadcn components: table, badge, dialog
+- Implemented loading states with useTransition for refresh button
+- Date formatting shows "Today" / "Tomorrow" for first two days, then weekday + date
+
+**Files changed:**
+- src/app/page.tsx - Server component wrapper that fetches data and renders DashboardClient
+- src/app/actions.ts - New server actions for dashboard (getDashboardData, refreshAllForecasts)
+- src/components/dashboard-client.tsx - Client component with grid UI and interactions
+- src/components/score-cell.tsx - Reusable color-coded score cell component
+- src/components/score-detail-dialog.tsx - Dialog showing score breakdown and hourly data
+- src/components/ui/badge.tsx - New shadcn badge component
+- src/components/ui/table.tsx - New shadcn table component
+- prd.json - Updated US-006 passes to true
+
+**Learnings for future iterations:**
+- Server/Client component split pattern: Server component fetches data, passes to client component for interactivity
+- useTransition hook provides isPending state for async server actions without additional loading state management
+- Sticky positioning (sticky left-0) on first column keeps site names visible during horizontal scroll
+- Color coding pattern: Use semi-transparent backgrounds (bg-color-500/20) for better dark mode support
+- Score cell as button with onClick provides clickable area while maintaining semantic HTML
+- formatDate with timezone handling: Add T12:00:00 to date strings to avoid timezone shift when creating Date objects
+- Dialog state management: Keep selected data (score, site, forecast) in separate state variables for detail view
+- getDashboardData uses Promise.all to parallelize forecast fetches across all sites for performance
+- Error handling: Individual site errors don't block other sites, errors are displayed in aggregate section
+- Empty state with CTA improves first-run experience - links directly to /sites to add first site
+- Grid auto-generates next 7 days starting from today, scores are matched by date string (YYYY-MM-DD)
+---
