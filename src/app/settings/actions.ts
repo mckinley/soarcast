@@ -1,10 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { readJSON, updateJSON } from '@/lib/storage';
-import type { Settings, SettingsData } from '@/types';
-
-const SETTINGS_FILE = 'settings.json';
+import { eq, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import { settings } from '@/db/schema';
+import { auth } from '@/auth';
+import type { Settings } from '@/types';
 
 const DEFAULT_SETTINGS: Settings = {
   notifications: {
@@ -17,42 +18,107 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 /**
- * Get current settings
+ * Transform DB settings row to app Settings type
  */
-export async function getSettings(): Promise<Settings> {
-  const data = await readJSON<SettingsData>(SETTINGS_FILE, {
-    settings: DEFAULT_SETTINGS,
-  });
-  return data.settings;
+function dbSettingsToApp(
+  dbSettings: typeof settings.$inferSelect
+): Settings {
+  return {
+    notifications: {
+      enabled: false, // Note: 'enabled' is not in DB schema - derived from push subscriptions in US-010
+      minScoreThreshold: dbSettings.minScoreThreshold,
+      daysAhead: dbSettings.daysAhead,
+      sitePreferences: dbSettings.siteNotifications,
+    },
+    updatedAt: dbSettings.updatedAt.toISOString(),
+  };
 }
 
 /**
- * Update settings
+ * Get current settings for authenticated user
+ * Creates default settings if none exist
+ */
+export async function getSettings(): Promise<Settings> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Try to get existing settings
+  const [existingSettings] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.userId, session.user.id))
+    .limit(1);
+
+  if (existingSettings) {
+    return dbSettingsToApp(existingSettings);
+  }
+
+  // Create default settings if none exist
+  const [newSettings] = await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      minScoreThreshold: 70,
+      daysAhead: 2,
+      siteNotifications: {},
+    })
+    .returning();
+
+  return dbSettingsToApp(newSettings);
+}
+
+/**
+ * Update settings for authenticated user
  */
 export async function updateSettings(
   updates: Partial<Settings['notifications']>
 ): Promise<Settings> {
-  let updatedSettings: Settings | null = null;
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
 
-  await updateJSON<SettingsData>(
-    SETTINGS_FILE,
-    { settings: DEFAULT_SETTINGS },
-    (data) => {
-      updatedSettings = {
-        notifications: {
-          ...data.settings.notifications,
-          ...updates,
-        },
-        updatedAt: new Date().toISOString(),
-      };
+  // Build update object with only provided fields
+  const updateData: {
+    minScoreThreshold?: number;
+    daysAhead?: number;
+    siteNotifications?: Record<string, boolean>;
+    updatedAt: Date;
+  } = {
+    updatedAt: new Date(),
+  };
 
-      return { settings: updatedSettings };
-    }
-  );
+  if (updates.minScoreThreshold !== undefined) {
+    updateData.minScoreThreshold = updates.minScoreThreshold;
+  }
+  if (updates.daysAhead !== undefined) {
+    updateData.daysAhead = updates.daysAhead;
+  }
+  if (updates.sitePreferences !== undefined) {
+    updateData.siteNotifications = updates.sitePreferences;
+  }
+
+  // Use upsert pattern: insert or update if exists
+  const [updatedSettings] = await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      minScoreThreshold: updates.minScoreThreshold ?? 70,
+      daysAhead: updates.daysAhead ?? 2,
+      siteNotifications: updates.sitePreferences ?? {},
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: updateData,
+    })
+    .returning();
 
   revalidatePath('/settings');
   revalidatePath('/'); // Revalidate dashboard to update notification indicators
-  return updatedSettings!;
+  return dbSettingsToApp(updatedSettings);
 }
 
 /**
@@ -62,24 +128,35 @@ export async function toggleSiteNotifications(
   siteId: string,
   enabled: boolean
 ): Promise<void> {
-  await updateJSON<SettingsData>(
-    SETTINGS_FILE,
-    { settings: DEFAULT_SETTINGS },
-    (data) => {
-      const updatedSettings: Settings = {
-        notifications: {
-          ...data.settings.notifications,
-          sitePreferences: {
-            ...data.settings.notifications.sitePreferences,
-            [siteId]: enabled,
-          },
-        },
-        updatedAt: new Date().toISOString(),
-      };
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
 
-      return { settings: updatedSettings };
-    }
-  );
+  // Get current settings to merge site preferences
+  const currentSettings = await getSettings();
+  const updatedSitePreferences = {
+    ...currentSettings.notifications.sitePreferences,
+    [siteId]: enabled,
+  };
+
+  // Update with merged site preferences
+  await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      minScoreThreshold: currentSettings.notifications.minScoreThreshold,
+      daysAhead: currentSettings.notifications.daysAhead,
+      siteNotifications: updatedSitePreferences,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: {
+        siteNotifications: updatedSitePreferences,
+        updatedAt: new Date(),
+      },
+    });
 
   revalidatePath('/settings');
   revalidatePath('/'); // Revalidate dashboard
