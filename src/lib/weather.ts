@@ -1,7 +1,8 @@
 // Weather data fetching service using Open-Meteo API
 import { Forecast } from '@/types';
-import { readJSON, updateJSON } from './storage';
-import type { ForecastsData } from '@/types';
+import { db } from '@/db';
+import { forecastsCache } from '@/db/schema';
+import { and, eq, sql } from 'drizzle-orm';
 
 // Open-Meteo API configuration
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -28,6 +29,11 @@ interface OpenMeteoResponse {
     cape: number[];
     precipitation_probability: number[];
     pressure_msl: number[];
+    // Upper-air parameters for XC assessment
+    boundary_layer_height?: (number | null)[];
+    wind_speed_850hPa?: (number | null)[];
+    wind_direction_850hPa?: (number | null)[];
+    convective_inhibition?: (number | null)[];
   };
 }
 
@@ -56,6 +62,11 @@ export async function fetchWeatherForecast(
       'cape',
       'precipitation_probability',
       'pressure_msl',
+      // Upper-air parameters for XC assessment
+      'boundary_layer_height',
+      'wind_speed_850hPa',
+      'wind_direction_850hPa',
+      'convective_inhibition',
     ].join(','),
     daily: ['sunrise', 'sunset'].join(','),
     forecast_days: '7',
@@ -97,6 +108,11 @@ export async function fetchWeatherForecast(
         cape: data.hourly.cape,
         precipitation_probability: data.hourly.precipitation_probability,
         pressure_msl: data.hourly.pressure_msl,
+        // Upper-air parameters (handle missing values gracefully with empty arrays of nulls)
+        boundary_layer_height: data.hourly.boundary_layer_height ?? data.hourly.time.map(() => null),
+        wind_speed_850hPa: data.hourly.wind_speed_850hPa ?? data.hourly.time.map(() => null),
+        wind_direction_850hPa: data.hourly.wind_direction_850hPa ?? data.hourly.time.map(() => null),
+        convective_inhibition: data.hourly.convective_inhibition ?? data.hourly.time.map(() => null),
       },
     };
 
@@ -123,38 +139,47 @@ export async function getForecast(
   longitude: number
 ): Promise<Forecast> {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const cacheKey = `${siteId}_${today}`;
+  const now = new Date();
 
-  // Try to get cached forecast
-  const forecastsData = await readJSON<ForecastsData>('forecasts.json', {
-    forecasts: {},
-  });
-
-  const cachedForecast = forecastsData.forecasts[cacheKey];
+  // Try to get cached forecast from Turso
+  const [cachedRow] = await db
+    .select()
+    .from(forecastsCache)
+    .where(
+      and(
+        eq(forecastsCache.siteId, siteId),
+        eq(forecastsCache.fetchDate, today)
+      )
+    )
+    .limit(1);
 
   // Check if cache exists and is still valid
-  if (cachedForecast) {
-    const now = new Date();
-    const expiresAt = new Date(cachedForecast.expiresAt);
-
-    if (now < expiresAt) {
-      // Cache is still valid, return it
-      return cachedForecast;
-    }
+  if (cachedRow && new Date(cachedRow.expiresAt) > now) {
+    // Cache is still valid, parse and return it
+    return cachedRow.data as Forecast;
   }
 
   // Cache miss or expired - fetch fresh data
   const freshForecast = await fetchWeatherForecast(siteId, latitude, longitude);
 
-  // Store in cache
-  await updateJSON<ForecastsData>(
-    'forecasts.json',
-    { forecasts: {} },
-    (data) => {
-      data.forecasts[cacheKey] = freshForecast;
-      return data;
-    }
-  );
+  // Store in Turso cache (upsert pattern)
+  await db
+    .insert(forecastsCache)
+    .values({
+      siteId,
+      fetchDate: today,
+      data: freshForecast,
+      fetchedAt: new Date(freshForecast.fetchedAt),
+      expiresAt: new Date(freshForecast.expiresAt),
+    })
+    .onConflictDoUpdate({
+      target: [forecastsCache.siteId, forecastsCache.fetchDate],
+      set: {
+        data: freshForecast,
+        fetchedAt: new Date(freshForecast.fetchedAt),
+        expiresAt: new Date(freshForecast.expiresAt),
+      },
+    });
 
   return freshForecast;
 }
@@ -192,23 +217,9 @@ export async function fetchAllForecasts(
 export async function clearExpiredForecasts(): Promise<void> {
   const now = new Date();
 
-  await updateJSON<ForecastsData>(
-    'forecasts.json',
-    { forecasts: {} },
-    (data) => {
-      const forecasts = data.forecasts;
-      const updated: Record<string, Forecast> = {};
-
-      // Keep only non-expired forecasts
-      Object.entries(forecasts).forEach(([key, forecast]) => {
-        const expiresAt = new Date(forecast.expiresAt);
-        if (now < expiresAt) {
-          updated[key] = forecast;
-        }
-      });
-
-      data.forecasts = updated;
-      return data;
-    }
-  );
+  // Delete expired forecasts from Turso using SQL template
+  // Drizzle ORM doesn't have lt() operator, so we use sql template for date comparison
+  await db
+    .delete(forecastsCache)
+    .where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
 }

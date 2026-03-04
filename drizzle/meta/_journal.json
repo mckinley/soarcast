@@ -15,6 +15,13 @@
       "when": 1772633442321,
       "tag": "0001_funny_ultragirl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772633999755,
+      "tag": "0002_modern_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

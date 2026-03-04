@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { text, integer, sqliteTable, primaryKey } from 'drizzle-orm/sqlite-core';
+import { text, integer, sqliteTable, primaryKey, unique } from 'drizzle-orm/sqlite-core';
 
 // NextAuth adapter tables
 export const users = sqliteTable('users', {
@@ -89,7 +89,10 @@ export const forecastsCache = sqliteTable('forecasts_cache', {
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
   expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
-});
+}, (table) => ({
+  // Unique constraint for cache key (one forecast per site per day)
+  uniqueSiteDate: unique().on(table.siteId, table.fetchDate),
+}));
 
 export const settings = sqliteTable('settings', {
   id: text('id')

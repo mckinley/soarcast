@@ -30,6 +30,11 @@ export interface Forecast {
     cape: number[];
     precipitation_probability: number[];
     pressure_msl: number[];
+    // Upper-air parameters for XC assessment
+    boundary_layer_height: (number | null)[];
+    wind_speed_850hPa: (number | null)[];
+    wind_direction_850hPa: (number | null)[];
+    convective_inhibition: (number | null)[];
   };
 }
 
