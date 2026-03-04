@@ -1,10 +1,9 @@
-export default function SettingsPage() {
-  return (
-    <div>
-      <h1 className="text-3xl font-bold">Settings</h1>
-      <p className="mt-4 text-muted-foreground">
-        Configure your notification preferences here.
-      </p>
-    </div>
-  );
+import { getSettings } from './actions';
+import { getSites } from '../sites/actions';
+import { SettingsClient } from '@/components/settings-client';
+
+export default async function SettingsPage() {
+  const [settings, sites] = await Promise.all([getSettings(), getSites()]);
+
+  return <SettingsClient initialSettings={settings} sites={sites} />;
 }

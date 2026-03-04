@@ -2,9 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import type { DayScore } from '@/types';
+import { Bell } from 'lucide-react';
 
 interface ScoreCellProps {
   score: DayScore | null;
+  showNotification?: boolean;
   onClick?: () => void;
 }
 
@@ -21,7 +23,7 @@ function getScoreColorClass(score: number): string {
   return 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30';
 }
 
-export function ScoreCell({ score, onClick }: ScoreCellProps) {
+export function ScoreCell({ score, showNotification = false, onClick }: ScoreCellProps) {
   if (!score) {
     return (
       <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
@@ -33,8 +35,13 @@ export function ScoreCell({ score, onClick }: ScoreCellProps) {
   return (
     <button
       onClick={onClick}
-      className={`flex h-16 w-full flex-col items-center justify-center gap-1 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
+      className={`relative flex h-16 w-full flex-col items-center justify-center gap-1 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
     >
+      {showNotification && (
+        <div className="absolute top-1 right-1">
+          <Bell className="h-3.5 w-3.5 text-primary fill-primary animate-pulse" />
+        </div>
+      )}
       <div className="text-2xl font-bold">{score.overallScore}</div>
       <div className="text-[10px] font-medium uppercase tracking-wide opacity-80">
         {score.label}

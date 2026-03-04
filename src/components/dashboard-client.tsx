@@ -5,16 +5,17 @@ import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import type { SiteForecastData } from '@/app/actions';
-import type { DayScore, Site, Forecast } from '@/types';
+import type { DayScore, Site, Forecast, Settings } from '@/types';
 import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardClientProps {
   data: SiteForecastData[];
+  settings: Settings;
   refreshAction: () => Promise<{ success: boolean; message: string }>;
 }
 
-export function DashboardClient({ data, refreshAction }: DashboardClientProps) {
+export function DashboardClient({ data, settings, refreshAction }: DashboardClientProps) {
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
@@ -79,6 +80,21 @@ export function DashboardClient({ data, refreshAction }: DashboardClientProps) {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
+  // Determine if a notification indicator should be shown for a given score/site/date
+  const shouldShowNotification = (score: DayScore | null, siteId: string, dayIndex: number): boolean => {
+    if (!score) return false;
+
+    // Check if site notifications are enabled (default to true if not set)
+    const siteNotificationsEnabled = settings.notifications.sitePreferences[siteId] ?? true;
+    if (!siteNotificationsEnabled) return false;
+
+    // Check if day is within notification window (daysAhead)
+    if (dayIndex >= settings.notifications.daysAhead) return false;
+
+    // Check if score meets threshold
+    return score.overallScore >= settings.notifications.minScoreThreshold;
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -124,12 +140,14 @@ export function DashboardClient({ data, refreshAction }: DashboardClientProps) {
                     </div>
                   </div>
                 </td>
-                {dates.map((date) => {
+                {dates.map((date, dateIndex) => {
                   const score = scores.find((s) => s.date === date) || null;
+                  const showNotification = shouldShowNotification(score, site.id, dateIndex);
                   return (
                     <td key={date} className="py-2 px-2">
                       <ScoreCell
                         score={score}
+                        showNotification={showNotification}
                         onClick={
                           score && forecast
                             ? () => handleCellClick(score, site, forecast)

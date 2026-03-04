@@ -135,7 +135,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Actual notification delivery is out of scope for v1. Just store preferences and show visual indicators."
     },
     {
