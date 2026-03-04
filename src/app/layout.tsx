@@ -19,11 +19,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'SoarCast',
+    default: 'SoarCast - Paragliding XC Weather Monitor',
     template: '%s | SoarCast',
   },
   description:
-    'Paragliding XC forecast monitor — track flying conditions at your favorite sites with 7-day weather forecasts and XC soaring scores.',
+    'Track flying conditions at your favorite paragliding sites with 7-day weather forecasts, intelligent XC scoring, and push notifications. Get alerted when epic soaring conditions are forecasted.',
   keywords: [
     'paragliding',
     'XC flying',
@@ -33,24 +33,36 @@ export const metadata: Metadata = {
     'flying sites',
     'CAPE',
     'wind conditions',
+    'boundary layer height',
+    'cross country',
+    'hang gliding',
   ],
   authors: [{ name: 'SoarCast' }],
   creator: 'SoarCast',
+  metadataBase: new URL(process.env.AUTH_URL || 'http://localhost:3000'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    title: 'SoarCast',
-    description: 'Paragliding XC forecast monitor for tracking flying conditions',
+    url: '/',
+    title: 'SoarCast - Paragliding XC Weather Monitor',
+    description: 'Track flying conditions at your favorite paragliding sites with 7-day weather forecasts, intelligent XC scoring, and push notifications.',
     siteName: 'SoarCast',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SoarCast',
-    description: 'Paragliding XC forecast monitor for tracking flying conditions',
+    title: 'SoarCast - Paragliding XC Weather Monitor',
+    description: 'Track flying conditions at your favorite paragliding sites with 7-day weather forecasts, intelligent XC scoring, and push notifications.',
+    creator: '@soarcast',
   },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SoarCast',
   },
 };
 
@@ -64,11 +76,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="SoarCast" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

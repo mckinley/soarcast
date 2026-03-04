@@ -259,3 +259,142 @@ Started: Wed Mar  4 21:00:39 +07 2026
   - **Chart legend**: Added flex-wrap to legend so it wraps on smaller screens
     * Three legend items now display properly even on narrow viewports
 ---
+## 2026-03-04 23:00 - US-010
+- Implemented Web Push Notifications with VAPID keys and service worker
+- Files changed:
+  - Added: package.json, package-lock.json (web-push, @types/web-push)
+  - Added: public/sw.js (service worker for push events and PWA caching)
+  - Added: src/app/api/notifications/subscribe/route.ts (subscribe/unsubscribe endpoints)
+  - Added: src/app/api/notifications/check/route.ts (cron endpoint to check forecasts and send notifications)
+  - Added: src/components/ui/alert.tsx (Alert component for error messages)
+  - Added: vercel.json (cron configuration for 6 AM and 6 PM UTC)
+  - Modified: src/app/settings/actions.ts (added push subscription status check in dbSettingsToApp)
+  - Modified: src/components/settings-client.tsx (added push notification enable/disable UI with service worker registration)
+  - Modified: src/lib/scoring.ts (exported scoreToLabel function)
+- **Learnings for future iterations:**
+  - **Service Worker registration**: Must register from public/ directory and use `navigator.serviceWorker.register('/sw.js')`
+    * Service worker handles both push notifications AND PWA caching (dual purpose)
+    * Use `self.skipWaiting()` in install event and `self.clients.claim()` in activate event for immediate activation
+  - **VAPID keys**: Generated with `npx web-push generate-vapid-keys`
+    * Public key must be in `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (client-side accessible)
+    * Private key in `VAPID_PRIVATE_KEY` (server-side only)
+    * Must convert base64 VAPID public key to Uint8Array for PushManager.subscribe()
+  - **Push subscription storage**: Store endpoint + keys (p256dh, auth) in pushSubscriptions table
+    * endpoint is unique - use as primary key to prevent duplicates
+    * keys must be extracted from subscription object and base64-encoded
+  - **Notification permissions**: Use `Notification.requestPermission()` to trigger browser permission prompt
+    * Only works in secure contexts (HTTPS or localhost)
+    * User can deny - handle gracefully with error message
+  - **Cron job security**: Vercel automatically adds `Authorization: Bearer ${CRON_SECRET}` header
+    * Verify this header in API route to prevent unauthorized calls
+    * Return 401 if header doesn't match
+  - **Push notification payload**: JSON with title, body, url, siteId, tag
+    * tag prevents duplicate notifications (e.g., `site-${siteId}-${date}`)
+    * url used by service worker to navigate when notification clicked
+  - **Invalid subscriptions**: If web-push returns 410 Gone, subscription is invalid/expired
+    * Automatically delete from database to keep subscriptions table clean
+  - **Notification check logic**: Iterate all users → get settings → get subscriptions → check sites → score forecasts → send if meets threshold
+    * Only send ONE notification per site (for first qualifying day in window)
+    * Uses calculateDailyScores to get all day scores, then filter by date range
+  - **Vercel cron syntax**: `"0 6,18 * * *"` = minute 0, hours 6 and 18, every day
+    * Runs at 6 AM and 6 PM UTC daily
+  - **Client-side VAPID conversion**: Use urlBase64ToUint8Array helper to convert VAPID public key
+    * Handle URL-safe base64 (replace - with +, _ with /, add padding)
+    * Convert to Uint8Array for applicationServerKey parameter
+  - **Async settings transform**: dbSettingsToApp became async to check pushSubscriptions table
+    * notifications.enabled derived from whether user has active subscriptions
+    * All callers updated to await the function
+---
+## 2026-03-04 23:15 - US-011
+- Implemented PWA Support with manifest, icons, and meta tags
+- Files changed:
+  - Added: public/manifest.json (PWA metadata with app name, theme, icons, and shortcuts)
+  - Added: src/app/icon-192.png/route.tsx (192x192 PWA icon generator using ImageResponse)
+  - Added: src/app/icon-512.png/route.tsx (512x512 PWA icon generator using ImageResponse)
+  - Added: src/app/apple-touch-icon.png/route.tsx (180x180 Apple touch icon generator)
+  - Modified: src/app/layout.tsx (added PWA meta tags and manifest link in head)
+  - Modified: public/sw.js (updated cache list to include manifest and icons)
+- **Learnings for future iterations:**
+  - **Next.js dynamic route icons**: Use `app/icon-{size}.png/route.tsx` pattern to generate icons dynamically
+    * Export `GET()` function returning ImageResponse for edge runtime
+    * Export `size` object with width/height and `contentType` for metadata
+    * More flexible than static images - can use gradients, emojis, or programmatic designs
+  - **PWA manifest structure**: JSON file with name, short_name, display mode, icons array, start_url
+    * `display: "standalone"` makes app look like native app (no browser UI)
+    * `theme_color` sets Android status bar color and other UI elements
+    * `background_color` shown during app launch before content loads
+    * `purpose: "any maskable"` allows icons to work on all platforms including adaptive icons
+  - **PWA shortcuts**: Optional manifest feature for deep linking from app icon long-press
+    * Provides quick access to key app sections (Dashboard, Sites, Settings)
+    * Each shortcut has name, url, and description
+  - **Apple PWA support**: iOS Safari requires specific meta tags beyond standard manifest
+    * `apple-mobile-web-app-capable` enables standalone mode on iOS
+    * `apple-mobile-web-app-status-bar-style` controls status bar appearance (default, black, black-translucent)
+    * `apple-mobile-web-app-title` overrides app name shown on home screen
+    * Apple touch icon should be 180x180 (referenced via metadata icons.apple in layout)
+  - **Service worker caching strategy**: Cache manifest and icon assets for offline installation
+    * Updated urlsToCache array to include /manifest.json, /icon-192.png, /icon-512.png
+    * These allow PWA installation prompt to work offline after first visit
+  - **PWA installability requirements**: manifest.json + service worker + HTTPS (auto on Vercel)
+    * Browser shows "Add to Home Screen" prompt when requirements met
+    * Android Chrome shows install banner automatically after engagement heuristics
+    * iOS Safari requires manual "Add to Home Screen" from share menu
+  - **Icon consistency**: All icons (192, 512, apple-touch, favicon) use same design pattern
+    * Paragliding emoji (🪂) on blue gradient background (#60a5fa to #3b82f6)
+    * Rounded corners (20% border-radius) for friendly appearance
+    * Font sizes scaled proportionally to icon size (192→120px, 512→320px, 180→110px)
+---
+## 2026-03-04 23:30 - US-012
+- Implemented Demo Mode + Polish + Documentation
+- Files changed:
+  - Modified: README.md (complete v2 documentation with setup instructions for Turso, NextAuth, VAPID, and Vercel deployment)
+  - Modified: .env.example (enhanced with detailed comments and sections for all environment variables)
+  - Modified: src/app/layout.tsx (enhanced metadata with Open Graph, Twitter cards, PWA meta tags, and metadataBase)
+  - Modified: src/app/sites/page.tsx (added page-specific metadata)
+  - Modified: src/app/settings/page.tsx (added page-specific metadata)
+  - Modified: src/app/sites/[id]/page.tsx (added generateMetadata function for dynamic site-specific metadata)
+  - Added: src/app/sites/loading.tsx (skeleton loading state for sites list)
+  - Added: src/app/settings/loading.tsx (skeleton loading state for settings page)
+  - Added: src/app/sites/[id]/loading.tsx (skeleton loading state for site detail page)
+  - Deleted: src/lib/storage.ts (removed old JSON file storage)
+  - Deleted: src/lib/seed.ts (removed old seeding logic, demo mode now uses constants in actions.ts from US-007)
+  - Modified: .gitignore (removed data/ directory entry since no longer used)
+  - Modified: prd.json (marked US-012 as passes: true)
+- **Learnings for future iterations:**
+  - **Demo mode already implemented**: US-007 already completed demo mode with DEMO_SITES constant in actions.ts
+    * Unauthenticated users see 3 demo sites with live weather data
+    * Banner on dashboard prompts sign-in to add custom sites
+    * No database required for public demo - fully functional without auth
+  - **Error boundaries already existed**: error.tsx and global-error.tsx were already in place from earlier work
+    * error.tsx: Styled page-level error boundary with reset button and "Go to Dashboard" option
+    * global-error.tsx: Critical error handler with inline styles (no CSS dependencies)
+  - **404 page already existed**: not-found.tsx was already styled and functional
+    * Includes navigation to dashboard and sites pages
+    * Uses MapPinOff icon for paragliding theme consistency
+  - **Next.js metadata best practices**:
+    * Use `metadata` export for static metadata (title, description, keywords, OG tags)
+    * Use `generateMetadata` async function for dynamic metadata (site detail pages with specific site names)
+    * Set `metadataBase` in layout for proper absolute URL resolution in OG tags
+    * PWA meta tags (apple-mobile-web-app-*) can be in metadata.appleWebApp object, no need for <head> tags
+    * manifest link automatically included when metadata.manifest is set
+  - **Loading skeleton pattern**: Create loading.tsx in same directory as page.tsx for automatic Suspense boundary
+    * Use Skeleton component from shadcn/ui for consistent loading states
+    * Match skeleton layout to actual page structure (grid for sites, cards for detail)
+    * Next.js automatically wraps page in Suspense with loading.tsx as fallback
+  - **Cleanup workflow**: Removed obsolete v1 code (storage.ts, seed.ts, data/ references)
+    * All storage now uses Turso database via Drizzle ORM
+    * Demo data handled by constants in server actions, not seed files
+    * Simplified architecture with no file system dependencies
+  - **Documentation structure**: README should cover full stack setup in order:
+    1. Prerequisites and installation
+    2. Database setup (Turso)
+    3. OAuth provider configuration
+    4. VAPID key generation
+    5. Environment variable configuration
+    6. Database migrations
+    7. Development and deployment
+  - **Environment variable organization**: Group related vars with headers in .env.example
+    * Makes it easier to understand dependencies between variables
+    * Provide examples and links to setup instructions for OAuth apps
+    * Note which variables are NEXT_PUBLIC_ (client-accessible) vs server-only
+---

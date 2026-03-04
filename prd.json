@@ -187,7 +187,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "web-push npm package handles VAPID signing. Service worker must be in public/ directory. Use navigator.serviceWorker.register and PushManager.subscribe on client. Cron endpoint should be protected with CRON_SECRET env var."
     },
     {
@@ -204,7 +204,7 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "Minimal PWA requires: manifest.json with icons + service worker + HTTPS (Vercel provides). The service worker from US-010 can double as the PWA service worker. Cache strategy: network-first for API calls, cache-first for static assets."
     },
     {
@@ -225,7 +225,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Demo mode should NOT require a database - use hardcoded site coordinates and fetch weather client-side or server-side without caching. This way the public demo works even before setting up Turso."
     }
   ]

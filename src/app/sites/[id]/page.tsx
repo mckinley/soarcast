@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import type { Metadata } from 'next';
 import { getSites } from '../actions';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
@@ -20,6 +21,27 @@ const MapDisplay = dynamic(
     ),
   }
 );
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const sites = await getSites();
+  const site = sites.find((s) => s.id === id);
+
+  if (!site) {
+    return {
+      title: 'Site Not Found',
+    };
+  }
+
+  return {
+    title: site.name,
+    description: `7-day weather forecast and XC soaring scores for ${site.name}. ${site.notes || 'Track flying conditions with detailed hourly data.'}`,
+  };
+}
 
 export default async function SiteDetailPage({
   params,

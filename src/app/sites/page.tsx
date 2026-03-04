@@ -2,6 +2,12 @@ import { getSites, addSite, updateSite, deleteSite } from './actions';
 import { SiteFormDialog } from '@/components/site-form-dialog';
 import { SiteCard } from '@/components/site-card';
 import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'My Sites',
+  description: 'Manage your paragliding flying sites - add, edit, or remove locations to track weather conditions.',
+};
 
 export default async function SitesPage() {
   const sites = await getSites();
