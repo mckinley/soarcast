@@ -1,26 +1,13 @@
 import { notFound } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import type { Metadata } from 'next';
 import { getSites } from '../actions';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import { SiteDetailClient } from '@/components/site-detail-client';
+import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-
-// Dynamically import map display (Leaflet requires window/document)
-const MapDisplay = dynamic(
-  () => import('@/components/map-display').then((mod) => mod.MapDisplay),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[300px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading map...</p>
-      </div>
-    ),
-  }
-);
 
 export async function generateMetadata({
   params,
@@ -98,7 +85,7 @@ export default async function SiteDetailPage({
 
         {/* Site location map */}
         <div className="mt-4">
-          <MapDisplay latitude={site.latitude} longitude={site.longitude} />
+          <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
         </div>
       </div>
 
