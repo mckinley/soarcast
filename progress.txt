@@ -113,3 +113,25 @@ Started: $(date)
 - getForecast() provides automatic cache-or-fetch logic - use this for most cases instead of direct fetchWeatherForecast()
 - fetchAllForecasts() can parallelize multiple site fetches using Promise.all for efficiency
 ---
+## 2026-03-04 - US-005
+- Implemented XC soaring score algorithm that analyzes weather data to produce 0-100 scores for flying days
+- Created src/lib/scoring.ts with calculateDailyScores() as main entry point
+- Analyzes only flyable hours (10:00-17:00 local time) to focus on when XC flights actually happen
+- Weighted scoring system: CAPE 30%, wind speed 25%, wind direction 20%, cloud cover 15%, precipitation 10%
+- Each factor normalized to 0-100 scale before applying weights
+- Score labels: Poor (0-30), Fair (31-50), Good (51-70), Great (71-85), Epic (86-100)
+- Handles missing CAPE data gracefully (treats null as 0)
+
+**Files changed:**
+- src/lib/scoring.ts - New scoring algorithm module
+- prd.json - Updated US-005 passes to true
+
+**Learnings for future iterations:**
+- CAPE scoring: Linear scale from 0 J/kg (score 0) to 2000 J/kg (score 100) - typical XC days have 500-1500 J/kg CAPE
+- Wind speed scoring: Uses threshold approach (e.g., 30% of max = 100, 50% of max = 90, 85% of max = 40) to better reflect pilot preferences than pure linear
+- Wind direction scoring: Must account for circular nature of compass - use angleDifference() helper that handles 359° to 1° wraparound
+- Hourly data grouping: Extract date from ISO timestamp with .split('T')[0], filter by hour range before grouping
+- Factor scores are rounded for UI display but weighted calculation uses full precision for accuracy
+- Days with no flyable hours default to score 0 (Poor) rather than erroring
+- The scoring algorithm is the single source of truth for XC potential - UI components will consume DayScore objects
+---

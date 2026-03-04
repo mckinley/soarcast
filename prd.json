@@ -84,7 +84,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Higher CAPE = stronger thermals = better score. Wind below site max is good. Wind matching ideal directions is good. Low cloud cover and low precip probability are good."
     },
     {
