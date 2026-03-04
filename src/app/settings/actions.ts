@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
-import { settings } from '@/db/schema';
+import { settings, pushSubscriptions } from '@/db/schema';
 import { auth } from '@/auth';
 import type { Settings } from '@/types';
 
@@ -20,12 +20,24 @@ const DEFAULT_SETTINGS: Settings = {
 /**
  * Transform DB settings row to app Settings type
  */
-function dbSettingsToApp(
-  dbSettings: typeof settings.$inferSelect
-): Settings {
+async function dbSettingsToApp(
+  dbSettings: typeof settings.$inferSelect,
+  userId?: string
+): Promise<Settings> {
+  // Check if user has active push subscriptions
+  let enabled = false;
+  if (userId) {
+    const subs = await db
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId))
+      .limit(1);
+    enabled = subs.length > 0;
+  }
+
   return {
     notifications: {
-      enabled: false, // Note: 'enabled' is not in DB schema - derived from push subscriptions in US-010
+      enabled,
       minScoreThreshold: dbSettings.minScoreThreshold,
       daysAhead: dbSettings.daysAhead,
       sitePreferences: dbSettings.siteNotifications,
@@ -55,7 +67,7 @@ export async function getSettings(): Promise<Settings> {
     .limit(1);
 
   if (existingSettings) {
-    return dbSettingsToApp(existingSettings);
+    return dbSettingsToApp(existingSettings, session.user.id);
   }
 
   // Create default settings if none exist
@@ -69,7 +81,7 @@ export async function getSettings(): Promise<Settings> {
     })
     .returning();
 
-  return dbSettingsToApp(newSettings);
+  return dbSettingsToApp(newSettings, session.user.id);
 }
 
 /**
@@ -121,7 +133,7 @@ export async function updateSettings(
 
   revalidatePath('/settings');
   revalidatePath('/'); // Revalidate dashboard to update notification indicators
-  return dbSettingsToApp(updatedSettings);
+  return dbSettingsToApp(updatedSettings, session.user.id);
 }
 
 /**

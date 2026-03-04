@@ -150,7 +150,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Leaflet MUST be dynamically imported in Next.js (no SSR). Use next/dynamic with ssr: false. OpenStreetMap tiles are free. Nominatim has a 1 req/sec rate limit - add debounce to search. Use react-leaflet MapContainer, TileLayer, Marker, useMapEvents."
     },
     {
@@ -167,7 +167,7 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "BLH displayed in meters (typical range 0-3000m). 850hPa wind in km/h. Keep the chart simple - CSS bars or SVG, no heavy chart libraries."
     },
     {

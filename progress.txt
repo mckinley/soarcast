@@ -184,3 +184,78 @@ Started: Wed Mar  4 21:00:39 +07 2026
   - **Empty state nuance**: Only show "add first site" empty state for authenticated users with no sites
     * Unauthenticated users always see demo sites (never empty)
 ---
+## 2026-03-04 22:30 - US-008
+- Implemented Map-Based Site Picker with Leaflet and Nominatim geocoding
+- Files changed:
+  - Added: package.json (leaflet, react-leaflet, @types/leaflet dependencies)
+  - Added: src/components/map-picker.tsx (interactive map with click-to-set coordinates and geocoding search)
+  - Added: src/components/map-display.tsx (read-only map display for site detail pages)
+  - Modified: src/components/site-form-dialog.tsx (added MapPicker component with dynamic import, increased dialog size to 700px)
+  - Modified: src/app/sites/[id]/page.tsx (added MapDisplay component to site header)
+- **Learnings for future iterations:**
+  - **Leaflet + Next.js SSR gotcha**: Leaflet requires window/document APIs, so MUST use dynamic import with `ssr: false`
+    * Use `next/dynamic` with explicit `ssr: false` option
+    * Add loading fallback (skeleton/spinner) for better UX during dynamic load
+    * Import pattern: `dynamic(() => import('component').then(mod => mod.Component), { ssr: false })`
+  - **Leaflet icon paths in webpack**: Default marker icons don't work with Next.js webpack bundling
+    * Solution: Create custom Icon with unpkg CDN URLs for marker images
+    * Must specify iconUrl, iconRetinaUrl, shadowUrl explicitly
+    * This avoids 404 errors for marker-icon.png in production
+  - **Nominatim geocoding API**: Free OpenStreetMap geocoding service with rate limits
+    * Rate limit: 1 request per second (must respect to avoid blocking)
+    * No API key needed, but MUST include User-Agent header identifying your app
+    * Returns array of results with lat/lon strings (need parseFloat conversion)
+    * Search endpoint: `https://nominatim.openstreetmap.org/search?format=json&q={query}&limit={n}`
+  - **Map component architecture**: Separate picker (editable) from display (read-only)
+    * MapPicker: Full interactive map with click events, search, and coordinate updates
+    * MapDisplay: Simplified read-only map for showing existing site locations
+    * Both use same base components (MapContainer, TileLayer, Marker) but different interaction models
+  - **useMapEvents hook**: react-leaflet pattern for handling map interactions
+    * Use inside a component rendered within MapContainer
+    * Provides access to map click events and other interactions
+    * Returns null (or marker) - doesn't render anything itself
+  - **OpenStreetMap tiles**: Free tile layer, no API key required
+    * URL template: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
+    * Attribution required: `© OpenStreetMap contributors`
+  - **Mobile touch support**: Leaflet handles touch events automatically
+    * scrollWheelZoom prop controls zoom on scroll/pinch
+    * MapContainer works with touch on mobile browsers out of the box
+  - **Form UX pattern**: Map picker placed BEFORE coordinate inputs
+    * User selects on map first (primary interaction)
+    * Coordinates auto-fill from map clicks
+    * Coordinates still editable manually (fallback for precision)
+    * Labels indicate "auto-filled from map" to guide user
+  - **Dialog sizing**: Increased dialog max-width from 550px to 700px for map visibility
+    * Added `max-h-[90vh] overflow-y-auto` for mobile/small screens
+    * Ensures map has enough space (400px height) while remaining usable
+  - **Leaflet CSS**: Import 'leaflet/dist/leaflet.css' directly in component files
+    * CSS is scoped to components that use it
+    * No need to add to global CSS (keeps global styles clean)
+---
+## 2026-03-04 22:45 - US-009
+- Implemented Site Detail Page Improvements with BLH and 850hPa wind display
+- Files changed:
+  - Modified: src/components/site-detail-client.tsx (added BLH and upper wind to daily cards, hourly chart, and hourly table)
+- **Learnings for future iterations:**
+  - **Hourly data structure**: Extended the hourly data type to include `blh` and `wind850hPa` fields (both nullable)
+    * Use optional chaining with nullish coalescing: `forecast.hourly.boundary_layer_height?.[index] ?? null`
+    * This handles cases where Open-Meteo doesn't provide these parameters
+  - **Daily card averages**: Calculate averages for BLH and 850hPa wind similar to other parameters
+    * Use `(h.blh || 0)` when summing to treat null as 0 for average calculation
+    * Display '-' in UI when average is 0 (indicates missing data)
+  - **Three-layer chart architecture**: Split chart space into three equal sections (30% each)
+    * Wind (blue), CAPE (green), BLH (purple) each get their own vertical section
+    * Each layer has independent scaling: Wind max 60 km/h, CAPE max 2000 J/kg, BLH max 3000m
+    * Title updated to "Wind Speed, CAPE & BLH" to reflect all three layers
+  - **Hourly table columns**: Added BLH (meters) and 850hPa (km/h) columns between CAPE and Clouds
+    * Null handling: Display '-' when data is not available (`hour.blh !== null ? ... : '-'`)
+    * Format units in display: `${Math.round(hour.blh)}m` for BLH, `${Math.round(hour.wind850hPa)} km/h` for upper wind
+  - **Score breakdown**: Already implemented in US-007 via score-detail-dialog.tsx
+    * Shows all 7 factors: CAPE, wind, wind direction, BLH, upper wind, cloud cover, precipitation
+    * No changes needed here - US-007 already completed this requirement
+  - **Wind direction comparison**: Already present via WindIndicator component in cards and table
+    * Shows compass arrow for actual wind direction
+    * User can compare to site's idealWindDirections in site header
+  - **Chart legend**: Added flex-wrap to legend so it wraps on smaller screens
+    * Three legend items now display properly even on narrow viewports
+---

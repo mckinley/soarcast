@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { updateSettings, toggleSiteNotifications } from '@/app/settings/actions';
 import type { Settings, Site } from '@/types';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SettingsClientProps {
   initialSettings: Settings;
@@ -18,6 +19,28 @@ interface SettingsClientProps {
 export function SettingsClient({ initialSettings, sites }: SettingsClientProps) {
   const [isPending, startTransition] = useTransition();
   const [settings, setSettings] = useState(initialSettings);
+  const [pushEnabled, setPushEnabled] = useState(initialSettings.notifications.enabled);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
+
+  // Register service worker on mount
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered:', registration);
+          setSwRegistration(registration);
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+          setPushError('Failed to register service worker');
+        });
+    } else {
+      setPushError('Push notifications are not supported in this browser');
+    }
+  }, []);
 
   const handleUpdateThreshold = (value: string) => {
     const threshold = parseInt(value, 10);
@@ -56,6 +79,123 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
     });
   };
 
+  const handleEnablePushNotifications = async () => {
+    setPushLoading(true);
+    setPushError(null);
+
+    try {
+      if (!swRegistration) {
+        throw new Error('Service worker not registered');
+      }
+
+      // Request notification permission
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        throw new Error('Notification permission denied');
+      }
+
+      // Subscribe to push notifications
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        throw new Error('VAPID public key not configured');
+      }
+
+      // Convert base64 VAPID key to Uint8Array
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+      const subscription = await swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+
+      // Send subscription to server
+      const response = await fetch('/api/notifications/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save subscription');
+      }
+
+      setPushEnabled(true);
+    } catch (error: any) {
+      console.error('Error enabling push notifications:', error);
+      setPushError(error.message || 'Failed to enable push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleDisablePushNotifications = async () => {
+    setPushLoading(true);
+    setPushError(null);
+
+    try {
+      if (!swRegistration) {
+        throw new Error('Service worker not registered');
+      }
+
+      // Get current subscription
+      const subscription = await swRegistration.pushManager.getSubscription();
+      if (subscription) {
+        // Unsubscribe from push
+        await subscription.unsubscribe();
+
+        // Remove subscription from server
+        await fetch('/api/notifications/subscribe', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            endpoint: subscription.endpoint,
+          }),
+        });
+      }
+
+      setPushEnabled(false);
+    } catch (error: any) {
+      console.error('Error disabling push notifications:', error);
+      setPushError(error.message || 'Failed to disable push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Helper function to convert ArrayBuffer to base64
+  function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  // Helper function to convert base64 string to Uint8Array
+  function urlBase64ToUint8Array(base64String: string): BufferSource {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -65,6 +205,60 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
           Configure notification preferences for flying day alerts.
         </p>
       </div>
+
+      {/* Push Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Push Notifications</CardTitle>
+          <CardDescription>
+            Receive browser notifications when good flying conditions are forecasted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {pushError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{pushError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Push Notifications</Label>
+              <p className="text-sm text-muted-foreground">
+                {pushEnabled
+                  ? 'You will receive notifications at 6 AM and 6 PM UTC daily'
+                  : 'Click enable to start receiving notifications'}
+              </p>
+            </div>
+            {pushEnabled ? (
+              <Button
+                onClick={handleDisablePushNotifications}
+                disabled={pushLoading}
+                variant="outline"
+              >
+                {pushLoading ? 'Disabling...' : 'Disable'}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleEnablePushNotifications}
+                disabled={pushLoading || !swRegistration}
+              >
+                {pushLoading ? 'Enabling...' : 'Enable'}
+              </Button>
+            )}
+          </div>
+
+          {pushEnabled && (
+            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              <p>
+                ✓ Push notifications are enabled. You'll be notified when any of your sites have
+                conditions that meet your minimum score threshold.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Global Notification Settings */}
       <Card>
@@ -179,11 +373,11 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
           <div className="flex items-start gap-3">
             <Bell className="mt-0.5 h-5 w-5 text-muted-foreground" />
             <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">About Notifications</p>
+              <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
-                Actual notification delivery (email, push, etc.) is not implemented in v1. These
-                settings control visual indicators on the dashboard that show which days meet your
-                criteria for good flying conditions.
+                Notifications are checked twice daily (6 AM and 6 PM UTC). You'll receive a push
+                notification for each site where the forecast meets your minimum score threshold
+                within your notification window.
               </p>
             </div>
           </div>

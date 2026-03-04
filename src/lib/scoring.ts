@@ -282,7 +282,7 @@ function scorePrecipitation(precipProbability: number): number {
 /**
  * Converts numeric score to label
  */
-function scoreToLabel(score: number): DayScore['label'] {
+export function scoreToLabel(score: number): DayScore['label'] {
   if (score >= 86) return 'Epic';
   if (score >= 71) return 'Great';
   if (score >= 51) return 'Good';
