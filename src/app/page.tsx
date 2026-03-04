@@ -1,10 +1,8 @@
-export default function Home() {
-  return (
-    <div>
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p className="mt-4 text-muted-foreground">
-        Welcome to SoarCast. Configure your flying sites to see forecasts.
-      </p>
-    </div>
-  );
+import { getDashboardData, refreshAllForecasts } from './actions';
+import { DashboardClient } from '@/components/dashboard-client';
+
+export default async function Home() {
+  const data = await getDashboardData();
+
+  return <DashboardClient data={data} refreshAction={refreshAllForecasts} />;
 }
