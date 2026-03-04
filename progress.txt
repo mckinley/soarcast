@@ -7,6 +7,84 @@ Started: $(date)
 - shadcn/ui components installed via `npx shadcn@latest add <component>`
 - Tailwind CSS v4
 - JSON file storage in data/ directory at project root
-- Server actions for data mutations
+- Server actions for data mutations - define in actions.ts, wrap with inline 'use server' when passing to client components
 - TypeScript strict mode
+- AppShell component wraps all pages in src/app/layout.tsx - provides navigation automatically
+- next-themes for dark mode with suppressHydrationWarning on html tag
+- revalidatePath() in server actions to refresh UI after mutations
+---
+## 2026-03-04 - US-001
+- Implemented responsive app shell with sidebar navigation and mobile sheet menu
+- Installed shadcn components: sidebar, button, sheet, separator, tooltip, input, skeleton
+- Installed next-themes for dark mode support with theme toggle
+- Created AppShell component that wraps all pages with navigation
+- Created ThemeProvider component for dark mode functionality
+- Added placeholder pages for Dashboard (/), Sites (/sites), and Settings (/settings)
+- Updated metadata in layout to reflect SoarCast branding
+
+**Files changed:**
+- src/app/layout.tsx - Added ThemeProvider, TooltipProvider, and AppShell wrapper
+- src/app/page.tsx - Simplified to basic Dashboard placeholder
+- src/app/sites/page.tsx - New placeholder for Sites page
+- src/app/settings/page.tsx - New placeholder for Settings page
+- src/components/app-shell.tsx - New app shell with sidebar and mobile navigation
+- src/components/theme-provider.tsx - New theme provider wrapper
+- src/components/ui/* - shadcn components (button, sheet, sidebar, etc.)
+- src/hooks/use-mobile.ts - Mobile detection hook
+- package.json - Added next-themes dependency
+
+**Learnings for future iterations:**
+- shadcn's Sidebar component auto-installs several dependencies (separator, tooltip, input, skeleton) for full functionality
+- Theme provider needs `suppressHydrationWarning` on html tag to prevent hydration mismatches
+- AppShell pattern centralizes layout logic - all pages automatically get navigation without prop drilling
+- Mobile navigation uses Sheet component (slide-in drawer) instead of trying to make Sidebar responsive
+- ThemeToggle needs mounted state check to prevent hydration errors with theme detection
+---
+## 2026-03-04 - US-002
+- Implemented type-safe JSON file storage layer with generic read/write/update functions
+- Created comprehensive TypeScript interfaces for all data shapes (Site, Forecast, DayScore, Settings)
+- Established data/ directory structure with three storage files: sites.json, forecasts.json, settings.json
+- Auto-creates data directory and initializes JSON files with defaults on first access
+- Implemented read-modify-write pattern in updateJSON for concurrent access safety
+- Added typecheck npm script to package.json
+
+**Files changed:**
+- src/lib/storage.ts - New storage utility with readJSON, writeJSON, updateJSON, fileExists functions
+- src/types/index.ts - New type definitions for all data structures
+- package.json - Added typecheck script
+- data/sites.json - Initial empty sites array
+- data/forecasts.json - Initial empty forecasts object
+- data/settings.json - Default notification settings
+
+**Learnings for future iterations:**
+- Storage pattern: readJSON auto-creates files with defaults if missing (ENOENT error handling)
+- updateJSON provides atomic read-modify-write pattern - always use this for mutations to avoid race conditions
+- All data types exported from src/types/index.ts for consistency across the app
+- Forecast cache key pattern: `${siteId}_${date}` for efficient lookup
+- Settings.sitePreferences uses Record<string, boolean> for per-site notification toggles
+- data/ directory already in .gitignore to keep user data out of version control
+---
+## 2026-03-04 - US-003
+- Implemented comprehensive site management with CRUD operations
+- Created server actions in src/app/sites/actions.ts (getSites, addSite, updateSite, deleteSite)
+- Built reusable SiteFormDialog component with full validation
+- Built SiteCard component for displaying site details
+- Updated /sites page with card grid layout, empty state, and add/edit/delete functionality
+- Installed shadcn components: card, dialog, form, select, label
+
+**Files changed:**
+- src/app/sites/actions.ts - New server actions for site CRUD operations
+- src/app/sites/page.tsx - Full site management UI with grid layout
+- src/components/site-form-dialog.tsx - Reusable form dialog for add/edit
+- src/components/site-card.tsx - Site display card with edit/delete actions
+- src/components/ui/* - New shadcn components (card, dialog, form, select, label)
+- package.json/package-lock.json - Updated dependencies from shadcn install
+
+**Learnings for future iterations:**
+- Server Actions pattern: define core actions in actions.ts file, wrap with inline 'use server' functions when passing to client components
+- revalidatePath() in server actions ensures UI updates after mutations without manual cache invalidation
+- Form validation happens client-side for immediate feedback, but server actions should also validate for security
+- Wind directions stored as number array (degrees 0-360), comma-separated input for user convenience
+- Confirmation dialogs (window.confirm) provide simple destructive action protection before implementing more complex modals
+- Empty state with prominent CTA improves UX when no data exists yet
 ---
