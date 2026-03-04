@@ -12,6 +12,7 @@ Started: $(date)
 - AppShell component wraps all pages in src/app/layout.tsx - provides navigation automatically
 - next-themes for dark mode with suppressHydrationWarning on html tag
 - revalidatePath() in server actions to refresh UI after mutations
+- updateJSON takes 3 params: updateJSON(filename, defaultValue, updaterFunction) - don't forget the defaultValue!
 ---
 ## 2026-03-04 - US-001
 - Implemented responsive app shell with sidebar navigation and mobile sheet menu
@@ -87,4 +88,28 @@ Started: $(date)
 - Wind directions stored as number array (degrees 0-360), comma-separated input for user convenience
 - Confirmation dialogs (window.confirm) provide simple destructive action protection before implementing more complex modals
 - Empty state with prominent CTA improves UX when no data exists yet
+---
+## 2026-03-04 - US-004
+- Implemented weather data fetching service using Open-Meteo API
+- Created src/lib/weather.ts with fetchWeatherForecast(), getForecast(), fetchAllForecasts(), and clearExpiredForecasts() functions
+- Fetches 7-day hourly forecast data including all required parameters: temperature, wind speed/direction/gusts, cloud cover, CAPE, precipitation probability, pressure
+- Also fetches model elevation and sunrise/sunset times for each site
+- Implements 6-hour cache expiration strategy to balance freshness vs. API load
+- Cache key pattern: ${siteId}_${date} stores forecasts in data/forecasts.json
+- Comprehensive error handling with descriptive error messages for API failures
+- TypeScript types defined for Open-Meteo API response structure
+
+**Files changed:**
+- src/lib/weather.ts - New weather service module
+- prd.json - Updated US-004 passes to true
+
+**Learnings for future iterations:**
+- Open-Meteo API requires no authentication and provides free access to comprehensive weather data
+- Cache strategy uses ${siteId}_${YYYY-MM-DD} pattern for daily forecasts - this allows efficient lookup and automatic daily refresh
+- updateJSON requires 3 parameters (filename, defaultValue, updater function) for safe read-modify-write operations
+- URLSearchParams is the cleanest way to build API query strings with multiple parameters
+- CAPE (Convective Available Potential Energy) is measured in J/kg - higher values indicate stronger thermal potential
+- Sunrise/sunset come from the daily object, while all weather parameters are in the hourly object
+- getForecast() provides automatic cache-or-fetch logic - use this for most cases instead of direct fetchWeatherForecast()
+- fetchAllForecasts() can parallelize multiple site fetches using Promise.all for efficiency
 ---
