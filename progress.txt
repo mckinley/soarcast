@@ -169,3 +169,37 @@ Started: $(date)
 - Empty state with CTA improves first-run experience - links directly to /sites to add first site
 - Grid auto-generates next 7 days starting from today, scores are matched by date string (YYYY-MM-DD)
 ---
+## 2026-03-04 - US-007
+- Implemented site detail page at /sites/[id] with comprehensive forecast visualization
+- Created dynamic route with server-side data fetching (site info + forecast + scores)
+- Built SiteDetailClient component with two main sections:
+  1. Daily forecast cards showing 7-day overview with score badges and key metrics
+  2. Interactive hourly timeline with simple bar chart visualization for wind speed and CAPE
+- Created WindIndicator component - SVG-based arrow that rotates to show wind direction
+- Updated SiteCard to include "View Forecast" button linking to detail page
+- Implemented day selection pattern - clicking a daily card shows hourly breakdown
+- Added back navigation to sites list with ArrowLeft icon from lucide-react
+- Temperature range calculation for each day (min/max from hourly data)
+- Error handling and empty state display
+
+**Files changed:**
+- src/app/sites/[id]/page.tsx - New dynamic route with server data fetching
+- src/components/site-detail-client.tsx - Client component with daily cards and hourly timeline
+- src/components/wind-indicator.tsx - Reusable wind direction arrow component
+- src/components/site-card.tsx - Added "View Forecast" link button
+- prd.json - Updated US-007 passes to true
+
+**Learnings for future iterations:**
+- Dynamic routes pattern: [id]/page.tsx with params: Promise<{ id: string }> for Next.js 15 App Router
+- notFound() helper from next/navigation provides clean 404 handling for missing resources
+- Server/client split: Server component fetches data and handles errors, client component manages interactivity
+- Chart visualization without heavy libraries: CSS height percentages with flex layout creates simple but effective bar charts
+- Wind direction indicator: SVG with transform rotate based on degrees, uses currentColor for theme compatibility
+- Date grouping pattern: Split ISO timestamp by 'T' to extract YYYY-MM-DD, then group hourly data by date
+- Temperature range: Extract all hourly temps for a day, then use Math.min/max to get range
+- Selected state pattern: First day auto-selected on load, clicking daily cards updates selected date for hourly view
+- Averaging for daily summaries: Reduce hourly data to single average values for card display
+- Avoid timezone issues: Add T12:00:00 when creating Date objects from YYYY-MM-DD strings to prevent timezone shift
+- The hourly chart shows two metrics (wind and CAPE) stacked vertically with different colors - keeps it simple while showing the most important XC indicators
+- Wind gusts displayed alongside wind speed in hourly table - important safety information for pilots
+---

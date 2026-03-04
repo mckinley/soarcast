@@ -118,7 +118,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Keep charts simple — can use a basic SVG or CSS-based bar chart. No need for heavy chart libraries."
     },
     {
