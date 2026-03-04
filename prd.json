@@ -1,0 +1,158 @@
+{
+  "project": "SoarCast",
+  "branchName": "ralph/soarcast-mvp",
+  "description": "Paragliding XC weather monitor — scores flying conditions for configured sites using Open-Meteo data, shows a 7-day forecast dashboard, and tracks notification preferences.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Project Foundation & Layout",
+      "description": "As a developer, I want the app shell and layout set up so I have a solid foundation to build on.",
+      "acceptanceCriteria": [
+        "App has a responsive layout with header (logo/title SoarCast), sidebar navigation, and main content area",
+        "Navigation includes: Dashboard, Sites, Settings",
+        "Dark mode support via shadcn theme toggle",
+        "Mobile-responsive (sidebar collapses to hamburger menu)",
+        "TypeScript strict mode enabled in tsconfig",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Use shadcn sidebar, button, and sheet components. Install next-themes for dark mode."
+    },
+    {
+      "id": "US-002",
+      "title": "JSON File Storage Layer",
+      "description": "As a developer, I want a simple JSON file storage utility so the app can persist data without a database.",
+      "acceptanceCriteria": [
+        "Utility module at src/lib/storage.ts with read/write/update functions for JSON files",
+        "Data stored in data/ directory at project root",
+        "Type-safe generic functions that accept TypeScript types",
+        "Handles concurrent reads safely with read-modify-write pattern",
+        "Stores: sites.json, forecasts.json, settings.json",
+        "TypeScript interfaces defined for all data shapes in src/types/index.ts",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Use fs/promises. Keep it simple — JSON.parse/stringify with proper error handling."
+    },
+    {
+      "id": "US-003",
+      "title": "Site Management",
+      "description": "As a user, I want to add and manage my flying sites so I can track conditions at places I fly.",
+      "acceptanceCriteria": [
+        "Sites page at /sites listing all configured sites in a card grid",
+        "Add Site dialog with form: name, latitude, longitude, elevation (m), ideal wind directions (multi-select compass), max wind speed (km/h), notes",
+        "Edit and delete functionality for existing sites",
+        "Form validation with error messages",
+        "Sites persisted to data/sites.json via server actions",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Use shadcn card, dialog, form, input, select, and button components."
+    },
+    {
+      "id": "US-004",
+      "title": "Weather Data Fetching",
+      "description": "As the system, I want to fetch weather forecast data from Open-Meteo so I can analyze flying conditions.",
+      "acceptanceCriteria": [
+        "Service module at src/lib/weather.ts fetching from Open-Meteo API",
+        "Fetches 7-day hourly forecast including: temperature, wind speed, wind direction, wind gusts, cloud cover, CAPE, precipitation probability, pressure",
+        "Also fetches model elevation and sunrise/sunset times",
+        "Results cached in data/forecasts.json keyed by site ID + fetch date",
+        "Cache expires after 6 hours",
+        "Error handling for API failures",
+        "TypeScript types for API response and internal forecast model",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Open-Meteo forecast API: https://api.open-meteo.com/v1/forecast. No API key needed. Use hourly params: temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,cape,precipitation_probability,pressure_msl"
+    },
+    {
+      "id": "US-005",
+      "title": "XC Soaring Score Algorithm",
+      "description": "As a user, I want each day scored for XC potential so I can quickly see which days look good.",
+      "acceptanceCriteria": [
+        "Scoring module at src/lib/scoring.ts",
+        "Analyzes hourly weather data for flyable window 10:00-17:00 local time",
+        "Scoring factors: CAPE/thermal strength 30%, wind speed vs site max 25%, wind direction match 20%, cloud cover 15%, precipitation probability 10%",
+        "Overall score 0-100 with labels: Poor (0-30), Fair (31-50), Good (51-70), Great (71-85), Epic (86-100)",
+        "Returns per-day score with overall score, label, and factor breakdown",
+        "Handles missing data gracefully",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Higher CAPE = stronger thermals = better score. Wind below site max is good. Wind matching ideal directions is good. Low cloud cover and low precip probability are good."
+    },
+    {
+      "id": "US-006",
+      "title": "Dashboard — Forecast Overview",
+      "description": "As a user, I want a dashboard showing the next 7 days of forecasts for all my sites so I can plan my flying.",
+      "acceptanceCriteria": [
+        "Dashboard page at / showing grid: rows = sites, columns = next 7 days",
+        "Each cell shows XC score 0-100 with color coding (red to yellow to green)",
+        "Clicking a cell opens detail dialog with score breakdown and hourly data",
+        "Refresh forecasts button that re-fetches for all sites",
+        "Auto-fetches on page load if data stale (>6 hours)",
+        "Empty state when no sites configured with prompt to add sites",
+        "Loading states while fetching",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Use shadcn table, dialog, badge, and skeleton components."
+    },
+    {
+      "id": "US-007",
+      "title": "Site Detail Page",
+      "description": "As a user, I want detailed forecasts for a specific site so I can analyze conditions in depth.",
+      "acceptanceCriteria": [
+        "Site detail page at /sites/[id] showing site info and 7-day forecast",
+        "Daily cards with score badge, wind speed/direction, CAPE, cloud cover, precip %, temperature range",
+        "Hourly timeline for selected day showing wind speed and CAPE",
+        "Visual wind direction indicator",
+        "Back navigation to sites list",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Keep charts simple — can use a basic SVG or CSS-based bar chart. No need for heavy chart libraries."
+    },
+    {
+      "id": "US-008",
+      "title": "Settings & Notifications Config",
+      "description": "As a user, I want to configure notification preferences so I get alerted about good flying days.",
+      "acceptanceCriteria": [
+        "Settings page at /settings with notification preferences",
+        "Configurable minimum score threshold for alerts (default 70)",
+        "Configurable notification window in days ahead (default 2)",
+        "Toggle notifications per site",
+        "Settings persisted to data/settings.json",
+        "Show notification would fire indicator on dashboard for qualifying days",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Actual notification delivery is out of scope for v1. Just store preferences and show visual indicators."
+    },
+    {
+      "id": "US-009",
+      "title": "Seed Data & Polish",
+      "description": "As a user, I want example sites pre-loaded so I can see the app in action immediately.",
+      "acceptanceCriteria": [
+        "Default seed data with 3 PNW sites: Tiger Mountain (47.4829, -121.9410, 460m), Dog Mountain (45.6996, -121.7073, 701m), Chelan Butte (47.8282, -120.0164, 390m)",
+        "App has favicon and meta tags (title SoarCast, description Paragliding XC forecast monitor)",
+        "Loading/error boundaries for all pages",
+        "Styled 404 page",
+        "README.md updated with project description, setup, and deployment notes",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Seed data should load on first run if sites.json is empty or missing."
+    }
+  ]
+}

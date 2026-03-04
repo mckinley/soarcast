@@ -1,0 +1,12 @@
+# Ralph Progress Log
+Started: $(date)
+---
+
+## Codebase Patterns
+- Next.js 15 App Router with src/ directory
+- shadcn/ui components installed via `npx shadcn@latest add <component>`
+- Tailwind CSS v4
+- JSON file storage in data/ directory at project root
+- Server actions for data mutations
+- TypeScript strict mode
+---
