@@ -13,9 +13,15 @@ interface DashboardClientProps {
   data: SiteForecastData[];
   settings: Settings;
   refreshAction: () => Promise<{ success: boolean; message: string }>;
+  isAuthenticated: boolean;
 }
 
-export function DashboardClient({ data, settings, refreshAction }: DashboardClientProps) {
+export function DashboardClient({
+  data,
+  settings,
+  refreshAction,
+  isAuthenticated,
+}: DashboardClientProps) {
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
@@ -40,8 +46,8 @@ export function DashboardClient({ data, settings, refreshAction }: DashboardClie
     setDialogOpen(true);
   };
 
-  // Empty state when no sites configured
-  if (data.length === 0) {
+  // Empty state when authenticated user has no sites
+  if (data.length === 0 && isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-3xl font-bold mb-4">Welcome to SoarCast</h1>
@@ -97,6 +103,20 @@ export function DashboardClient({ data, settings, refreshAction }: DashboardClie
 
   return (
     <div className="space-y-4">
+      {/* Unauthenticated User Banner */}
+      {!isAuthenticated && (
+        <div className="p-6 border border-primary/30 bg-primary/5 rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">Welcome to SoarCast</h2>
+          <p className="text-muted-foreground mb-4">
+            You're viewing demo sites with live weather data. Sign in to add your own flying sites
+            and customize your XC soaring forecasts.
+          </p>
+          <Link href="/auth/signin">
+            <Button size="lg">Sign In to Add Your Sites</Button>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

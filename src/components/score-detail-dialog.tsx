@@ -51,6 +51,8 @@ function getHourlyDataForDate(forecast: Forecast, date: string) {
     cape: number;
     cloudCover: number;
     precip: number;
+    blh: number | null;
+    upperWind: number | null;
   }[] = [];
 
   forecast.hourly.time.forEach((time, idx) => {
@@ -63,6 +65,8 @@ function getHourlyDataForDate(forecast: Forecast, date: string) {
         cape: forecast.hourly.cape[idx] || 0,
         cloudCover: forecast.hourly.cloud_cover[idx] || 0,
         precip: forecast.hourly.precipitation_probability[idx] || 0,
+        blh: forecast.hourly.boundary_layer_height?.[idx] ?? null,
+        upperWind: forecast.hourly.wind_speed_850hPa?.[idx] ?? null,
       });
     }
   });
@@ -115,11 +119,13 @@ export function ScoreDetailDialog({
             <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
               Score Breakdown
             </h3>
-            <FactorBar label="CAPE / Thermal Strength" score={score.factors.cape} weight="30%" />
-            <FactorBar label="Wind Speed" score={score.factors.windSpeed} weight="25%" />
-            <FactorBar label="Wind Direction Match" score={score.factors.windDirection} weight="20%" />
-            <FactorBar label="Cloud Cover" score={score.factors.cloudCover} weight="15%" />
-            <FactorBar label="Precipitation Risk" score={score.factors.precipitation} weight="10%" />
+            <FactorBar label="CAPE / Thermal Strength" score={score.factors.cape} weight="25%" />
+            <FactorBar label="Wind Speed" score={score.factors.windSpeed} weight="20%" />
+            <FactorBar label="Wind Direction Match" score={score.factors.windDirection} weight="15%" />
+            <FactorBar label="Boundary Layer Height" score={score.factors.blh} weight="15%" />
+            <FactorBar label="Upper Wind (850hPa)" score={score.factors.upperWind} weight="10%" />
+            <FactorBar label="Cloud Cover" score={score.factors.cloudCover} weight="10%" />
+            <FactorBar label="Precipitation Risk" score={score.factors.precipitation} weight="5%" />
           </div>
 
           {/* Hourly Data Table */}
@@ -137,6 +143,8 @@ export function ScoreDetailDialog({
                       <th className="py-2 text-right">Wind (km/h)</th>
                       <th className="py-2 text-right">Dir (°)</th>
                       <th className="py-2 text-right">CAPE</th>
+                      <th className="py-2 text-right">BLH (m)</th>
+                      <th className="py-2 text-right">850hPa (km/h)</th>
                       <th className="py-2 text-right">Cloud %</th>
                       <th className="py-2 text-right">Precip %</th>
                     </tr>
@@ -149,6 +157,8 @@ export function ScoreDetailDialog({
                         <td className="py-2 text-right">{hour.windSpeed.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.windDir.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.cape.toFixed(0)}</td>
+                        <td className="py-2 text-right">{hour.blh !== null ? hour.blh.toFixed(0) : '-'}</td>
+                        <td className="py-2 text-right">{hour.upperWind !== null ? hour.upperWind.toFixed(0) : '-'}</td>
                         <td className="py-2 text-right">{hour.cloudCover.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.precip.toFixed(0)}</td>
                       </tr>

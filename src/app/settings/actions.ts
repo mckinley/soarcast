@@ -37,11 +37,14 @@ function dbSettingsToApp(
 /**
  * Get current settings for authenticated user
  * Creates default settings if none exist
+ * Returns default settings for unauthenticated users (demo mode)
  */
 export async function getSettings(): Promise<Settings> {
   const session = await auth();
+
+  // Unauthenticated users get default settings (for demo mode)
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    return DEFAULT_SETTINGS;
   }
 
   // Try to get existing settings
