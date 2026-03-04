@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { getSites } from '../actions';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
@@ -6,6 +7,19 @@ import { SiteDetailClient } from '@/components/site-detail-client';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+
+// Dynamically import map display (Leaflet requires window/document)
+const MapDisplay = dynamic(
+  () => import('@/components/map-display').then((mod) => mod.MapDisplay),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[300px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading map...</p>
+      </div>
+    ),
+  }
+);
 
 export default async function SiteDetailPage({
   params,
@@ -58,6 +72,11 @@ export default async function SiteDetailPage({
           )}
           <p>Max Wind Speed: {site.maxWindSpeed} km/h</p>
           {site.notes && <p className="italic">{site.notes}</p>}
+        </div>
+
+        {/* Site location map */}
+        <div className="mt-4">
+          <MapDisplay latitude={site.latitude} longitude={site.longitude} />
         </div>
       </div>
 

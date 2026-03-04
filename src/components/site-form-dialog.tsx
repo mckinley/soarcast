@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +15,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Site } from '@/types';
+
+// Dynamically import map picker (Leaflet requires window/document)
+const MapPicker = dynamic(
+  () => import('@/components/map-picker').then((mod) => mod.MapPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading map...</p>
+      </div>
+    ),
+  }
+);
 
 interface SiteFormDialogProps {
   site?: Site;
@@ -133,7 +147,7 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
       <DialogTrigger asChild>
         {trigger || <Button>Add Site</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{site ? 'Edit Site' : 'Add Site'}</DialogTitle>
@@ -155,9 +169,25 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
               {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
             </div>
 
+            {/* Map picker */}
+            <div className="grid gap-2">
+              <Label>Location *</Label>
+              <MapPicker
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                onLocationSelect={(lat, lng) => {
+                  setFormData({
+                    ...formData,
+                    latitude: lat,
+                    longitude: lng,
+                  });
+                }}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="latitude">Latitude *</Label>
+                <Label htmlFor="latitude">Latitude * (auto-filled from map)</Label>
                 <Input
                   id="latitude"
                   type="number"
@@ -172,7 +202,7 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="longitude">Longitude *</Label>
+                <Label htmlFor="longitude">Longitude * (auto-filled from map)</Label>
                 <Input
                   id="longitude"
                   type="number"
