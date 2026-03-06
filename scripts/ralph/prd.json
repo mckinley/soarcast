@@ -1,140 +1,166 @@
 {
   "project": "SoarCast",
-  "branchName": "ralph/phase1-foundation",
-  "description": "Phase 1 Foundation — Tooling, launch site database, atmospheric profile data, and updated UI. Washington State is the high-fidelity testbed; global coverage is broad but lighter-weight.",
+  "branchName": "ralph/phase2-windgrams",
+  "description": "Phase 2 — Interactive Windgram Visualizations. Build dynamic, interactive windgram-style charts that show atmospheric profiles over time at any location. These replace static windgram images with responsive, interactive web components. Washington State launch sites are the primary testing ground.",
   "context": {
     "stack": "Next.js 16 + Turso (Drizzle ORM) + shadcn/ui + Leaflet + Tailwind v4",
-    "weatherAPI": "Open-Meteo (free, no API key). Pressure-level params: temperature_XhPa, windspeed_XhPa, winddirection_XhPa, relativehumidity_XhPa, geopotential_height_XhPa, cloudcover_XhPa where X = 1000, 950, 900, 850, 800, 700, 600, 500",
-    "siteDataAPI": "ParaglidingEarth bounding-box API: GET https://www.paragliding.earth/api/getBoundingBoxSites.php?north=X&south=X&east=X&west=X&limit=100&style=detailled — returns XML, no API key needed",
-    "washingtonBBox": { "north": 49.0, "south": 45.5, "east": -116.9, "west": -124.8 },
-    "deployment": "Vercel",
-    "database": "Turso (libsql, SQLite-compatible)"
+    "weatherAPI": "Open-Meteo pressure-level data already fetched by src/lib/weather-profile.ts",
+    "existingData": "AtmosphericProfile type with hourly data at 8 pressure levels (1000-500 hPa), surface data, computed lapse rates, thermal index, cloud base estimates",
+    "existingAPI": "GET /api/weather/profile?lat=X&lng=Y&days=2 and GET /api/sites/[slug]/profile",
+    "windgramReference": "Traditional RASP windgrams show: X-axis=time (hours), Y-axis=altitude/pressure, wind barbs at each level/hour, background color=lapse rate (stability), thermal velocity at top, cloud symbols, humidity hatching. See http://wxtofly.net/v2/windgrams.html for reference.",
+    "designValues": "Beautiful yet minimalistic. Friendly UIs. Strong UX focus. Non-technical pilots should understand it at a glance. Power users can dig into raw data."
   },
   "userStories": [
     {
       "id": "US-001",
-      "title": "Code Quality Tooling",
-      "description": "Set up Prettier, Vitest, and Playwright. Add lint-staged + husky for pre-commit hooks.",
+      "title": "Windgram Chart Component — Core Layout",
+      "description": "Build the foundational windgram chart component using a canvas-based or SVG approach. This is the core visual: a time × altitude grid with proper axes, labels, and responsive sizing.",
       "acceptanceCriteria": [
-        "Prettier installed and configured (.prettierrc with singleQuote, trailingComma all, printWidth 100)",
-        ".prettierignore excludes build outputs, node_modules, drizzle migrations",
-        "All existing source files formatted with prettier",
-        "Vitest installed with path aliases matching tsconfig (@/* -> ./src/*)",
-        "At least one example unit test passing",
-        "Playwright installed with chromium, basic smoke test (homepage loads)",
-        "Husky + lint-staged configured: pre-commit runs eslint --fix + prettier --write on staged .ts/.tsx/.js files",
-        "npm scripts added: test, test:e2e, format, format:check",
-        "All existing ESLint errors in the codebase are FIXED (not suppressed) before committing",
-        "npm run build succeeds",
-        "npm run lint passes with zero errors",
-        "npm run format:check passes"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": "IMPORTANT: The existing codebase has lint errors (any types, unescaped quotes, unused vars, Math.random in render). Fix ALL of them as part of this story. Do not commit until lint is clean."
-    },
-    {
-      "id": "US-002",
-      "title": "Launch Site Database Schema",
-      "description": "Create new database tables for global launch sites (from ParaglidingEarth) separate from user-created custom sites. Users can favorite launch sites and add personal custom monitoring points.",
-      "acceptanceCriteria": [
-        "launch_sites table created with: id, name, slug (unique), country_code, region, latitude (real), longitude (real), elevation, landing_elevation, orientations (json), site_type, flying_types (json), source, source_id, description, landing_lat, landing_lng, landing_description, max_wind_speed, ideal_wind_directions (json), last_synced_at, created_at, updated_at",
-        "user_favorite_sites table created with: id, user_id (FK), site_id (FK to launch_sites), notes, custom_max_wind, custom_ideal_directions (json), notify (boolean), created_at. UNIQUE(user_id, site_id)",
-        "custom_sites table created with: id, user_id (FK), name, latitude, longitude, elevation, max_wind_speed, ideal_wind_directions (json), created_at, updated_at",
-        "Drizzle migration generated and applies cleanly",
-        "Existing user sites data preserved (migrated to custom_sites)",
-        "Old sites table kept for backward compat during transition OR cleanly migrated",
-        "forecasts_cache updated to work with both launch_sites and custom_sites",
-        "TypeScript types exported for all new tables",
+        "New component at src/components/windgram/windgram-chart.tsx",
+        "X-axis: time (hours of day, e.g. 6AM-8PM local time)",
+        "Y-axis: altitude in meters AND feet (dual labels), with pressure levels marked",
+        "Grid lines at each hour and each pressure level",
+        "Responsive: works on mobile (360px) through desktop (1400px)",
+        "Accepts AtmosphericProfile data as props",
+        "Uses either D3.js, visx, or HTML Canvas — choose what's best for performance and interactivity",
+        "Light and dark theme support (use CSS variables from the existing theme)",
+        "Loading skeleton state while data fetches",
         "npm run build succeeds",
         "npm run lint passes"
       ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Performance matters — this chart will re-render on interactions. Canvas may be better than SVG for the background fill. Consider using visx (React bindings for D3) for a more React-native approach. The chart should feel smooth on mobile."
+    },
+    {
+      "id": "US-002",
+      "title": "Windgram — Lapse Rate Background",
+      "description": "Add the most important visual layer: background color fill showing atmospheric stability (lapse rate) at each altitude/time cell. This is what tells a pilot at a glance whether thermals will form.",
+      "acceptanceCriteria": [
+        "Each cell (time × altitude) colored by lapse rate",
+        "Color scale: unstable (warm orange/yellow, lapse rate >= 3°C/1000ft) → neutral (white/light gray, ~2°C/1000ft) → stable (cool blue/purple, <= 1°C/1000ft) → inversion (deep purple, negative lapse rate)",
+        "Color scale is visually intuitive — warm colors = good for flying, cool colors = bad",
+        "Smooth gradient between cells (not blocky)",
+        "Legend showing the color scale with labels: 'Unstable', 'Neutral', 'Stable', 'Inversion'",
+        "Lapse rate data comes from the computed derivedParams in AtmosphericProfile",
+        "npm run build succeeds",
+        "Unit test for color mapping function"
+      ],
       "priority": 2,
-      "passes": true,
-      "notes": "Be careful with the migration — existing users have sites with forecasts. Don't lose data. The forecasts_cache FK currently points to sites.id. Consider making it a simple text field (no FK) that can reference either table, or add a site_type discriminator."
+      "passes": false,
+      "notes": "The lapse rate between levels is already computed in weather-profile.ts. Use bilinear interpolation for smooth gradients between the discrete pressure levels and hours. The dry adiabatic lapse rate is ~3°C/1000ft — anything above that is unstable (good thermals)."
     },
     {
       "id": "US-003",
-      "title": "ParaglidingEarth Site Scraper",
-      "description": "Build a scraper to import paragliding launch sites from ParaglidingEarth's API. Washington State first, global capability built in.",
+      "title": "Windgram — Wind Barbs",
+      "description": "Add wind barb symbols at each pressure level and time step, showing wind speed and direction at a glance — the signature element of a windgram.",
       "acceptanceCriteria": [
-        "Scraper service at src/lib/scraper/paraglidingearth.ts",
-        "Parses XML response correctly (use a lightweight XML parser like fast-xml-parser)",
-        "Maps ParaglidingEarth data to launch_sites schema including orientations, flying types, landing info",
-        "Derives ideal_wind_directions array from orientations (directions rated 2=good become ideal)",
-        "CLI script at scripts/import-sites.ts runnable via npx tsx scripts/import-sites.ts",
-        "Supports --region washington (pre-defined bbox) and --bbox north,south,east,west",
-        "Upserts on source_id to avoid duplicates on re-import",
-        "Rate limiting: max 1 request per second to ParaglidingEarth",
-        "Washington State import succeeds and imports 50+ sites",
-        "Unit tests for XML parsing and orientation-to-direction conversion",
+        "Wind barbs rendered at each pressure level for each hour",
+        "Standard meteorological wind barb convention: shaft points into wind direction, half barb = 5 kt, full barb = 10 kt, flag = 50 kt",
+        "Wind speed in knots (convert from km/h in the data)",
+        "Barbs sized appropriately — not too dense, readable on mobile",
+        "On mobile: optionally thin out barbs (show every other level or every other hour) to avoid clutter",
+        "Color-coded by speed: light winds (green), moderate (yellow), strong (orange), dangerous (red)",
+        "Tooltip on hover/tap showing exact wind speed, direction, and altitude",
         "npm run build succeeds",
-        "npm run test passes"
+        "Unit test for wind barb rendering logic (knots to barb configuration)"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "ParaglidingEarth XML format: <search><takeoff><name/><lat/><lng/><takeoff_altitude/><orientations><N>0|1|2</N>...</orientations><paragliding>1</paragliding><hanggliding>0</hanggliding>...</takeoff><landing>...</landing></search>. Rate limit politely. Generate a slug from the name (lowercase, hyphens, no special chars)."
+      "passes": false,
+      "notes": "Wind barbs are SVG elements overlaid on the chart. The km/h to knots conversion is: knots = km/h * 0.539957. Standard barb rules: speed rounded to nearest 5 kt, then decompose into flags (50), full barbs (10), half barbs (5)."
     },
     {
       "id": "US-004",
-      "title": "Pressure-Level Atmospheric Data Service",
-      "description": "Upgrade the weather service to fetch full vertical atmospheric profiles from Open-Meteo at multiple pressure levels, enabling windgram-style visualizations in Phase 2.",
+      "title": "Windgram — Thermal & Cloud Indicators",
+      "description": "Add visual indicators for thermal activity, cloud base, top of lift, and boundary layer height — the key soaring-specific information.",
       "acceptanceCriteria": [
-        "New function fetchAtmosphericProfile(lat, lng, days?) in src/lib/weather-profile.ts",
-        "Fetches pressure-level data at 1000, 950, 900, 850, 800, 700, 600, 500 hPa",
-        "At each level: temperature, wind_speed, wind_direction, relative_humidity, geopotential_height, cloud_cover",
-        "Surface data: temperature_2m, wind_speed_10m, wind_direction_10m, wind_gusts_10m, cloud_cover, cape, precipitation_probability, boundary_layer_height, convective_inhibition, lifted_index, shortwave_radiation",
-        "TypeScript types defined: AtmosphericProfile, AtmosphericHour, PressureLevel, SurfaceData",
-        "Computed derived parameters: lapse rate between levels (°C/1000ft), thermal index, estimated cloud base (from surface temp/dewpoint spread), estimated top of lift",
-        "Separate cache table (atmospheric_profiles_cache) in Turso with 3-hour TTL",
-        "API route: GET /api/weather/profile?lat=X&lng=Y&days=2 returns JSON AtmosphericProfile",
-        "Existing simple forecast (weather.ts, scoring.ts) still works unchanged",
-        "Unit tests for lapse rate calculation, thermal index, cloud base estimation",
-        "npm run build succeeds",
-        "npm run test passes"
+        "Thermal velocity shown as text/icons along the top of the chart for each hour (like windgrams show 'W*')",
+        "Color-coded thermal strength: none (gray), weak <1m/s (light blue), moderate 1-2m/s (green), strong >2m/s (orange)",
+        "Cloud base line drawn across the chart showing estimated cloud base altitude over time",
+        "Top of lift line showing maximum useful thermal height",
+        "Boundary layer height line (from surface data)",
+        "Humidity/cloud layer shading: areas where relative humidity > 90% at a pressure level get a subtle cloud overlay pattern",
+        "These indicators are visually distinct but don't overwhelm the lapse rate background",
+        "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Open-Meteo param format: temperature_1000hPa (not temperature_1000hpa). The geopotential_height gives actual altitude at each pressure level. Lapse rate = (T_lower - T_upper) / (height_upper - height_lower) * 304.8 to get °C/1000ft. Dry adiabatic lapse rate is ~3°C/1000ft. Keep existing weather.ts untouched — this is a NEW service alongside it."
+      "passes": false,
+      "notes": "Cloud base, top of lift, and thermal velocity are already computed in weather-profile.ts derivedParams. The boundary layer height comes from surface data. Keep these overlays subtle — dashed lines, semi-transparent fills. The lapse rate background should remain the primary visual."
     },
     {
       "id": "US-005",
-      "title": "Updated Site Pages & Navigation",
-      "description": "Update the UI to browse imported launch sites, favorite them, and see enriched data. Keep existing custom site functionality working.",
+      "title": "Windgram — Interactivity & Detail Panel",
+      "description": "Make the windgram interactive: hover/tap to see detailed data, zoom, and switch between days.",
       "acceptanceCriteria": [
-        "Browse Sites page (/sites/browse) showing all imported WA launch sites on a Leaflet map",
-        "Site markers on map, clicking opens popup with name + elevation + link to detail page",
-        "Search/filter by name and region on browse page",
-        "Site detail page (/sites/[slug]) shows enriched data: name, elevation, orientations, landing info, source attribution",
-        "Authenticated users can favorite/unfavorite launch sites",
-        "Dashboard shows user's favorited launch sites + custom sites",
-        "Existing custom site create/edit/delete still works",
-        "Mobile-friendly layout (responsive)",
+        "Hover crosshair that follows mouse/finger showing current time and altitude",
+        "Detail panel (side or bottom) showing exact values at the crosshair position: temperature, wind speed/direction, humidity, lapse rate, thermal index",
+        "Click/tap to pin the crosshair and keep the detail panel open",
+        "Day selector tabs to switch between forecast days (up to 7 days)",
+        "Smooth transitions when switching days",
+        "Touch-friendly: works with finger on mobile, not just mouse",
+        "Keyboard accessible: arrow keys move crosshair",
         "npm run build succeeds",
         "npm run lint passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Use slugs for launch site URLs (not UUIDs). Keep the existing /sites page for user's own sites and favorites. The /sites/browse page is for discovery. Leaflet must be dynamically imported (no SSR) — use the existing map-display-wrapper.tsx pattern."
+      "passes": false,
+      "notes": "The detail panel is crucial for non-technical pilots — they hover over the chart and get plain-language explanations. Consider using a floating tooltip on desktop and a fixed bottom sheet on mobile."
     },
     {
       "id": "US-006",
-      "title": "API Routes for Site & Atmospheric Data",
-      "description": "Create clean REST API endpoints for sites and atmospheric profiles that the Phase 2 windgram component will consume.",
+      "title": "Windgram — Simple Flyability Summary",
+      "description": "Above the windgram chart, show a simple at-a-glance flyability assessment for pilots who don't want to interpret the chart themselves.",
       "acceptanceCriteria": [
-        "GET /api/sites?region=washington&type=paragliding — returns filtered launch sites",
-        "GET /api/sites/[slug] — returns single site with full details",
-        "GET /api/sites/[slug]/profile — returns atmospheric profile for a specific site",
-        "GET /api/weather/profile?lat=X&lng=Y&days=2 — returns atmospheric profile for arbitrary location",
-        "All routes return proper JSON with appropriate HTTP status codes",
-        "Cache-Control headers set appropriately (atmospheric data: max-age=3600)",
-        "Error responses are consistent: { error: string, status: number }",
+        "Summary bar above the windgram for each day",
+        "Shows: flyability rating (Epic/Great/Good/Fair/Poor with color), best window (e.g. '11AM-3PM'), key concerns (e.g. 'Strong upper winds', 'Low cloud base')",
+        "Plain language: 'Looks like a great XC day! Best window 11AM-3PM. Watch for increasing winds after 2PM.'",
+        "Uses existing scoring algorithm plus atmospheric profile data for richer assessment",
+        "Expandable to show more detail (wind at launch altitude, thermal strength estimate)",
+        "Designed for the pilot who just wants to know: should I drive to launch today?",
+        "npm run build succeeds"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "This is the UX layer that makes SoarCast accessible to non-weather-nerds. The windgram is the power tool; this summary is the quick answer. Use the atmospheric profile data to generate more nuanced assessments than the current simple scoring."
+    },
+    {
+      "id": "US-007",
+      "title": "Integrate Windgrams into Site Pages",
+      "description": "Wire the windgram component into the site detail pages so users can see atmospheric profiles for any launch site or custom location.",
+      "acceptanceCriteria": [
+        "Site detail page (/sites/[slug]) shows windgram as the hero visualization",
+        "Flyability summary above the windgram",
+        "Custom site pages (/sites/custom/[id]) also show windgram",
+        "Map click: clicking any point on the browse map (/sites/browse) shows a windgram for that location (bottom sheet or modal)",
+        "Loading states while atmospheric data fetches",
+        "Error states if Open-Meteo is unavailable",
+        "The old simple forecast table/cards are available in an 'Advanced' or 'Table View' tab",
+        "npm run build succeeds",
+        "npm run lint passes",
+        "Playwright E2E test: navigate to a WA launch site, verify windgram renders"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "The windgram fetch can be slow (multiple pressure levels). Use React Suspense or SWR for client-side data fetching with good loading states. The site detail page should feel fast — show site info immediately, then load the windgram. Consider prefetching profiles for favorited sites."
+    },
+    {
+      "id": "US-008",
+      "title": "Multi-Day Dashboard Thumbnails",
+      "description": "On the dashboard, show small windgram thumbnails for each favorited site giving an at-a-glance 7-day overview.",
+      "acceptanceCriteria": [
+        "Dashboard shows each favorited/custom site as a card",
+        "Each card has a small windgram thumbnail (simplified: just lapse rate colors, no barbs) for today",
+        "Flyability rating badge on each card (Epic/Great/Good/Fair/Poor)",
+        "7-day mini bar showing flyability rating for each day (colored dots or small bars)",
+        "Click card → navigate to full site detail page with full windgram",
+        "Cards are responsive: 1 column on mobile, 2-3 on desktop",
+        "Performance: thumbnails should load quickly (simplified rendering, smaller data fetch)",
         "npm run build succeeds",
         "npm run lint passes"
       ],
-      "priority": 6,
-      "passes": true,
-      "notes": "The /api/weather/profile route was created in US-004. This story adds the site-specific routes and ensures consistent API design across all endpoints. Consider rate limiting for the profile endpoints since they hit Open-Meteo."
+      "priority": 8,
+      "passes": false,
+      "notes": "Thumbnails are a simplified version of the windgram — just the background colors, maybe 100x60px. Don't fetch full atmospheric profiles for thumbnails; use the existing simple forecast data for the 7-day bar and only the first day's profile for the thumbnail. Lazy-load thumbnails as they scroll into view."
     }
   ]
 }
