@@ -21,6 +21,9 @@ Started: Fri Mar 6 2026
 - CLI scripts: Add `import 'dotenv/config'` at top to load .env before accessing process.env
 - Drizzle timestamp columns expect Date objects, not numbers (use `new Date()` not `Date.now()`)
 - Vitest config: Exclude e2e folder to prevent Playwright tests from running in vitest
+- Weather services: `weather.ts` (simple forecasts, 6hr cache) and `weather-profile.ts` (atmospheric profiles, 3hr cache)
+- API routes: Use NextResponse.json() with Cache-Control headers for CDN caching (s-maxage for shared cache)
+- Location-based cache keys: Round coordinates to 2 decimal places (~1km precision) for better cache hit rates
 ---
 
 ## 2026-03-06 17:48 - US-001
@@ -87,5 +90,31 @@ Started: Fri Mar 6 2026
   - Unique constraints must exist on conflict target columns - needed migration to add missing index
   - Vitest exclude config: add e2e folder to prevent Playwright tests from running in vitest
   - CLI scripts need `import 'dotenv/config'` at the top to load .env file before importing modules that access process.env
+---
+
+## 2026-03-06 18:08 - US-004
+- Implemented pressure-level atmospheric profile service for windgram visualizations
+- Files changed:
+  - Created: src/lib/weather-profile.ts (full atmospheric profile service)
+  - Created: src/lib/__tests__/weather-profile.test.ts (22 unit tests for calculations)
+  - Created: src/app/api/weather/profile/route.ts (API endpoint with validation)
+  - Created: drizzle/0005_tired_wallflower.sql (atmospheric_profiles_cache table)
+  - Modified: src/db/schema.ts (added atmosphericProfilesCache table)
+- Implementation details:
+  - Fetches 8 pressure levels (1000-500 hPa) with 6 parameters each from Open-Meteo
+  - Surface data: temperature, wind, gusts, cloud cover, CAPE, precipitation probability, BLH, CIN, lifted index, shortwave radiation
+  - Derived parameters: lapse rate (°C/1000ft), thermal index (0-100 composite score), estimated cloud base (from temp/dewpoint), estimated top of lift (from BLH + CAPE)
+  - Location-based caching with rounded coordinates (~1km precision) and 3-hour TTL
+  - API route: GET /api/weather/profile?lat=X&lng=Y&days=2 with validation and CDN caching
+  - All 22 unit tests passing (lapse rate, cloud base, thermal index, top of lift)
+- **Learnings for future iterations:**
+  - Open-Meteo pressure-level format: `temperature_1000hPa` (capital Pa, not lowercase)
+  - Lapse rate calculation: (T_lower - T_upper) / (height_diff_ft / 1000) for °C/1000ft
+  - Thermal index is composite: lapse (0-40) + CAPE (0-30) + CIN (0-15) + wind (0-15) = 0-100
+  - Cloud base estimation uses Magnus formula: dewpoint = f(temp, RH), then (T-Td)/2.5*1000 ft
+  - Location-based cache keys use rounded coordinates (2 decimal places) to improve cache hit rate
+  - Separate cache table for atmospheric profiles (3hr TTL) vs simple forecasts (6hr TTL)
+  - Weather profile service kept separate from existing weather.ts to avoid breaking existing code
+  - Test carefully for wind penalties - strong winds reduce thermal index but not as much as expected
 ---
 

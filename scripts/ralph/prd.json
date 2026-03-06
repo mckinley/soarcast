@@ -94,7 +94,7 @@
         "npm run test passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Open-Meteo param format: temperature_1000hPa (not temperature_1000hpa). The geopotential_height gives actual altitude at each pressure level. Lapse rate = (T_lower - T_upper) / (height_upper - height_lower) * 304.8 to get °C/1000ft. Dry adiabatic lapse rate is ~3°C/1000ft. Keep existing weather.ts untouched — this is a NEW service alongside it."
     },
     {
