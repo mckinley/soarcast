@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getLaunchSites } from './actions';
+import { getLaunchSites, getFilterOptions } from './actions';
 import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { SitesBrowseClient } from './browse-client';
 
@@ -12,13 +12,32 @@ export const metadata: Metadata = {
 export default async function BrowseSitesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; region?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    region?: string;
+    country?: string;
+    siteType?: string;
+    orientations?: string;
+    sort?: string;
+    minScore?: string;
+  }>;
 }) {
   const params = await searchParams;
+
+  // Parse orientations from comma-separated string
+  const orientations = params.orientations
+    ? params.orientations.split(',').filter(Boolean)
+    : undefined;
+
   const sites = await getLaunchSites({
     search: params.search,
     region: params.region,
+    country: params.country,
+    siteType: params.siteType,
+    orientations,
   });
+
+  const filterOptions = await getFilterOptions();
 
   return (
     <div className="space-y-6">
@@ -29,7 +48,7 @@ export default async function BrowseSitesPage({
         </p>
       </div>
 
-      <SitesBrowseClient initialSites={sites} />
+      <SitesBrowseClient initialSites={sites} filterOptions={filterOptions} searchParams={params} />
 
       <div className="mt-6">
         <SitesBrowseMapWrapper sites={sites} />

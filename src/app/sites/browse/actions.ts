@@ -12,35 +12,69 @@ import { revalidatePath } from 'next/cache';
 export async function getLaunchSites(filters?: {
   search?: string;
   region?: string;
+  country?: string;
+  siteType?: string;
+  orientations?: string[]; // e.g., ['N', 'NE', 'E']
 }): Promise<LaunchSite[]> {
-  let query = db.query.launchSites.findMany({
+  const conditions = [];
+
+  // Full-text search across name, region, country
+  if (filters?.search) {
+    conditions.push(
+      or(
+        like(launchSites.name, `%${filters.search}%`),
+        like(launchSites.region, `%${filters.search}%`),
+        like(launchSites.countryCode, `%${filters.search}%`),
+      ),
+    );
+  }
+
+  // Filter by region
+  if (filters?.region) {
+    conditions.push(eq(launchSites.region, filters.region));
+  }
+
+  // Filter by country
+  if (filters?.country) {
+    conditions.push(eq(launchSites.countryCode, filters.country));
+  }
+
+  // Filter by site type
+  if (filters?.siteType) {
+    conditions.push(eq(launchSites.siteType, filters.siteType));
+  }
+
+  // Note: orientation filtering is done client-side in the component
+  // because orientations is a JSON field and complex to query efficiently in SQLite
+
+  const sites = await db.query.launchSites.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
     orderBy: (launchSites, { asc }) => [asc(launchSites.name)],
   });
 
-  // Apply filters if provided
-  if (filters?.search || filters?.region) {
-    const conditions = [];
+  return sites;
+}
 
-    if (filters.search) {
-      conditions.push(
-        or(
-          like(launchSites.name, `%${filters.search}%`),
-          like(launchSites.region, `%${filters.search}%`),
-        ),
-      );
-    }
+/**
+ * Get unique values for filter dropdowns
+ */
+export async function getFilterOptions(): Promise<{
+  regions: string[];
+  countries: string[];
+  siteTypes: string[];
+}> {
+  const sites = await db.query.launchSites.findMany();
 
-    if (filters.region) {
-      conditions.push(eq(launchSites.region, filters.region));
-    }
+  // Extract unique values
+  const regions = [...new Set(sites.map((s) => s.region).filter(Boolean))] as string[];
+  const countries = [...new Set(sites.map((s) => s.countryCode).filter(Boolean))] as string[];
+  const siteTypes = [...new Set(sites.map((s) => s.siteType).filter(Boolean))] as string[];
 
-    query = db.query.launchSites.findMany({
-      where: conditions.length > 1 ? and(...conditions) : conditions[0],
-      orderBy: (launchSites, { asc }) => [asc(launchSites.name)],
-    });
-  }
-
-  return query;
+  return {
+    regions: regions.sort(),
+    countries: countries.sort(),
+    siteTypes: siteTypes.sort(),
+  };
 }
 
 /**

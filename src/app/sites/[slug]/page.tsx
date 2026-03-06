@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { LaunchSiteFavoriteButton } from './favorite-button';
+import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { auth } from '@/auth';
 
 export async function generateMetadata({
@@ -77,6 +78,9 @@ export default async function LaunchSiteDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* Track recently viewed sites */}
+      <RecentSiteTracker site={{ id: site.id, name: site.name, slug: site.slug }} />
+
       {/* Header with back navigation */}
       <div>
         <Link href="/sites/browse">
