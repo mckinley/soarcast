@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  computeLapseRatesForHour,
+  lapseRateToColor,
+  bilinearInterpolate,
+} from './lapse-rate-utils';
 
 interface WindgramChartProps {
   data: AtmosphericProfile | null;
@@ -53,6 +59,8 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const { resolvedTheme } = useTheme();
+  const isDarkTheme = resolvedTheme === 'dark';
 
   // Handle responsive sizing
   useEffect(() => {
@@ -161,6 +169,77 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // ========================================
+    // DRAW LAPSE RATE BACKGROUND (US-002)
+    // ========================================
+    // Compute lapse rates for each hour at each layer
+    const lapseRateGrid: (number | null)[][] = daylightHours.map((hour) =>
+      computeLapseRatesForHour(hour),
+    );
+
+    // Render colored cells with smooth gradients
+    const numLayers = PRESSURE_LEVELS.length - 1; // Number of layers between pressure levels
+
+    for (let layerIdx = 0; layerIdx < numLayers; layerIdx++) {
+      for (let timeIdx = 0; timeIdx < daylightHours.length; timeIdx++) {
+        // Calculate cell boundaries
+        const x1 = CHART_PADDING.left + (timeIdx / (daylightHours.length - 1)) * chartWidth;
+        const x2 =
+          timeIdx < daylightHours.length - 1
+            ? CHART_PADDING.left + ((timeIdx + 1) / (daylightHours.length - 1)) * chartWidth
+            : CHART_PADDING.left + chartWidth;
+        const y1 = CHART_PADDING.top + (layerIdx / numLayers) * chartHeight;
+        const y2 = CHART_PADDING.top + ((layerIdx + 1) / numLayers) * chartHeight;
+
+        const cellWidth = x2 - x1;
+        const cellHeight = y2 - y1;
+
+        // For smooth gradients, use bilinear interpolation
+        // Get neighboring lapse rates for gradient calculation
+        const lapseRate_00 = lapseRateGrid[timeIdx]?.[layerIdx] ?? null;
+        const lapseRate_10 =
+          timeIdx < daylightHours.length - 1
+            ? (lapseRateGrid[timeIdx + 1]?.[layerIdx] ?? null)
+            : lapseRate_00;
+        const lapseRate_01 =
+          layerIdx < numLayers - 1
+            ? (lapseRateGrid[timeIdx]?.[layerIdx + 1] ?? null)
+            : lapseRate_00;
+        const lapseRate_11 =
+          timeIdx < daylightHours.length - 1 && layerIdx < numLayers - 1
+            ? (lapseRateGrid[timeIdx + 1]?.[layerIdx + 1] ?? null)
+            : lapseRate_00;
+
+        // Create gradient within cell for smooth transition
+        // Sample 4 sub-cells for better gradient quality
+        const subSamples = 2;
+        for (let sy = 0; sy < subSamples; sy++) {
+          for (let sx = 0; sx < subSamples; sx++) {
+            const subX1 = x1 + (sx / subSamples) * cellWidth;
+            const subY1 = y1 + (sy / subSamples) * cellHeight;
+            const subWidth = cellWidth / subSamples;
+            const subHeight = cellHeight / subSamples;
+
+            // Interpolate lapse rate at center of sub-cell
+            const xFrac = (sx + 0.5) / subSamples;
+            const yFrac = (sy + 0.5) / subSamples;
+            const interpolatedRate = bilinearInterpolate(
+              xFrac,
+              yFrac,
+              lapseRate_00,
+              lapseRate_10,
+              lapseRate_01,
+              lapseRate_11,
+            );
+
+            const color = lapseRateToColor(interpolatedRate, isDarkTheme);
+            ctx.fillStyle = color;
+            ctx.fillRect(subX1, subY1, subWidth, subHeight);
+          }
+        }
+      }
+    }
+
     // Draw grid lines and labels
     ctx.strokeStyle = gridColorRgba;
     ctx.lineWidth = 1;
@@ -227,7 +306,7 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.textAlign = 'center';
     ctx.fillText('Altitude', 0, 0);
     ctx.restore();
-  }, [data, dimensions]);
+  }, [data, dimensions, isDarkTheme]);
 
   // Loading skeleton
   if (loading || !data) {
