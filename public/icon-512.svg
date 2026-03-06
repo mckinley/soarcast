@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded rectangle background -->
+  <rect width="512" height="512" rx="76.8" fill="url(#bgGrad)"/>
+
+  <!-- Cloud shape -->
+  <g fill="white">
+    <ellipse cx="179.2" cy="230.39999999999998" rx="38.4" ry="38.4"/>
+    <ellipse cx="256" cy="192" rx="64" ry="64"/>
+    <ellipse cx="332.8" cy="230.39999999999998" rx="38.4" ry="38.4"/>
+    <ellipse cx="256" cy="281.6" rx="128" ry="89.6"/>
+  </g>
+
+  <!-- Wind lines -->
+  <g stroke="white" stroke-width="7.68" stroke-linecap="round" fill="none">
+    <path d="M 153.6,332.79999999999995 Q 256,325.12 358.4,332.79999999999995"/>
+    <path d="M 153.6,353.28 Q 256,345.6 358.4,353.28"/>
+    <path d="M 153.6,373.76 Q 256,366.08 358.4,373.76"/>
+  </g>
+</svg>

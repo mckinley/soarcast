@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import type { DayScore } from '@/types';
 import { WindgramChart } from './windgram-chart';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
+import { useAttachTouchGestures } from '@/hooks/use-touch-gestures';
 
 interface WindgramInteractiveProps {
   data: AtmosphericProfile | null;
@@ -29,6 +30,7 @@ export function WindgramInteractive({
   className = '',
 }: WindgramInteractiveProps) {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Split hours into days
   const days = useMemo(() => {
@@ -70,12 +72,31 @@ export function WindgramInteractive({
     return dayScores.find((score) => score.date === dateString);
   }, [days, selectedDayIndex, dayScores]);
 
+  // Handle swipe gestures for day navigation
+  const handleSwipeLeft = useCallback(() => {
+    if (selectedDayIndex < days.length - 1) {
+      setSelectedDayIndex(selectedDayIndex + 1);
+    }
+  }, [selectedDayIndex, days.length]);
+
+  const handleSwipeRight = useCallback(() => {
+    if (selectedDayIndex > 0) {
+      setSelectedDayIndex(selectedDayIndex - 1);
+    }
+  }, [selectedDayIndex]);
+
+  // Attach touch gesture handlers to container
+  useAttachTouchGestures(containerRef, {
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+  });
+
   if (loading || !data) {
     return <WindgramChart data={null} loading={true} className={className} />;
   }
 
   return (
-    <div className={className}>
+    <div ref={containerRef} className={className}>
       {/* Day selector */}
       {days.length > 1 && (
         <WindgramDaySelector
@@ -97,13 +118,18 @@ export function WindgramInteractive({
         </div>
       )}
 
-      {/* Chart with smooth transition */}
+      {/* Chart with smooth transition and swipe hint */}
       <div
         key={selectedDayIndex}
-        className="transition-opacity duration-300"
+        className="transition-opacity duration-300 relative"
         style={{ animation: 'fadeIn 0.3s ease-in-out' }}
       >
         <WindgramChart data={selectedDayData} loading={false} />
+        {days.length > 1 && (
+          <p className="text-xs text-muted-foreground text-center mt-2 md:hidden">
+            👈 Swipe to change days 👉
+          </p>
+        )}
       </div>
 
       <style jsx>{`
