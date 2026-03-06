@@ -237,3 +237,66 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Windgram null safety: Existing code already handles null values gracefully
 - No changes needed - defensive programming from initial implementation
 ---
+## 2026-03-06 20:15 - US-006
+- Implemented comprehensive mobile responsive design audit and polish
+- Created PWA icons:
+  - Generated SVG icons at 192x192, 512x512, 180x180 (apple-touch-icon), and 32x32 (favicon)
+  - Updated manifest.json to reference SVG icons
+  - Created icon generation scripts (scripts/generate-icons-svg.mjs)
+  - Modern browsers support SVG PWA icons, providing sharp icons at all resolutions
+- Enhanced touch interactions:
+  - Created useTouch Gestures hook (src/hooks/use-touch-gestures.ts)
+  - Supports swipe left/right, pinch-to-zoom, tap, and double-tap
+  - Integrated swipe gestures into WindgramInteractive for day navigation
+  - Added visual swipe hint on mobile ("👈 Swipe to change days 👉")
+  - Touch gestures work seamlessly with existing mouse/keyboard interactions
+- Fixed tap target sizes for mobile accessibility:
+  - Updated all button sizes in src/components/ui/button.tsx
+  - default: 36px → 44px (h-9 → h-11)
+  - sm: 32px → 40px (h-8 → h-10)
+  - xs: 24px → 32px (h-6 → h-8)
+  - lg: 40px → 48px (h-10 → h-12)
+  - icon sizes increased proportionally (icon: 36px → 44px)
+  - Now meets Apple HIG minimum 44px tap target recommendation
+- Mobile layout verified:
+  - Existing code already handles responsive layout well
+  - App shell collapses sidebar to Sheet component on mobile
+  - Windgram chart already has mobile-specific rendering (reduced barb density)
+  - No horizontal scroll issues found in existing pages
+- Created comprehensive Playwright test suite (tests/mobile-responsive.spec.ts):
+  - Tests all pages at 390px viewport (iPhone 14 Pro)
+  - Validates no horizontal scroll at all breakpoints (360px, 390px, 428px, 768px, 1024px, 1440px)
+  - Checks readable font sizes (headings ≥20px, body ≥14px)
+  - Validates touch-friendly tap targets (≥40px height)
+  - Tests mobile navigation menu open/close
+  - Tests PWA manifest.json and icon loading
+  - Tests windgram day selector and swipe functionality
+  - Tests browse page filters and site cards on mobile
+- PWA features verified:
+  - manifest.json properly configured with shortcuts
+  - Icons available at all required sizes
+  - Theme color and apple-mobile-web-app-capable meta tags present
+  - Display mode set to "standalone" for app-like experience
+- Files changed:
+  - public/icon-192.svg, public/icon-512.svg (new PWA icons)
+  - public/apple-touch-icon.svg, public/favicon.svg (new icons)
+  - public/manifest.json (updated icon references and shortcuts)
+  - scripts/generate-icons-svg.mjs (icon generation script)
+  - src/components/ui/button.tsx (increased tap target sizes)
+  - src/components/windgram/windgram-interactive.tsx (touch gestures)
+  - src/hooks/use-touch-gestures.ts (new touch gesture hook)
+  - tests/mobile-responsive.spec.ts (comprehensive mobile tests)
+- Quality checks: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- Modern browsers support SVG favicons and PWA icons - no need for PNG conversion
+- Touch gesture detection: swipe requires deltaX > 50px and horizontal bias (deltaX > 2*deltaY)
+- Pinch zoom: track initialDistance between two touch points, scale = currentDistance / initialDistance
+- Button sizes matter: Apple HIG recommends 44x44px minimum, Android suggests 48x48dp
+- Playwright viewport testing: use page.setViewportSize() to test multiple breakpoints
+- Touch-friendly UI: Increase tap targets, show visual feedback, provide hints for gestures
+- SVG icons scale perfectly and save bandwidth compared to multiple PNG sizes
+- Responsive testing should check: no horizontal scroll, readable fonts, touch targets, navigation flow
+- Windgram already mobile-friendly: reduces barb density automatically on small screens
+- Don't forget to test PWA features: manifest.json, icons, meta tags, display mode
+---

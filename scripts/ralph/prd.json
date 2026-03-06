@@ -134,7 +134,7 @@
         "npm run build succeeds"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Use Playwright's setViewportSize for mobile testing. The windgram chart needs special attention on mobile \u2014 consider a simplified view that shows key info without requiring precise hover targeting."
     }
   ]
