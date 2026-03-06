@@ -89,3 +89,46 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Filter UI: Sheet component from shadcn/ui works great for mobile filter panels
 - Active filter badges: Visual feedback with quick removal improves discoverability
 ---
+## 2026-03-06 22:30 - US-003
+- Implemented onboarding flow for new users with public landing page
+- Added onboardingCompleted field to settings schema
+- Created and applied migration 0008_onboarding_field.sql
+- Created new public landing page at root (/):
+  - Hero section with clear value proposition "Know when to fly, before you drive"
+  - Sample windgram preview card for Tiger Mountain showing key metrics
+  - Features section with 6 cards highlighting core capabilities
+  - Mobile-first responsive design with CTAs for browse and sign-in
+  - Footer with Open-Meteo attribution
+- Moved dashboard from / to /dashboard route (protected)
+- Created OnboardingFlow component (src/components/onboarding-flow.tsx):
+  - 3-step modal overlay shown after first sign-in
+  - Step 1: Welcome with feature overview (atmospheric profiles, notifications)
+  - Step 2: Site discovery with nearby/popular sites list (uses geolocation)
+  - Step 3: Completion screen with quick tips
+  - Fully skippable with X button at any time
+  - Progress indicators at bottom
+- Added getOnboardingStatus and completeOnboarding server actions
+- Dashboard conditionally renders onboarding flow for first-time users
+- Files changed:
+  - drizzle/0008_onboarding_field.sql: Migration for onboarding field
+  - src/db/schema.ts: Added onboardingCompleted boolean to settings
+  - src/app/page.tsx: New public landing page with hero showcase
+  - src/app/dashboard/page.tsx: Moved from root, added onboarding check
+  - src/app/dashboard/actions.ts: Fixed imports after file move
+  - src/app/settings/actions.ts: Added onboarding status actions
+  - src/components/onboarding-flow.tsx: New 3-step guided flow
+  - src/components/dashboard-client.tsx: Fixed import path
+- Quality checks: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- Landing page pattern: Show immediate value (sample windgram preview) before asking for sign-in
+- Onboarding state: Track in settings table, not user table (allows reset without user deletion)
+- Modal overlays: Use fixed positioning with backdrop-blur for focus
+- Geolocation API: Request permission on-demand, fail silently with fallback (popular sites)
+- Skippable flows: Always provide X button - experienced users shouldn't be forced through steps
+- Progress indicators: Simple dot indicators (active vs muted) work well for multi-step flows
+- Mobile-first: Landing page tested on mobile breakpoints (360px, 390px, 768px)
+- Route restructure: Dashboard moved from / to /dashboard, root becomes public landing
+- Server actions for state: completeOnboarding updates DB and revalidates dashboard path
+- First-time UX: Show onboarding only when onboardingCompleted is false and user is authenticated
+---

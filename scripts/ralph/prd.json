@@ -79,7 +79,7 @@
         "npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Most paraglider pilots will discover SoarCast on their phone, shared by another pilot. First impression matters. Show a beautiful windgram for a well-known site as the hero, then let them explore."
     },
     {
