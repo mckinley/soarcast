@@ -96,3 +96,36 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Knot conversion:** 1 kt = 1.852 km/h, so km/h to knots = km/h × 0.539957. Always round to nearest integer for display.
 ---
 
+## Fri Mar 6 19:00:00 +07 2026 - US-004
+- ✅ Implemented thermal and cloud indicators for windgram
+- Created `thermal-cloud-utils.ts` with utilities for:
+  - Thermal strength categorization and colored badges (none/weak/moderate/strong)
+  - Altitude-to-Y coordinate conversion
+  - Smooth line drawing for atmospheric layers (cloud base, top of lift, boundary layer)
+  - Moisture/cloud shading with diagonal hatching pattern for high humidity areas (RH > 90%)
+  - Line labels with background badges
+- Updated `WindgramChart` to render:
+  - Thermal index badges at top of chart (color-coded by strength)
+  - Cloud base line (cyan dashed)
+  - Top of lift line (green dashed)
+  - Boundary layer height line (orange dashed)
+  - Humidity hatching for areas with RH > 90%
+  - Line labels at right edge of chart
+- Increased chart padding: top from 40→50px (for thermal badges), right from 60→120px (for line labels)
+- All overlays are subtle and don't overwhelm the lapse rate background
+
+**Files changed:**
+- src/components/windgram/thermal-cloud-utils.ts (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Thermal index badges vs velocity text:** The PRD mentioned "thermal velocity" like traditional windgrams show "W*" (in m/s). However, the existing `derivedParams` only provides `thermalIndex` (0-100 composite score), not a direct thermal velocity measurement. I used the thermal index with color-coded badges instead, which provides similar information in a more accessible format for pilots.
+- **Layer ordering matters:** Draw moisture shading BEFORE wind barbs so barbs remain clearly visible. Draw atmospheric lines BEFORE barbs but AFTER moisture shading for optimal layering.
+- **Label placement strategy:** Place line labels at the right edge using the last non-null Y value for each line. Use semi-transparent backgrounds for readability over the chart.
+- **Humidity shading subtlety:** Use low opacity (max 0.3) and diagonal line pattern instead of solid fills. Only show for RH > 90% to avoid cluttering the chart.
+- **Coordinate conversion is essential:** The `altitudeToY()` utility converts meters MSL to canvas Y coordinates. Remember to convert AGL measurements (cloud base, boundary layer) to MSL by adding elevation.
+- **Mobile optimization:** Thermal badges are also thinned out on mobile (every other hour) to match wind barb density.
+- **Color choices match pilot intuition:** Cyan/blue for clouds, green for top of lift (where you want to be), orange for boundary layer (mixing height).
+---
+
