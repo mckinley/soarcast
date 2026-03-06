@@ -129,3 +129,48 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Color choices match pilot intuition:** Cyan/blue for clouds, green for top of lift (where you want to be), orange for boundary layer (mixing height).
 ---
 
+## Fri Mar 6 19:15:00 +07 2026 - US-005
+- ✅ Implemented interactive windgram with crosshair, detail panel, and day selection
+- Created `WindgramDetailPanel` component:
+  - Shows comprehensive atmospheric data at crosshair position
+  - Temperature (°C and °F), wind (knots, mph, direction, cardinal), humidity
+  - Computed lapse rate with plain-language stability assessment
+  - Thermal index display
+  - Pinned mode with close button
+- Created `WindgramDaySelector` component:
+  - Tab-based navigation for multi-day forecasts (Today, Tomorrow, day names)
+  - Accessible with ARIA roles
+  - Responsive button layout
+- Created `WindgramInteractive` wrapper component:
+  - Splits multi-day data into per-day charts
+  - Handles day switching with smooth fade transitions
+  - Manages selected day state
+- Updated `WindgramChart` with full interactivity:
+  - Crosshair rendering on canvas (dashed lines + center circle)
+  - Hover/touch tracking with snapping to hour grid
+  - Click/tap to pin crosshair (blue pin icon when pinned)
+  - Keyboard navigation: arrow keys move crosshair, Escape to unpin
+  - Auto-initialize crosshair on first arrow key press
+  - Detail panel integration (side panel on desktop, below on mobile)
+  - Separate wind barb tooltip (only shows when crosshair is not active)
+  - Helpful hint text below chart explaining controls
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/windgram-detail-panel.tsx (new)
+- src/components/windgram/windgram-day-selector.tsx (new)
+- src/components/windgram/windgram-interactive.tsx (new)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Crosshair UX pattern:** Hover shows crosshair, click pins it. Pinned crosshair stays visible and is navigable with keyboard. This matches user expectations from other chart tools (TradingView, etc.).
+- **Canvas-based crosshair:** Drawing crosshair directly on canvas keeps everything synchronized. Use dashed lines (`setLineDash([4, 4])`) for subtlety. Remember to reset dash with `setLineDash([])` after drawing.
+- **Detail panel positioning:** Use flexbox with `flex-col lg:flex-row` for responsive layout. On desktop, detail panel is sticky sidebar (`lg:sticky lg:top-4`). On mobile, it flows below the chart.
+- **Plain-language assessments:** Non-technical pilots benefit from color-coded labels like "Unstable (Good thermals)" instead of just "3.5°C/1000ft". Match colors to intuition (orange=unstable=good for soaring).
+- **Keyboard navigation:** Initialize crosshair in center on first arrow key press. Use arrow keys for navigation (left/right for time, up/down for altitude). Escape key to unpin and clear crosshair.
+- **Touch vs mouse:** Crosshair works with both mouse hover and touch. On touch devices, the crosshair appears on tap and stays visible (essentially auto-pinned).
+- **Day switching:** Split hours by `toDateString()` to group into days. Use fade animation for smooth transitions between days. Show "Today" and "Tomorrow" labels for the first two days.
+- **Accessibility:** Use `tabIndex={0}` on canvas for keyboard focus. Add `role="img"` and `aria-label` for screen readers. Hint text below chart explains controls.
+- **Don't show crosshair detail and wind barb tooltip simultaneously:** Only show wind barb tooltip when crosshair is not active to avoid visual clutter.
+---
+

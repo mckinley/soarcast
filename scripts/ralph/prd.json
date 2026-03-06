@@ -103,7 +103,7 @@
         "npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The detail panel is crucial for non-technical pilots — they hover over the chart and get plain-language explanations. Consider using a floating tooltip on desktop and a fixed bottom sheet on mobile."
     },
     {
