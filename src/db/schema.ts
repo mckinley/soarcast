@@ -70,7 +70,7 @@ export const launchSites = sqliteTable('launch_sites', {
   siteType: text('site_type'), // "takeoff", "landing", etc.
   flyingTypes: text('flying_types', { mode: 'json' }).$type<string[]>(), // ["paragliding", "hanggliding"]
   source: text('source').notNull(), // "paraglidingearth"
-  sourceId: text('source_id').notNull(), // external ID
+  sourceId: text('source_id').notNull().unique(), // external ID
   description: text('description'),
   landingLat: text('landing_lat'),
   landingLng: text('landing_lng'),

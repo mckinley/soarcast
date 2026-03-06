@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `launch_sites_source_id_unique` ON `launch_sites` (`source_id`);
