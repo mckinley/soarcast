@@ -62,3 +62,37 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Theme-aware color mapping:** Same lapse rate needs different RGB values in light vs dark mode for good contrast and readability.
 
 ---
+## Fri Mar 6 18:43:00 +07 2026 - US-003
+- ✅ Implemented wind barb visualization for windgram
+- Created wind barb utility functions and rendering:
+  - `kmhToKnots()`: Converts wind speed from km/h to knots (km/h * 0.539957)
+  - `windSpeedToBarb()`: Converts wind speed/direction to standard meteorological barb configuration (flags, full barbs, half barbs)
+  - `drawWindBarb()`: Renders wind barb on canvas using standard convention (shaft points into wind, barbs on right side)
+  - `formatWindTooltip()`: Formats wind data for tooltip display (speed in kt/mph, cardinal direction, altitude)
+- Added wind barb rendering to `WindgramChart` component:
+  - Renders barbs at each pressure level and hour (8 levels × ~15 hours = ~120 barbs per day)
+  - Mobile optimization: shows every other level and hour on screens <640px to avoid clutter
+  - Color-coded by speed category: calm (gray), light ≤10kt (green), moderate ≤20kt (yellow), strong ≤30kt (orange), dangerous >30kt (red)
+  - Scale barbs based on screen size (0.7× on mobile, 1.0× on desktop)
+- Added interactive tooltip on hover/tap:
+  - Shows exact wind speed (knots + mph), direction (degrees + cardinal), and altitude (meters + feet)
+  - Tooltip follows pointer with offset for readability
+  - Hover detection uses proximity radius (15px desktop, 20px mobile)
+- 20 unit tests covering all wind barb logic, color mapping, and tooltip formatting
+
+**Files changed:**
+- src/components/windgram/wind-barb-utils.ts (new)
+- src/components/windgram/wind-barb-utils.test.ts (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Standard meteorological wind barb convention:** Shaft points INTO the direction wind is blowing FROM (meteorological convention). Barbs are drawn on the right side of the shaft (clockwise). Speed rounded to nearest 5 kt: 50kt = flag (triangle), 10kt = full barb, 5kt = half barb.
+- **Canvas-based barb rendering:** Drawing barbs directly on canvas (vs SVG overlay) keeps everything in one rendering context, avoiding z-index complexity and simplifying interaction detection.
+- **Mobile barb density:** On mobile, showing every barb creates visual clutter. Thinning to every other level AND hour (step=2) reduces density by 75% while maintaining readability.
+- **Proximity-based hover:** Instead of checking exact pixel overlap with complex barb shapes, use circular proximity detection (15-20px radius). This is touch-friendly and works well for barbs.
+- **Speed category colors match pilot intuition:** Green = light winds = safe flying. Yellow/orange = moderate/strong = caution. Red = dangerous = no-go. This aligns with existing pilot weather conventions.
+- **Tooltip formatting for non-technical pilots:** Show both imperial (mph, feet) and metric (kt, meters) units. Include cardinal directions (N, NE, etc.) which are easier to understand than raw degrees.
+- **Knot conversion:** 1 kt = 1.852 km/h, so km/h to knots = km/h × 0.539957. Always round to nearest integer for display.
+---
+

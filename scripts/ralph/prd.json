@@ -66,7 +66,7 @@
         "Unit test for wind barb rendering logic (knots to barb configuration)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Wind barbs are SVG elements overlaid on the chart. The km/h to knots conversion is: knots = km/h * 0.539957. Standard barb rules: speed rounded to nearest 5 kt, then decompose into flags (50), full barbs (10), half barbs (5)."
     },
     {
