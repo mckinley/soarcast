@@ -194,3 +194,42 @@ export async function toggleSiteNotifications(siteId: string, enabled: boolean):
   revalidatePath('/settings');
   revalidatePath('/'); // Revalidate dashboard
 }
+
+/**
+ * Mark onboarding as completed for the current user
+ */
+export async function completeOnboarding(): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  await db
+    .update(settings)
+    .set({
+      onboardingCompleted: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(settings.userId, session.user.id));
+
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Check if user has completed onboarding
+ */
+export async function getOnboardingStatus(): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return true; // Unauthenticated users don't need onboarding
+  }
+
+  const [userSettings] = await db
+    .select({ onboardingCompleted: settings.onboardingCompleted })
+    .from(settings)
+    .where(eq(settings.userId, session.user.id))
+    .limit(1);
+
+  // If no settings exist yet, user hasn't completed onboarding
+  return userSettings?.onboardingCompleted ?? false;
+}

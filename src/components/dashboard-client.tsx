@@ -6,7 +6,7 @@ import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import { SiteCard } from '@/components/dashboard/site-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { SiteForecastData } from '@/app/actions';
+import type { SiteForecastData } from '@/app/dashboard/actions';
 import type { DayScore, Site, Forecast, Settings } from '@/types';
 import { RefreshCw, LayoutGrid, Table } from 'lucide-react';
 import Link from 'next/link';

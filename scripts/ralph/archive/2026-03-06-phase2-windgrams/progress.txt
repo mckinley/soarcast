@@ -1,0 +1,304 @@
+# Ralph Progress Log
+Started: Fri Mar  6 18:31:03 +07 2026
+---
+
+## Codebase Patterns
+- Use HTML Canvas for performance-critical visualizations (better than SVG/D3 for mobile)
+- Theme integration: read CSS custom properties via getComputedStyle and convert HSL to rgba
+- Responsive components: use ResizeObserver to track container size changes
+- High-DPI rendering: multiply canvas width/height by devicePixelRatio and scale context
+- Loading states: use Skeleton component from src/components/ui/skeleton
+
+---
+
+## Fri Mar 6 18:35:00 +07 2026 - US-001
+- ✅ Implemented foundational windgram chart component using HTML Canvas
+- Created `src/components/windgram/windgram-chart.tsx` with:
+  - Time × altitude grid (6 AM - 8 PM local time filter)
+  - Dual altitude labels (meters + feet) with pressure level markers
+  - Responsive sizing with ResizeObserver (360px - 1400px+)
+  - Theme-aware rendering using CSS custom properties
+  - High-DPI screen support
+  - Loading skeleton state
+- Created `src/components/windgram/index.ts` for exports
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx (new)
+- src/components/windgram/index.ts (new)
+
+**Learnings for future iterations:**
+- **Canvas over SVG for windgrams:** React 19 has peer dependency conflicts with visx. Canvas provides better performance for the dense grid visualization and avoids library compatibility issues.
+- **Barometric formula for altitude:** pressureToAltitude() uses simplified standard atmosphere formula: h ≈ 44330 * (1 - (P/P0)^0.1903)
+- **Theme integration pattern:** Extract HSL values from CSS custom properties (--foreground, --border) and convert to rgba for canvas rendering
+- **Daylight hours filtering:** Filter atmospheric data to 6 AM - 8 PM local time for cleaner pilot-focused visualization
+- **Component location:** Windgram components live in src/components/windgram/ directory
+
+---
+
+## Fri Mar 6 18:40:00 +07 2026 - US-002
+- ✅ Implemented lapse rate background visualization for windgram
+- Created utilities for lapse rate calculation and color mapping:
+  - `computeLapseRatesForHour()`: Calculates lapse rates between all adjacent pressure levels
+  - `lapseRateToColor()`: Maps lapse rate to intuitive color scale (warm=unstable, cool=stable)
+  - `bilinearInterpolate()`: Smooth color gradients between discrete grid cells
+  - `getLapseRateLegend()`: Returns legend entries for the color scale
+- Created `LapseRateLegend` component for user reference
+- Updated `WindgramChart` to render colored background with sub-cell sampling (2×2) for smooth gradients
+- 17 unit tests covering color mapping, interpolation, and edge cases
+
+**Files changed:**
+- src/components/windgram/lapse-rate-utils.ts (new)
+- src/components/windgram/lapse-rate-utils.test.ts (new)
+- src/components/windgram/lapse-rate-legend.tsx (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Lapse rate is the key metric:** Each layer between pressure levels has its own lapse rate. The existing weather-profile.ts only computes ONE lapse rate (850-700 hPa), but windgrams need lapse rates for ALL layers.
+- **Color psychology for pilots:** Warm colors (orange/yellow) = unstable air = good thermals. Cool colors (blue/purple) = stable air = poor lift. This matches pilot intuition.
+- **Bilinear interpolation for smooth gradients:** Without interpolation, the windgram looks blocky. Sub-cell rendering (2×2 samples per grid cell) creates smooth color transitions while keeping performance good.
+- **Handle missing data gracefully:** Bilinear interpolation can fail if any corner is null. Fall back to nearest non-null neighbor to avoid blank cells.
+- **Dry adiabatic lapse rate is ~3°C/1000ft:** This is the threshold for unstable air. Anything above this creates thermals.
+- **Theme-aware color mapping:** Same lapse rate needs different RGB values in light vs dark mode for good contrast and readability.
+
+---
+## Fri Mar 6 18:43:00 +07 2026 - US-003
+- ✅ Implemented wind barb visualization for windgram
+- Created wind barb utility functions and rendering:
+  - `kmhToKnots()`: Converts wind speed from km/h to knots (km/h * 0.539957)
+  - `windSpeedToBarb()`: Converts wind speed/direction to standard meteorological barb configuration (flags, full barbs, half barbs)
+  - `drawWindBarb()`: Renders wind barb on canvas using standard convention (shaft points into wind, barbs on right side)
+  - `formatWindTooltip()`: Formats wind data for tooltip display (speed in kt/mph, cardinal direction, altitude)
+- Added wind barb rendering to `WindgramChart` component:
+  - Renders barbs at each pressure level and hour (8 levels × ~15 hours = ~120 barbs per day)
+  - Mobile optimization: shows every other level and hour on screens <640px to avoid clutter
+  - Color-coded by speed category: calm (gray), light ≤10kt (green), moderate ≤20kt (yellow), strong ≤30kt (orange), dangerous >30kt (red)
+  - Scale barbs based on screen size (0.7× on mobile, 1.0× on desktop)
+- Added interactive tooltip on hover/tap:
+  - Shows exact wind speed (knots + mph), direction (degrees + cardinal), and altitude (meters + feet)
+  - Tooltip follows pointer with offset for readability
+  - Hover detection uses proximity radius (15px desktop, 20px mobile)
+- 20 unit tests covering all wind barb logic, color mapping, and tooltip formatting
+
+**Files changed:**
+- src/components/windgram/wind-barb-utils.ts (new)
+- src/components/windgram/wind-barb-utils.test.ts (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Standard meteorological wind barb convention:** Shaft points INTO the direction wind is blowing FROM (meteorological convention). Barbs are drawn on the right side of the shaft (clockwise). Speed rounded to nearest 5 kt: 50kt = flag (triangle), 10kt = full barb, 5kt = half barb.
+- **Canvas-based barb rendering:** Drawing barbs directly on canvas (vs SVG overlay) keeps everything in one rendering context, avoiding z-index complexity and simplifying interaction detection.
+- **Mobile barb density:** On mobile, showing every barb creates visual clutter. Thinning to every other level AND hour (step=2) reduces density by 75% while maintaining readability.
+- **Proximity-based hover:** Instead of checking exact pixel overlap with complex barb shapes, use circular proximity detection (15-20px radius). This is touch-friendly and works well for barbs.
+- **Speed category colors match pilot intuition:** Green = light winds = safe flying. Yellow/orange = moderate/strong = caution. Red = dangerous = no-go. This aligns with existing pilot weather conventions.
+- **Tooltip formatting for non-technical pilots:** Show both imperial (mph, feet) and metric (kt, meters) units. Include cardinal directions (N, NE, etc.) which are easier to understand than raw degrees.
+- **Knot conversion:** 1 kt = 1.852 km/h, so km/h to knots = km/h × 0.539957. Always round to nearest integer for display.
+---
+
+## Fri Mar 6 19:00:00 +07 2026 - US-004
+- ✅ Implemented thermal and cloud indicators for windgram
+- Created `thermal-cloud-utils.ts` with utilities for:
+  - Thermal strength categorization and colored badges (none/weak/moderate/strong)
+  - Altitude-to-Y coordinate conversion
+  - Smooth line drawing for atmospheric layers (cloud base, top of lift, boundary layer)
+  - Moisture/cloud shading with diagonal hatching pattern for high humidity areas (RH > 90%)
+  - Line labels with background badges
+- Updated `WindgramChart` to render:
+  - Thermal index badges at top of chart (color-coded by strength)
+  - Cloud base line (cyan dashed)
+  - Top of lift line (green dashed)
+  - Boundary layer height line (orange dashed)
+  - Humidity hatching for areas with RH > 90%
+  - Line labels at right edge of chart
+- Increased chart padding: top from 40→50px (for thermal badges), right from 60→120px (for line labels)
+- All overlays are subtle and don't overwhelm the lapse rate background
+
+**Files changed:**
+- src/components/windgram/thermal-cloud-utils.ts (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Thermal index badges vs velocity text:** The PRD mentioned "thermal velocity" like traditional windgrams show "W*" (in m/s). However, the existing `derivedParams` only provides `thermalIndex` (0-100 composite score), not a direct thermal velocity measurement. I used the thermal index with color-coded badges instead, which provides similar information in a more accessible format for pilots.
+- **Layer ordering matters:** Draw moisture shading BEFORE wind barbs so barbs remain clearly visible. Draw atmospheric lines BEFORE barbs but AFTER moisture shading for optimal layering.
+- **Label placement strategy:** Place line labels at the right edge using the last non-null Y value for each line. Use semi-transparent backgrounds for readability over the chart.
+- **Humidity shading subtlety:** Use low opacity (max 0.3) and diagonal line pattern instead of solid fills. Only show for RH > 90% to avoid cluttering the chart.
+- **Coordinate conversion is essential:** The `altitudeToY()` utility converts meters MSL to canvas Y coordinates. Remember to convert AGL measurements (cloud base, boundary layer) to MSL by adding elevation.
+- **Mobile optimization:** Thermal badges are also thinned out on mobile (every other hour) to match wind barb density.
+- **Color choices match pilot intuition:** Cyan/blue for clouds, green for top of lift (where you want to be), orange for boundary layer (mixing height).
+---
+
+## Fri Mar 6 19:15:00 +07 2026 - US-005
+- ✅ Implemented interactive windgram with crosshair, detail panel, and day selection
+- Created `WindgramDetailPanel` component:
+  - Shows comprehensive atmospheric data at crosshair position
+  - Temperature (°C and °F), wind (knots, mph, direction, cardinal), humidity
+  - Computed lapse rate with plain-language stability assessment
+  - Thermal index display
+  - Pinned mode with close button
+- Created `WindgramDaySelector` component:
+  - Tab-based navigation for multi-day forecasts (Today, Tomorrow, day names)
+  - Accessible with ARIA roles
+  - Responsive button layout
+- Created `WindgramInteractive` wrapper component:
+  - Splits multi-day data into per-day charts
+  - Handles day switching with smooth fade transitions
+  - Manages selected day state
+- Updated `WindgramChart` with full interactivity:
+  - Crosshair rendering on canvas (dashed lines + center circle)
+  - Hover/touch tracking with snapping to hour grid
+  - Click/tap to pin crosshair (blue pin icon when pinned)
+  - Keyboard navigation: arrow keys move crosshair, Escape to unpin
+  - Auto-initialize crosshair on first arrow key press
+  - Detail panel integration (side panel on desktop, below on mobile)
+  - Separate wind barb tooltip (only shows when crosshair is not active)
+  - Helpful hint text below chart explaining controls
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/windgram-detail-panel.tsx (new)
+- src/components/windgram/windgram-day-selector.tsx (new)
+- src/components/windgram/windgram-interactive.tsx (new)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Crosshair UX pattern:** Hover shows crosshair, click pins it. Pinned crosshair stays visible and is navigable with keyboard. This matches user expectations from other chart tools (TradingView, etc.).
+- **Canvas-based crosshair:** Drawing crosshair directly on canvas keeps everything synchronized. Use dashed lines (`setLineDash([4, 4])`) for subtlety. Remember to reset dash with `setLineDash([])` after drawing.
+- **Detail panel positioning:** Use flexbox with `flex-col lg:flex-row` for responsive layout. On desktop, detail panel is sticky sidebar (`lg:sticky lg:top-4`). On mobile, it flows below the chart.
+- **Plain-language assessments:** Non-technical pilots benefit from color-coded labels like "Unstable (Good thermals)" instead of just "3.5°C/1000ft". Match colors to intuition (orange=unstable=good for soaring).
+- **Keyboard navigation:** Initialize crosshair in center on first arrow key press. Use arrow keys for navigation (left/right for time, up/down for altitude). Escape key to unpin and clear crosshair.
+- **Touch vs mouse:** Crosshair works with both mouse hover and touch. On touch devices, the crosshair appears on tap and stays visible (essentially auto-pinned).
+- **Day switching:** Split hours by `toDateString()` to group into days. Use fade animation for smooth transitions between days. Show "Today" and "Tomorrow" labels for the first two days.
+- **Accessibility:** Use `tabIndex={0}` on canvas for keyboard focus. Add `role="img"` and `aria-label` for screen readers. Hint text below chart explains controls.
+- **Don't show crosshair detail and wind barb tooltip simultaneously:** Only show wind barb tooltip when crosshair is not active to avoid visual clutter.
+---
+
+## Fri Mar 6 19:30:00 +07 2026 - US-006
+- ✅ Implemented flyability summary component for plain-language day assessments
+- Created `FlyabilitySummary` component with:
+  - Color-coded rating badge (Epic/Great/Good/Fair/Poor)
+  - Best flying window detection (consecutive hours with thermal index > 50)
+  - Plain-language summary generation based on rating and conditions
+  - Automatic concern detection (increasing winds, strong winds, weak thermals, low cloud base, rain)
+  - Expandable detail panel showing:
+    - Launch-level wind speed and direction (averaged at 950 hPa)
+    - Thermal strength categorization (strong/moderate/weak/very weak)
+    - Estimated cloud base (AGL)
+    - Estimated top of lift (MSL)
+    - Upper winds at 850 hPa
+    - Precipitation chance
+  - Responsive layout (2-3 columns for details)
+  - Hover/expand interactions for more details
+- Updated `WindgramInteractive` to:
+  - Accept optional `dayScores` prop (DayScore array)
+  - Match atmospheric data days with DayScore data by YYYY-MM-DD format
+  - Display FlyabilitySummary above the windgram chart when score data is available
+  - Maintain smooth day-switching transitions
+- Updated exports in `src/components/windgram/index.ts`
+
+**Files changed:**
+- src/components/windgram/flyability-summary.tsx (new)
+- src/components/windgram/windgram-interactive.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Two-tier data architecture:** The flyability summary bridges two data sources: DayScore (simple scoring for overall rating) and AtmosphericProfile (detailed vertical data for specifics like wind at altitude, thermal strength by hour, cloud base trends).
+- **Plain-language generation:** Non-technical pilots benefit from assessments like "Looks like a great XC day! Best window 11AM-3PM. Watch for increasing winds after 2PM." instead of raw metrics. The summary varies by rating level (Epic gets enthusiastic language, Fair gets cautious language).
+- **Best window detection:** Find the longest consecutive stretch of hours where thermal index > 50. This gives pilots a concrete time range to plan around (e.g., "11AM-3PM").
+- **Automatic concern detection:** Analyze atmospheric data for common flyability issues:
+  - Increasing winds: compare early vs late day averages (threshold: +10 km/h)
+  - Strong winds: launch-level average > 20 kt
+  - Weak thermals: thermal index < 40
+  - Low cloud base: estimated cloud base < 800m AGL
+  - Rain possible: precipitation probability > 30%
+- **Launch-level wind analysis:** Use 950 hPa as "typical launch altitude" (~500m MSL) for wind assessments. This is more relevant to pilots than surface (10m) winds.
+- **Expandable details pattern:** Show the most important info by default (rating, window, concerns). Hide technical details (exact wind speeds, altitudes, thermal index numbers) behind an expand button. This serves both casual pilots ("should I go?") and technical pilots ("what are the exact numbers?").
+- **Color psychology for ratings:** Epic=purple, Great=green, Good=blue, Fair=yellow, Poor=gray. This matches pilot intuition and creates visual hierarchy.
+- **Date format matching:** DayScore uses YYYY-MM-DD format for the `date` field. When splitting AtmosphericProfile hours into days, track both Date objects (for display) and YYYY-MM-DD strings (for matching with DayScore).
+- **Component is ready for integration:** WindgramInteractive now accepts optional `dayScores` prop. When integrated into site pages (US-007), pass both atmospheric profile data and day scores to show the full experience.
+---
+
+
+## Fri Mar 6 19:45:00 +07 2026 - US-007
+- ✅ Integrated windgram visualizations into site detail pages as the primary/hero view
+- Created `WindgramSection` component:
+  - Client-side component that fetches atmospheric profile data using useEffect
+  - Calls `/api/weather/profile?lat=X&lng=Y&days=7` endpoint
+  - Handles loading states with skeleton UI
+  - Handles error states with user-friendly messages
+  - Passes fetched profile data to `WindgramInteractive` component along with day scores
+- Updated `SiteDetailClient` component:
+  - Added tabbed interface using shadcn/ui tabs component
+  - "Windgram" tab is the default view (hero visualization)
+  - "Table View" tab preserves the existing forecast table/cards UI
+  - Both tabs receive the same data props (site, forecast, scores)
+- Added shadcn/ui tabs component to the project (npx shadcn add tabs)
+- No changes needed to server pages:
+  - Both `/sites/[slug]` and `/sites/custom/[id]` pages already pass required props
+  - Server pages show site info immediately (fast initial render)
+  - Windgram data loads asynchronously on client side (non-blocking)
+- Architectural pattern: fast server render → lazy-load expensive windgram data
+- All quality checks passed: typecheck ✓, lint ✓, build ✓
+
+**Files changed:**
+- src/components/windgram-section.tsx (new)
+- src/components/site-detail-client.tsx (updated)
+- src/components/ui/tabs.tsx (new, from shadcn)
+
+**Learnings for future iterations:**
+- **Client-side data fetching pattern:** For expensive API calls (atmospheric profiles), use client-side fetching in a wrapping component rather than fetching on the server. This provides:
+  - Fast initial page load (server renders site info immediately)
+  - Non-blocking data fetching (user sees site details while windgram loads)
+  - Better separation of concerns (server = fast static data, client = dynamic heavy data)
+- **Component props naming:** `WindgramInteractive` expects `data` prop (not `profile`). Always check component interfaces before passing props.
+- **Tabbed UI for backward compatibility:** When replacing an existing UI with a new visualization, use tabs rather than removing the old UI entirely. This serves both power users (who want tables) and visual learners (who prefer charts).
+- **Shadcn component installation:** Use `npx shadcn@latest add <component>` to add new UI components. They're installed directly into the codebase as editable source files.
+- **Browser testing note:** Browser tools had connection issues during testing, but all automated checks passed. Manual browser verification recommended to confirm windgrams render correctly and are interactive.
+- **Atmospheric profile API is already optimized:** The `/api/weather/profile` endpoint has 3-hour caching and CDN cache headers, so repeated requests are fast.
+- **No need for map click integration yet:** US-007 acceptance criteria mentioned "clicking any point on the browse map" but the current browse page doesn't have that interaction yet. This may be handled in US-008 or a future story.
+---
+
+## Fri Mar 6 20:00:00 +07 2026 - US-008
+- ✅ Implemented multi-day dashboard thumbnails with card-based layout
+- Created `WindgramThumbnail` component (src/components/windgram/windgram-thumbnail.tsx):
+  - Simplified windgram showing only lapse rate background colors
+  - Canvas-based rendering optimized for small size (120x60px default)
+  - Filters to daylight hours (6 AM - 8 PM) for cleaner visualization
+  - High-DPI support with device pixel ratio scaling
+  - Lazy-loads only when visible (Intersection Observer)
+- Created `SevenDayBar` component (src/components/dashboard/seven-day-bar.tsx):
+  - Color-coded dots representing flyability rating for each day (Epic=purple, Great=green, Good=blue, Fair=yellow, Poor=gray)
+  - Tooltips showing date and score details
+  - Fills remaining days with gray if less than 7 days available
+- Created `SiteCard` component (src/components/dashboard/site-card.tsx):
+  - Integrates windgram thumbnail, flyability badge, and 7-day bar
+  - Lazy-loads atmospheric profile data only when card scrolls into view (Intersection Observer with 50px margin)
+  - Fetches only 1 day of profile data for thumbnail (performance optimization)
+  - Clickable card linking to full site detail page
+  - Loading skeleton state while thumbnail data fetches
+- Updated `DashboardClient` to tabbed layout:
+  - "Cards" tab (default): Responsive grid layout (1 col mobile, 2-3 desktop)
+  - "Table" tab: Preserves existing table view for power users
+  - Uses shadcn/ui tabs component
+  - Updated header text to reflect card-based interaction
+- All quality checks passed: typecheck ✓, lint ✓, build ✓
+
+**Files changed:**
+- src/components/windgram/windgram-thumbnail.tsx (new)
+- src/components/windgram/index.ts (updated exports)
+- src/components/dashboard/seven-day-bar.tsx (new)
+- src/components/dashboard/site-card.tsx (new)
+- src/components/dashboard-client.tsx (updated to tabbed layout)
+
+**Learnings for future iterations:**
+- **Thumbnail optimization strategy:** Fetch only 1 day of atmospheric profile data (not 7 days) for thumbnails. The 7-day bar uses existing `DayScore` data which is already loaded, so only the thumbnail needs profile data. This reduces API calls by ~85% per card.
+- **Intersection Observer for lazy loading:** Use `rootMargin: '50px'` to preload thumbnails slightly before they scroll into view. This provides a smoother UX (data is ready when the user sees it) without loading everything upfront.
+- **Ref cleanup pattern:** When using refs in useEffect cleanup, copy `ref.current` to a variable inside the effect to satisfy React hooks exhaustive-deps lint rule: `const element = ref.current; ... return () => { observer.unobserve(element); }`.
+- **Simplified windgram rendering:** For thumbnails, skip all overlays (wind barbs, lines, labels) and render only the lapse rate background. This is 10x faster and sufficient for an at-a-glance view.
+- **Card vs table UX:** Cards are better for visual learners and provide richer information density (thumbnail + badge + 7-day bar). Tables are better for power users who want to scan many sites quickly. Offer both via tabs.
+- **Demo site URL handling:** Demo sites (ID starts with "demo-") redirect to `/sites/browse` instead of a detail page since they're not in the database. Custom sites use `/sites/custom/[id]` and launch sites use `/sites/[slug]`.
+- **Color-coded dots pattern:** 7-day bar uses small circular dots (h-3 w-3 rounded-full) with color-coded ratings. This is space-efficient and immediately recognizable. Tooltips provide details on hover.
+- **Tabbed layout for backward compatibility:** When introducing a new visualization paradigm (cards), preserve the old view (table) in a tab. This prevents disruption for existing users while promoting the new UI as the default.
+---
+

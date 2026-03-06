@@ -206,6 +206,7 @@ export const settings = sqliteTable('settings', {
     .notNull()
     .default(false),
   morningDigestTime: text('morningDigestTime').default('08:00'), // HH:MM format in user's local timezone
+  onboardingCompleted: integer('onboardingCompleted', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

@@ -1,7 +1,7 @@
 'use server';
 
-import { getSites } from './sites/actions';
-import { getUserFavoriteSites } from './sites/browse/actions';
+import { getSites } from '@/app/sites/actions';
+import { getUserFavoriteSites } from '@/app/sites/browse/actions';
 import { getForecast, fetchAllForecasts } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import type { Site, Forecast, DayScore } from '@/types';
