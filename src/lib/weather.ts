@@ -135,30 +135,50 @@ function isDemoSite(siteId: string): boolean {
 }
 
 /**
+ * Result type for forecast fetch that includes cache metadata
+ */
+export interface ForecastResult {
+  forecast: Forecast;
+  /** True if the forecast was fetched from cache due to API failure */
+  isStale: boolean;
+  /** Age of cached data in hours, if applicable */
+  cacheAgeHours?: number;
+  /** Error message if fetch failed and cache was used */
+  error?: string;
+}
+
+/**
  * Gets cached forecast for a site or fetches fresh data if cache is stale/missing
+ * Falls back to stale cache if API fails (graceful degradation)
  * Demo sites (IDs starting with "demo-") skip DB caching since they have no
  * foreign key in the sites table.
  * @param siteId - Unique site identifier
  * @param latitude - Site latitude
  * @param longitude - Site longitude
  * @param siteType - Type of site: 'launch' | 'custom' | 'legacy' (default: 'legacy')
- * @returns Cached or fresh forecast data
+ * @returns Forecast result with cache metadata
  */
 export async function getForecast(
   siteId: string,
   latitude: number,
   longitude: number,
   siteType: 'launch' | 'custom' | 'legacy' = 'legacy',
-): Promise<Forecast> {
+): Promise<ForecastResult> {
   // Demo sites skip DB caching entirely — just fetch fresh data
   if (isDemoSite(siteId)) {
-    return fetchWeatherForecast(siteId, latitude, longitude);
+    try {
+      const forecast = await fetchWeatherForecast(siteId, latitude, longitude);
+      return { forecast, isStale: false };
+    } catch (error) {
+      // For demo sites, we can't fall back to cache, so rethrow
+      throw error;
+    }
   }
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const now = new Date();
 
-  // Try to get cached forecast from Turso
+  // Try to get cached forecast from Turso (both fresh and stale)
   const [cachedRow] = await db
     .select()
     .from(forecastsCache)
@@ -173,34 +193,64 @@ export async function getForecast(
 
   // Check if cache exists and is still valid
   if (cachedRow && new Date(cachedRow.expiresAt) > now) {
-    // Cache is still valid, parse and return it
-    return cachedRow.data as Forecast;
+    // Cache is still valid
+    return {
+      forecast: cachedRow.data as Forecast,
+      isStale: false,
+    };
   }
 
-  // Cache miss or expired - fetch fresh data
-  const freshForecast = await fetchWeatherForecast(siteId, latitude, longitude);
+  // Try to fetch fresh data
+  try {
+    const freshForecast = await fetchWeatherForecast(siteId, latitude, longitude);
 
-  // Store in Turso cache (upsert pattern)
-  await db
-    .insert(forecastsCache)
-    .values({
-      siteId,
-      siteType,
-      fetchDate: today,
-      data: freshForecast,
-      fetchedAt: new Date(freshForecast.fetchedAt),
-      expiresAt: new Date(freshForecast.expiresAt),
-    })
-    .onConflictDoUpdate({
-      target: [forecastsCache.siteId, forecastsCache.siteType, forecastsCache.fetchDate],
-      set: {
+    // Store in Turso cache (upsert pattern)
+    await db
+      .insert(forecastsCache)
+      .values({
+        siteId,
+        siteType,
+        fetchDate: today,
         data: freshForecast,
         fetchedAt: new Date(freshForecast.fetchedAt),
         expiresAt: new Date(freshForecast.expiresAt),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [forecastsCache.siteId, forecastsCache.siteType, forecastsCache.fetchDate],
+        set: {
+          data: freshForecast,
+          fetchedAt: new Date(freshForecast.fetchedAt),
+          expiresAt: new Date(freshForecast.expiresAt),
+        },
+      });
 
-  return freshForecast;
+    return {
+      forecast: freshForecast,
+      isStale: false,
+    };
+  } catch (error) {
+    // API fetch failed - try to use stale cache
+    if (cachedRow) {
+      const cacheAgeHours = Math.round(
+        (now.getTime() - new Date(cachedRow.fetchedAt).getTime()) / (1000 * 60 * 60),
+      );
+
+      console.warn(
+        `Open-Meteo API failed for site ${siteId}, using stale cache (${cacheAgeHours}h old):`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+
+      return {
+        forecast: cachedRow.data as Forecast,
+        isStale: true,
+        cacheAgeHours,
+        error: error instanceof Error ? error.message : 'Failed to fetch fresh data',
+      };
+    }
+
+    // No cache available - rethrow error
+    throw error;
+  }
 }
 
 /**
@@ -212,9 +262,9 @@ export async function fetchAllForecasts(
   sites: Array<{ id: string; latitude: number; longitude: number }>,
 ): Promise<Record<string, Forecast>> {
   const forecastPromises = sites.map((site) =>
-    getForecast(site.id, site.latitude, site.longitude).then((forecast) => ({
+    getForecast(site.id, site.latitude, site.longitude).then((result) => ({
       id: site.id,
-      forecast,
+      forecast: result.forecast,
     })),
   );
 

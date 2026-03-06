@@ -102,12 +102,12 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
       try {
         // Determine siteType based on whether it's in the launch sites set
         const siteType = launchSiteIds.has(site.id) ? 'launch' : 'legacy';
-        const forecast = await getForecast(site.id, site.latitude, site.longitude, siteType);
-        const scores = calculateDailyScores(forecast, site);
+        const forecastResult = await getForecast(site.id, site.latitude, site.longitude, siteType);
+        const scores = calculateDailyScores(forecastResult.forecast, site);
 
         return {
           site,
-          forecast,
+          forecast: forecastResult.forecast,
           scores,
         };
       } catch (error) {

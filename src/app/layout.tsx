@@ -5,6 +5,8 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppShell } from '@/components/app-shell';
 import { SessionProvider } from '@/components/session-provider';
+import { OfflineIndicator } from '@/components/offline-indicator';
+import { SentryInit } from '@/components/sentry-init';
 import { auth } from '@/auth';
 
 const geistSans = Geist({
@@ -81,6 +83,7 @@ export default async function RootLayout({
         <meta name="theme-color" content="#3b82f6" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SentryInit />
         <SessionProvider session={session}>
           <ThemeProvider
             attribute="class"
@@ -89,6 +92,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider>
+              <OfflineIndicator />
               <AppShell>{children}</AppShell>
             </TooltipProvider>
           </ThemeProvider>

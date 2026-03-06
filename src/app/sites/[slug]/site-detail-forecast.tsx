@@ -28,7 +28,9 @@ export async function SiteDetailForecast({ site }: SiteDetailForecastProps) {
   try {
     const lat = parseFloat(site.latitude);
     const lng = parseFloat(site.longitude);
-    forecast = await getForecast(site.id, lat, lng, 'launch');
+    const forecastResult = await getForecast(site.id, lat, lng, 'launch');
+
+    forecast = forecastResult.forecast;
 
     if (forecast) {
       // Convert launch site to the format expected by scoring

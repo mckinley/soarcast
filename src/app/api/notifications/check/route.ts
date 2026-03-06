@@ -101,14 +101,14 @@ export async function POST(request: NextRequest) {
               }
 
               try {
-                const atmosphericProfile = await getAtmosphericProfile(
+                const atmosphericResult = await getAtmosphericProfile(
                   parseFloat(site.latitude),
                   parseFloat(site.longitude),
                   1, // Only need today for morning digest
                 );
 
                 const analysis = analyzeFlyingDay(
-                  atmosphericProfile,
+                  atmosphericResult.profile,
                   {
                     id: site.id,
                     name: site.name,
@@ -222,20 +222,20 @@ export async function POST(request: NextRequest) {
 
           try {
             // Fetch both basic forecast and atmospheric profile
-            const forecast = await getForecast(
+            const forecastResult = await getForecast(
               site.id,
               parseFloat(site.latitude),
               parseFloat(site.longitude),
             );
 
-            const atmosphericProfile = await getAtmosphericProfile(
+            const atmosphericResult = await getAtmosphericProfile(
               parseFloat(site.latitude),
               parseFloat(site.longitude),
               userSettings.daysAhead,
             );
 
             // Calculate basic scores for all days (fallback if atmospheric analysis fails)
-            const dailyScores = calculateDailyScores(forecast, {
+            const dailyScores = calculateDailyScores(forecastResult.forecast, {
               id: site.id,
               name: site.name,
               latitude: parseFloat(site.latitude),
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
 
               // Try to use atmospheric profile analysis (enhanced notifications)
               const analysis = analyzeFlyingDay(
-                atmosphericProfile,
+                atmosphericResult.profile,
                 {
                   id: site.id,
                   name: site.name,

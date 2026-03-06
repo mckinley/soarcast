@@ -45,15 +45,35 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch atmospheric profile (cached or fresh)
-    const profile = await getAtmosphericProfile(latitude, longitude, days);
+    const result = await getAtmosphericProfile(latitude, longitude, days);
 
-    // Return JSON with cache headers (1 hour cache for CDN)
-    return NextResponse.json(profile, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=1800',
+    // Add cache metadata to response headers for debugging
+    const headers: HeadersInit = {
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=1800',
+    };
+
+    if (result.isStale) {
+      headers['X-Cache-Status'] = 'stale';
+      headers['X-Cache-Age'] = String(result.cacheAgeHours);
+    } else {
+      headers['X-Cache-Status'] = 'fresh';
+    }
+
+    // Return profile data with metadata
+    return NextResponse.json(
+      {
+        ...result.profile,
+        _meta: {
+          isStale: result.isStale,
+          cacheAgeHours: result.cacheAgeHours,
+          error: result.error,
+        },
       },
-    });
+      {
+        status: 200,
+        headers,
+      },
+    );
   } catch (error) {
     console.error('Error fetching atmospheric profile:', error);
 

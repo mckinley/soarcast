@@ -398,17 +398,31 @@ export async function fetchAtmosphericProfile(
 }
 
 /**
+ * Result type for atmospheric profile fetch that includes cache metadata
+ */
+export interface AtmosphericProfileResult {
+  profile: AtmosphericProfile;
+  /** True if the profile was fetched from cache due to API failure */
+  isStale: boolean;
+  /** Age of cached data in hours, if applicable */
+  cacheAgeHours?: number;
+  /** Error message if fetch failed and cache was used */
+  error?: string;
+}
+
+/**
  * Gets cached atmospheric profile or fetches fresh data if cache is stale/missing
+ * Falls back to stale cache if API fails (graceful degradation)
  * @param latitude - Location latitude
  * @param longitude - Location longitude
  * @param days - Number of forecast days (default 2)
- * @returns Cached or fresh atmospheric profile
+ * @returns Atmospheric profile result with cache metadata
  */
 export async function getAtmosphericProfile(
   latitude: number,
   longitude: number,
   days: number = 2,
-): Promise<AtmosphericProfile> {
+): Promise<AtmosphericProfileResult> {
   // Lazy import to avoid requiring DB env vars at module load time
   const { db } = await import('@/db');
   const { atmosphericProfilesCache } = await import('@/db/schema');
@@ -420,7 +434,7 @@ export async function getAtmosphericProfile(
   // Create cache key from rounded coordinates (2 decimal precision ~1km)
   const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
 
-  // Try to get cached profile
+  // Try to get cached profile (both fresh and stale)
   const [cachedRow] = await db
     .select()
     .from(atmosphericProfilesCache)
@@ -434,30 +448,60 @@ export async function getAtmosphericProfile(
 
   // Check if cache exists and is still valid
   if (cachedRow && new Date(cachedRow.expiresAt) > now) {
-    return cachedRow.data as AtmosphericProfile;
+    return {
+      profile: cachedRow.data as AtmosphericProfile,
+      isStale: false,
+    };
   }
 
-  // Cache miss or expired - fetch fresh data
-  const freshProfile = await fetchAtmosphericProfile(latitude, longitude, days);
+  // Try to fetch fresh data
+  try {
+    const freshProfile = await fetchAtmosphericProfile(latitude, longitude, days);
 
-  // Store in cache (upsert pattern)
-  await db
-    .insert(atmosphericProfilesCache)
-    .values({
-      locationKey: cacheKey,
-      fetchDate: today,
-      data: freshProfile,
-      fetchedAt: new Date(freshProfile.fetchedAt),
-      expiresAt: new Date(freshProfile.expiresAt),
-    })
-    .onConflictDoUpdate({
-      target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
-      set: {
+    // Store in cache (upsert pattern)
+    await db
+      .insert(atmosphericProfilesCache)
+      .values({
+        locationKey: cacheKey,
+        fetchDate: today,
         data: freshProfile,
         fetchedAt: new Date(freshProfile.fetchedAt),
         expiresAt: new Date(freshProfile.expiresAt),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
+        set: {
+          data: freshProfile,
+          fetchedAt: new Date(freshProfile.fetchedAt),
+          expiresAt: new Date(freshProfile.expiresAt),
+        },
+      });
 
-  return freshProfile;
+    return {
+      profile: freshProfile,
+      isStale: false,
+    };
+  } catch (error) {
+    // API fetch failed - try to use stale cache
+    if (cachedRow) {
+      const cacheAgeHours = Math.round(
+        (now.getTime() - new Date(cachedRow.fetchedAt).getTime()) / (1000 * 60 * 60),
+      );
+
+      console.warn(
+        `Open-Meteo API failed, using stale cache (${cacheAgeHours}h old):`,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+
+      return {
+        profile: cachedRow.data as AtmosphericProfile,
+        isStale: true,
+        cacheAgeHours,
+        error: error instanceof Error ? error.message : 'Failed to fetch fresh data',
+      };
+    }
+
+    // No cache available - rethrow error
+    throw error;
+  }
 }

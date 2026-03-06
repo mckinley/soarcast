@@ -45,7 +45,8 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   let error = null;
 
   try {
-    forecast = await getForecast(site.id, site.latitude, site.longitude);
+    const forecastResult = await getForecast(site.id, site.latitude, site.longitude);
+    forecast = forecastResult.forecast;
     if (forecast) {
       scores = calculateDailyScores(forecast, site);
     }
