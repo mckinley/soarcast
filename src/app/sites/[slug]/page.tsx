@@ -121,11 +121,13 @@ export default async function LaunchSiteDetailPage({
             </div>
           </div>
 
-          {session && (
-            <div className="shrink-0">
-              <LaunchSiteFavoriteButton siteId={site.id} initialIsFavorited={isFavorited} />
-            </div>
-          )}
+          <div className="shrink-0">
+            <LaunchSiteFavoriteButton
+              siteId={site.id}
+              initialIsFavorited={isFavorited}
+              isAuthenticated={!!session}
+            />
+          </div>
         </div>
 
         {site.description && (

@@ -7,16 +7,29 @@ export default auth((req) => {
   // Check if user is authenticated
   const isAuthenticated = !!req.auth;
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/sites', '/settings'];
+  // Protected routes that require authentication (user-specific pages)
+  const protectedRoutes = ['/dashboard', '/settings'];
 
-  // Protected API routes (mutation endpoints)
-  const protectedApiRoutes = ['/api/sites', '/api/settings', '/api/notifications'];
+  // Public read-only routes (allow without authentication)
+  const publicRoutes = ['/sites/browse', '/sites/'];
+
+  // Protected API routes (mutation endpoints only)
+  const protectedApiRoutes = ['/api/settings', '/api/notifications'];
+
+  // Check if this is a public route
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   // Check if current path matches protected routes
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
+  // Check if it's a protected API endpoint
+  // Note: /api/sites and /api/weather/profile are now public for GET requests
   const isProtectedApi = protectedApiRoutes.some((route) => pathname.startsWith(route));
+
+  // Allow public routes without authentication
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
 
   // Redirect to sign-in if accessing protected route without authentication
   if ((isProtectedRoute || isProtectedApi) && !isAuthenticated) {
