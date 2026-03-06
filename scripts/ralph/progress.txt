@@ -118,3 +118,33 @@ Started: Fri Mar 6 2026
   - Test carefully for wind penalties - strong winds reduce thermal index but not as much as expected
 ---
 
+## 2026-03-06 18:15 - US-005
+- Implemented updated site pages with browse, detail, and favorite functionality
+- Files changed:
+  - Created: src/app/sites/browse/page.tsx, browse-client.tsx, actions.ts (browse + search)
+  - Created: src/app/sites/[slug]/page.tsx, favorite-button.tsx (launch site detail)
+  - Created: src/components/sites-browse-map.tsx, sites-browse-map-wrapper.tsx (map with multiple markers)
+  - Modified: src/app/actions.ts (dashboard now includes favorited launch sites)
+  - Modified: src/components/app-shell.tsx (added "Browse Sites" nav link with Compass icon)
+  - Modified: src/db/schema.ts (added Drizzle relations for userFavoriteSites)
+  - Modified: src/lib/weather.ts (added siteType parameter to getForecast)
+  - Moved: src/app/sites/[id] → src/app/sites/custom/[id] (avoid route conflict)
+  - Modified: src/components/site-card.tsx (updated link to /sites/custom/[id])
+- Implementation details:
+  - Browse page shows all WA launch sites on Leaflet map with search/filter
+  - Map markers with popups containing site info + link to detail page
+  - Slug-based detail pages (/sites/[slug]) for launch sites with full enriched data
+  - Favorite button with optimistic UI updates (no toast component needed)
+  - Dashboard combines custom sites (legacy) + favorited launch sites
+  - Preserved all existing custom site CRUD functionality
+  - Mobile-responsive layouts with shadcn/ui components
+- **Learnings for future iterations:**
+  - Next.js route conflicts: Can't have both /sites/[id] and /sites/[slug] - they're ambiguous
+  - Moved legacy user sites to /sites/custom/[id] to allow /sites/[slug] for launch sites
+  - Drizzle relations syntax: `relations(table, ({ one, many }) => ({ ... }))` enables `.with()` queries
+  - LaunchSite lat/lng are stored as text (precision), must parseFloat() for calculations
+  - Site type tracking: Use a Set to track which sites are launch vs legacy for cache key
+  - Dashboard action pattern: fetch both custom + favorites, combine, then track types separately
+  - Pre-commit hooks ran automatically after commit (lint-staged + husky)
+---
+

@@ -114,7 +114,7 @@
         "npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Use slugs for launch site URLs (not UUIDs). Keep the existing /sites page for user's own sites and favorites. The /sites/browse page is for discovery. Leaflet must be dynamically imported (no SSR) — use the existing map-display-wrapper.tsx pattern."
     },
     {
