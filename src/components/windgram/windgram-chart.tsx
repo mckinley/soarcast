@@ -9,6 +9,7 @@ import {
   lapseRateToColor,
   bilinearInterpolate,
 } from './lapse-rate-utils';
+import { windSpeedToBarb, drawWindBarb, formatWindTooltip } from './wind-barb-utils';
 
 interface WindgramChartProps {
   data: AtmosphericProfile | null;
@@ -58,7 +59,15 @@ function formatTimeLabel(isoTime: string): string {
 export function WindgramChart({ data, loading = false, className = '' }: WindgramChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [hoveredBarb, setHoveredBarb] = useState<{
+    speedKmh: number;
+    direction: number;
+    altitude: { meters: number; feet: number };
+    x: number;
+    y: number;
+  } | null>(null);
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
 
@@ -291,6 +300,45 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
       ctx.restore();
     });
 
+    // ========================================
+    // DRAW WIND BARBS (US-003)
+    // ========================================
+    // Determine mobile vs desktop for barb density
+    const isMobile = dimensions.width < 640;
+
+    // On mobile: show every other level and every other hour to avoid clutter
+    const levelStep = isMobile ? 2 : 1;
+    const hourStep = isMobile ? 2 : 1;
+
+    PRESSURE_LEVELS.forEach((pressure, levelIdx) => {
+      // Skip levels on mobile for better readability
+      if (levelIdx % levelStep !== 0) return;
+
+      const y = CHART_PADDING.top + (levelIdx / (PRESSURE_LEVELS.length - 1)) * chartHeight;
+
+      daylightHours.forEach((hour, hourIdx) => {
+        // Skip hours on mobile for better readability
+        if (hourIdx % hourStep !== 0) return;
+
+        const x = CHART_PADDING.left + (hourIdx / (daylightHours.length - 1)) * chartWidth;
+
+        // Get wind data for this pressure level
+        const pressureLevel = hour.pressureLevels.find((pl) => pl.pressure === pressure);
+        if (!pressureLevel) return;
+
+        const { windSpeed, windDirection } = pressureLevel;
+
+        // Convert to barb configuration
+        const barbConfig = windSpeedToBarb(windSpeed, windDirection, isDarkTheme);
+
+        // Scale barbs based on screen size
+        const barbScale = isMobile ? 0.7 : 1.0;
+
+        // Draw the wind barb
+        drawWindBarb(ctx, x, y, barbConfig, barbScale);
+      });
+    });
+
     // Draw axis labels
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = textColorRgba;
@@ -308,6 +356,78 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.restore();
   }, [data, dimensions, isDarkTheme]);
 
+  // Handle mouse/touch hover for tooltip
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!data || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate chart area
+    const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
+    const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
+
+    // Filter to daylight hours
+    const daylightHours = data.hours.filter((hour) => {
+      const date = new Date(hour.time);
+      const localHour = date.getHours();
+      return localHour >= 6 && localHour <= 20;
+    });
+
+    if (daylightHours.length === 0) return;
+
+    // Determine mobile vs desktop for barb density
+    const isMobile = dimensions.width < 640;
+    const levelStep = isMobile ? 2 : 1;
+    const hourStep = isMobile ? 2 : 1;
+
+    // Check if pointer is near any wind barb
+    const hoverRadius = isMobile ? 20 : 15;
+    let foundBarb: typeof hoveredBarb = null;
+
+    for (let levelIdx = 0; levelIdx < PRESSURE_LEVELS.length; levelIdx++) {
+      if (levelIdx % levelStep !== 0) continue;
+
+      const pressure = PRESSURE_LEVELS[levelIdx];
+      const altitude = pressureToAltitude(pressure);
+      const barbY = CHART_PADDING.top + (levelIdx / (PRESSURE_LEVELS.length - 1)) * chartHeight;
+
+      for (let hourIdx = 0; hourIdx < daylightHours.length; hourIdx++) {
+        if (hourIdx % hourStep !== 0) continue;
+
+        const barbX = CHART_PADDING.left + (hourIdx / (daylightHours.length - 1)) * chartWidth;
+
+        // Check distance to barb
+        const distance = Math.sqrt(Math.pow(x - barbX, 2) + Math.pow(y - barbY, 2));
+
+        if (distance <= hoverRadius) {
+          const hour = daylightHours[hourIdx];
+          const pressureLevel = hour.pressureLevels.find((pl) => pl.pressure === pressure);
+
+          if (pressureLevel) {
+            foundBarb = {
+              speedKmh: pressureLevel.windSpeed,
+              direction: pressureLevel.windDirection,
+              altitude,
+              x: e.clientX,
+              y: e.clientY,
+            };
+            break;
+          }
+        }
+      }
+      if (foundBarb) break;
+    }
+
+    setHoveredBarb(foundBarb);
+  };
+
+  const handlePointerLeave = () => {
+    setHoveredBarb(null);
+  };
+
   // Loading skeleton
   if (loading || !data) {
     return (
@@ -318,12 +438,28 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
   }
 
   return (
-    <div className={`w-full ${className}`} ref={containerRef}>
+    <div className={`w-full relative ${className}`} ref={containerRef}>
       <canvas
         ref={canvasRef}
-        className="w-full h-auto border border-border rounded-lg"
+        className="w-full h-auto border border-border rounded-lg cursor-crosshair"
         aria-label="Windgram atmospheric profile chart"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
       />
+      {/* Tooltip for wind barbs */}
+      {hoveredBarb && (
+        <div
+          ref={tooltipRef}
+          className="fixed z-50 px-3 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg pointer-events-none whitespace-pre-line"
+          style={{
+            left: `${hoveredBarb.x + 10}px`,
+            top: `${hoveredBarb.y - 10}px`,
+            transform: 'translateY(-100%)',
+          }}
+        >
+          {formatWindTooltip(hoveredBarb.speedKmh, hoveredBarb.direction, hoveredBarb.altitude)}
+        </div>
+      )}
     </div>
   );
 }
