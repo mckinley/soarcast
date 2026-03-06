@@ -26,7 +26,7 @@
         "npm run lint passes"
       ],
       "priority": 0,
-      "passes": false,
+      "passes": true,
       "notes": "The middleware in src/middleware.ts currently blocks ALL /sites/* routes. Update protectedRoutes to only protect mutation endpoints and user-specific pages. The API routes /api/sites and /api/weather/profile should be public for read access."
     },
     {

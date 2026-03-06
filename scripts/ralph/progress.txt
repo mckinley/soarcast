@@ -25,3 +25,26 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Morning digest runs during 6-8AM UTC window, skips individual notifications when enabled
 - The notification check endpoint supports both enhanced and fallback (basic scoring) modes
 ---
+## 2026-03-06 21:45 - US-000
+- Made browse and site pages publicly accessible without authentication
+- Updated src/middleware.ts:
+  - Changed protectedRoutes from ['/sites', '/settings'] to ['/dashboard', '/settings']
+  - Added publicRoutes for /sites/browse and /sites/ (all site detail pages)
+  - Removed /api/sites and /api/weather from protectedApiRoutes (now public for GET)
+- Updated src/app/sites/[slug]/favorite-button.tsx:
+  - Added isAuthenticated prop to component
+  - Shows "Sign in to Favorite" button for unauthenticated users
+  - Redirects to /auth/signin with callbackUrl when clicked without authentication
+- Updated src/app/sites/[slug]/page.tsx:
+  - Removed conditional rendering of favorite button (now always shown)
+  - Passes isAuthenticated={!!session} to LaunchSiteFavoriteButton
+- Files changed: src/middleware.ts, src/app/sites/[slug]/favorite-button.tsx, src/app/sites/[slug]/page.tsx
+- All quality checks pass: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- Next.js middleware uses pattern matching - publicRoutes need explicit checks before protectedRoutes
+- The middleware pattern '/sites/' catches all /sites/[slug] detail pages
+- Auth flow: Pass isAuthenticated as boolean prop rather than session object to avoid serialization issues
+- Favorite button pattern: Show action, prompt sign-in on click rather than hiding completely
+- The middleware allows public GET access while server actions still check auth and throw errors
+---
