@@ -120,7 +120,7 @@
         "npm run build succeeds"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "This is the UX layer that makes SoarCast accessible to non-weather-nerds. The windgram is the power tool; this summary is the quick answer. Use the atmospheric profile data to generate more nuanced assessments than the current simple scoring."
     },
     {

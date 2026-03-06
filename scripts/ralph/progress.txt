@@ -174,3 +174,48 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Don't show crosshair detail and wind barb tooltip simultaneously:** Only show wind barb tooltip when crosshair is not active to avoid visual clutter.
 ---
 
+## Fri Mar 6 19:30:00 +07 2026 - US-006
+- ✅ Implemented flyability summary component for plain-language day assessments
+- Created `FlyabilitySummary` component with:
+  - Color-coded rating badge (Epic/Great/Good/Fair/Poor)
+  - Best flying window detection (consecutive hours with thermal index > 50)
+  - Plain-language summary generation based on rating and conditions
+  - Automatic concern detection (increasing winds, strong winds, weak thermals, low cloud base, rain)
+  - Expandable detail panel showing:
+    - Launch-level wind speed and direction (averaged at 950 hPa)
+    - Thermal strength categorization (strong/moderate/weak/very weak)
+    - Estimated cloud base (AGL)
+    - Estimated top of lift (MSL)
+    - Upper winds at 850 hPa
+    - Precipitation chance
+  - Responsive layout (2-3 columns for details)
+  - Hover/expand interactions for more details
+- Updated `WindgramInteractive` to:
+  - Accept optional `dayScores` prop (DayScore array)
+  - Match atmospheric data days with DayScore data by YYYY-MM-DD format
+  - Display FlyabilitySummary above the windgram chart when score data is available
+  - Maintain smooth day-switching transitions
+- Updated exports in `src/components/windgram/index.ts`
+
+**Files changed:**
+- src/components/windgram/flyability-summary.tsx (new)
+- src/components/windgram/windgram-interactive.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Two-tier data architecture:** The flyability summary bridges two data sources: DayScore (simple scoring for overall rating) and AtmosphericProfile (detailed vertical data for specifics like wind at altitude, thermal strength by hour, cloud base trends).
+- **Plain-language generation:** Non-technical pilots benefit from assessments like "Looks like a great XC day! Best window 11AM-3PM. Watch for increasing winds after 2PM." instead of raw metrics. The summary varies by rating level (Epic gets enthusiastic language, Fair gets cautious language).
+- **Best window detection:** Find the longest consecutive stretch of hours where thermal index > 50. This gives pilots a concrete time range to plan around (e.g., "11AM-3PM").
+- **Automatic concern detection:** Analyze atmospheric data for common flyability issues:
+  - Increasing winds: compare early vs late day averages (threshold: +10 km/h)
+  - Strong winds: launch-level average > 20 kt
+  - Weak thermals: thermal index < 40
+  - Low cloud base: estimated cloud base < 800m AGL
+  - Rain possible: precipitation probability > 30%
+- **Launch-level wind analysis:** Use 950 hPa as "typical launch altitude" (~500m MSL) for wind assessments. This is more relevant to pilots than surface (10m) winds.
+- **Expandable details pattern:** Show the most important info by default (rating, window, concerns). Hide technical details (exact wind speeds, altitudes, thermal index numbers) behind an expand button. This serves both casual pilots ("should I go?") and technical pilots ("what are the exact numbers?").
+- **Color psychology for ratings:** Epic=purple, Great=green, Good=blue, Fair=yellow, Poor=gray. This matches pilot intuition and creates visual hierarchy.
+- **Date format matching:** DayScore uses YYYY-MM-DD format for the `date` field. When splitting AtmosphericProfile hours into days, track both Date objects (for display) and YYYY-MM-DD strings (for matching with DayScore).
+- **Component is ready for integration:** WindgramInteractive now accepts optional `dayScores` prop. When integrated into site pages (US-007), pass both atmospheric profile data and day scores to show the full experience.
+---
+
