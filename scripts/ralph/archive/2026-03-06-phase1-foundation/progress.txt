@@ -1,0 +1,174 @@
+# Ralph Progress Log
+Started: Fri Mar 6 2026
+---
+
+## Codebase Patterns
+- Use Drizzle ORM with `drizzle-orm/libsql` for Turso database access
+- SQLite stores JSON as text — use `text('field', { mode: 'json' }).$type<T>()` for type-safe JSON columns
+- Use `crypto.randomUUID()` for generating primary keys in schema defaults
+- Environment variables for Turso: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN
+- NextAuth v5: Config in `src/auth.ts`, use `auth()` server-side, `useSession()` client-side
+- Protected routes: Middleware redirects pages to sign-in, returns 401 for API routes
+- Leaflet MUST be dynamically imported with next/dynamic ssr:false via a wrapper client component
+- Use `and()` from drizzle-orm to combine multiple where conditions
+- Upsert pattern: `.insert().onConflictDoUpdate({ target: [col1, col2], set: {...} })`
+- Generate migrations with `npx drizzle-kit generate`
+- shadcn/ui components are in src/components/ui/ — do not modify their internals unless fixing actual bugs
+- Site data model: `launch_sites` (imported), `custom_sites` (user-created), legacy `sites` table
+- `forecasts_cache` uses siteType discriminator ('launch'|'custom'|'legacy') — always include in queries/inserts
+- Complex migrations: Use custom migration scripts, not just drizzle-kit push (it compares schema, not migrations)
+- Lazy DB imports in utilities: Use `await import('@/db')` inside functions to avoid requiring env vars at module load (allows testing without DB)
+- CLI scripts: Add `import 'dotenv/config'` at top to load .env before accessing process.env
+- Drizzle timestamp columns expect Date objects, not numbers (use `new Date()` not `Date.now()`)
+- Vitest config: Exclude e2e folder to prevent Playwright tests from running in vitest
+- Weather services: `weather.ts` (simple forecasts, 6hr cache) and `weather-profile.ts` (atmospheric profiles, 3hr cache)
+- API routes: Use NextResponse.json() with Cache-Control headers for CDN caching (s-maxage for shared cache)
+- Location-based cache keys: Round coordinates to 2 decimal places (~1km precision) for better cache hit rates
+---
+
+## 2026-03-06 17:48 - US-001
+- Implemented code quality tooling foundation for Phase 1
+- Files changed:
+  - Created: .prettierrc, .prettierignore, vitest.config.ts, playwright.config.ts, .husky/pre-commit, e2e/homepage.spec.ts, src/lib/__tests__/scoring.test.ts
+  - Modified: package.json (added test scripts), 74 files formatted with Prettier
+- Fixed all 18 ESLint errors:
+  - Replaced `any` with proper types: `unknown` for error handlers, `SiteFormData` for form data
+  - Fixed unescaped apostrophes in JSX (replaced with &apos;)
+  - Removed unused imports (sql from drizzle-orm, Badge from score-cell, error param in dashboard-client)
+  - Fixed impure Math.random() call in sidebar skeleton component (used useState initializer)
+- **Learnings for future iterations:**
+  - Prettier formatting applies to entire codebase - run it last to avoid merge conflicts
+  - SiteFormData type doesn't include createdAt/updatedAt (form doesn't handle those)
+  - Error type narrowing in TypeScript: check `typeof error === 'object'` and `'statusCode' in error` before accessing properties
+  - React purity rule: use `useState(() => Math.random())` instead of `useMemo` to avoid impure functions in render
+  - Pre-commit hooks now enforce code quality automatically
+---
+
+## 2026-03-06 18:05 - US-002
+- Implemented database schema for launch sites, custom sites, and user favorites
+- Files changed:
+  - Created: drizzle/0003_nebulous_captain_universe.sql, scripts/run-migration.ts, scripts/complete-migration.ts
+  - Modified: src/db/schema.ts (added 3 new tables), src/lib/weather.ts (updated for new schema)
+- Database changes:
+  - Created `launch_sites` table for imported sites (23 fields including slug, orientations, landing info)
+  - Created `user_favorite_sites` junction table with custom overrides (max_wind, ideal_directions, notify)
+  - Created `custom_sites` table for user-created monitoring points
+  - Modified `forecasts_cache` to use site_type discriminator ('launch'|'custom'|'legacy') instead of FK
+  - Migrated existing user sites from `sites` table to `custom_sites` (1 site migrated)
+  - Kept legacy `sites` table for backward compatibility
+- **Learnings for future iterations:**
+  - drizzle-kit push compares schema to DB state, not migration files - use custom migration scripts for complex data migrations
+  - Use site_type discriminator pattern instead of foreign keys when a table needs to reference multiple source tables
+  - Migration script pattern: split by `--> statement-breakpoint` to execute statements sequentially
+  - Always verify data migration with SELECT COUNT(*) queries after migration
+  - Use `IF NOT EXISTS` in manual migrations to allow safe re-runs
+  - The forecasts_cache now needs siteType in all queries: `and(eq(siteId, id), eq(siteType, 'legacy'))`
+---
+## 2026-03-06 18:07 - US-003
+- Implemented ParaglidingEarth site scraper with full Washington State import
+- Files changed:
+  - Created: src/lib/scraper/paraglidingearth.ts (scraper service with XML parsing)
+  - Created: src/lib/scraper/__tests__/paraglidingearth.test.ts (18 unit tests, all passing)
+  - Created: scripts/import-sites.ts (CLI script with --region and --bbox support)
+  - Created: drizzle/0004_bouncy_timeslip.sql (added unique constraint on source_id)
+  - Modified: package.json (added fast-xml-parser dependency)
+  - Modified: vitest.config.ts (excluded e2e tests from vitest)
+  - Modified: src/db/schema.ts (added .unique() to sourceId field)
+- Implementation details:
+  - XML parsing with fast-xml-parser (lightweight, no dependencies)
+  - Orientation mapping: compass directions rated 2 (good) → ideal wind directions in degrees
+  - Slug generation: lowercase, remove special chars, replace spaces with hyphens
+  - Upsert pattern on source_id prevents duplicates on re-import
+  - Rate limiting: 1 second delay before each API request
+  - Successfully imported 55 sites from Washington State
+- **Learnings for future iterations:**
+  - Lazy import pattern for db: use `await import('@/db')` inside functions to avoid requiring env vars at module load time (enables testing utility functions without DB connection)
+  - Fast-xml-parser options: `ignoreAttributes: false` to preserve XML attributes, `parseTagValue: true` to auto-convert numbers
+  - ParaglidingEarth doesn't provide stable IDs - generated source_id from lat_lng coordinates for uniqueness
+  - Handle both array and single-item XML responses: `Array.isArray(parsed.search.takeoff) ? ... : [...]`
+  - Drizzle timestamp columns expect Date objects, not milliseconds (use `new Date()` not `Date.now()`)
+  - Unique constraints must exist on conflict target columns - needed migration to add missing index
+  - Vitest exclude config: add e2e folder to prevent Playwright tests from running in vitest
+  - CLI scripts need `import 'dotenv/config'` at the top to load .env file before importing modules that access process.env
+---
+
+## 2026-03-06 18:08 - US-004
+- Implemented pressure-level atmospheric profile service for windgram visualizations
+- Files changed:
+  - Created: src/lib/weather-profile.ts (full atmospheric profile service)
+  - Created: src/lib/__tests__/weather-profile.test.ts (22 unit tests for calculations)
+  - Created: src/app/api/weather/profile/route.ts (API endpoint with validation)
+  - Created: drizzle/0005_tired_wallflower.sql (atmospheric_profiles_cache table)
+  - Modified: src/db/schema.ts (added atmosphericProfilesCache table)
+- Implementation details:
+  - Fetches 8 pressure levels (1000-500 hPa) with 6 parameters each from Open-Meteo
+  - Surface data: temperature, wind, gusts, cloud cover, CAPE, precipitation probability, BLH, CIN, lifted index, shortwave radiation
+  - Derived parameters: lapse rate (°C/1000ft), thermal index (0-100 composite score), estimated cloud base (from temp/dewpoint), estimated top of lift (from BLH + CAPE)
+  - Location-based caching with rounded coordinates (~1km precision) and 3-hour TTL
+  - API route: GET /api/weather/profile?lat=X&lng=Y&days=2 with validation and CDN caching
+  - All 22 unit tests passing (lapse rate, cloud base, thermal index, top of lift)
+- **Learnings for future iterations:**
+  - Open-Meteo pressure-level format: `temperature_1000hPa` (capital Pa, not lowercase)
+  - Lapse rate calculation: (T_lower - T_upper) / (height_diff_ft / 1000) for °C/1000ft
+  - Thermal index is composite: lapse (0-40) + CAPE (0-30) + CIN (0-15) + wind (0-15) = 0-100
+  - Cloud base estimation uses Magnus formula: dewpoint = f(temp, RH), then (T-Td)/2.5*1000 ft
+  - Location-based cache keys use rounded coordinates (2 decimal places) to improve cache hit rate
+  - Separate cache table for atmospheric profiles (3hr TTL) vs simple forecasts (6hr TTL)
+  - Weather profile service kept separate from existing weather.ts to avoid breaking existing code
+  - Test carefully for wind penalties - strong winds reduce thermal index but not as much as expected
+---
+
+## 2026-03-06 18:15 - US-005
+- Implemented updated site pages with browse, detail, and favorite functionality
+- Files changed:
+  - Created: src/app/sites/browse/page.tsx, browse-client.tsx, actions.ts (browse + search)
+  - Created: src/app/sites/[slug]/page.tsx, favorite-button.tsx (launch site detail)
+  - Created: src/components/sites-browse-map.tsx, sites-browse-map-wrapper.tsx (map with multiple markers)
+  - Modified: src/app/actions.ts (dashboard now includes favorited launch sites)
+  - Modified: src/components/app-shell.tsx (added "Browse Sites" nav link with Compass icon)
+  - Modified: src/db/schema.ts (added Drizzle relations for userFavoriteSites)
+  - Modified: src/lib/weather.ts (added siteType parameter to getForecast)
+  - Moved: src/app/sites/[id] → src/app/sites/custom/[id] (avoid route conflict)
+  - Modified: src/components/site-card.tsx (updated link to /sites/custom/[id])
+- Implementation details:
+  - Browse page shows all WA launch sites on Leaflet map with search/filter
+  - Map markers with popups containing site info + link to detail page
+  - Slug-based detail pages (/sites/[slug]) for launch sites with full enriched data
+  - Favorite button with optimistic UI updates (no toast component needed)
+  - Dashboard combines custom sites (legacy) + favorited launch sites
+  - Preserved all existing custom site CRUD functionality
+  - Mobile-responsive layouts with shadcn/ui components
+- **Learnings for future iterations:**
+  - Next.js route conflicts: Can't have both /sites/[id] and /sites/[slug] - they're ambiguous
+  - Moved legacy user sites to /sites/custom/[id] to allow /sites/[slug] for launch sites
+  - Drizzle relations syntax: `relations(table, ({ one, many }) => ({ ... }))` enables `.with()` queries
+  - LaunchSite lat/lng are stored as text (precision), must parseFloat() for calculations
+  - Site type tracking: Use a Set to track which sites are launch vs legacy for cache key
+  - Dashboard action pattern: fetch both custom + favorites, combine, then track types separately
+  - Pre-commit hooks ran automatically after commit (lint-staged + husky)
+---
+
+## 2026-03-06 18:20 - US-006
+- Implemented REST API endpoints for site and atmospheric data access
+- Files changed:
+  - Created: src/app/api/sites/route.ts (list sites with filters)
+  - Created: src/app/api/sites/[slug]/route.ts (single site details)
+  - Created: src/app/api/sites/[slug]/profile/route.ts (site atmospheric profile)
+  - Verified: src/app/api/weather/profile/route.ts exists from US-004
+- Implementation details:
+  - GET /api/sites supports region, type, and search query params
+  - Flying type filter requires JSON array parsing (not DB-level since JSON column)
+  - All endpoints return { count, sites } or single object with consistent error format
+  - Cache-Control: public, s-maxage=3600, stale-while-revalidate for CDN optimization
+  - Error responses: { error: string, status: number } with matching HTTP status
+  - Atmospheric profile endpoints reuse fetchAtmosphericProfile from weather-profile.ts
+  - Days parameter validated 1-7 range with default of 2
+- **Learnings for future iterations:**
+  - Next.js API routes: Use NextResponse.json() for proper content-type headers
+  - CDN caching: s-maxage controls shared cache (Vercel Edge), max-age controls browser
+  - stale-while-revalidate allows serving stale data while fetching fresh in background
+  - JSON columns in SQLite: Can't filter at DB level, must filter in JS after query
+  - Route params in Next.js 15: Must await params object before destructuring
+  - Consistent error format across all endpoints helps API consumers handle errors uniformly
+---
+
