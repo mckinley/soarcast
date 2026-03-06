@@ -7,3 +7,8 @@ export {
   formatWindTooltip,
   type WindBarbConfig,
 } from './wind-barb-utils';
+export {
+  getThermalStrength,
+  formatThermalIndex,
+  type ThermalStrength,
+} from './thermal-cloud-utils';

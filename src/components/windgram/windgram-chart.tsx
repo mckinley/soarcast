@@ -10,6 +10,13 @@ import {
   bilinearInterpolate,
 } from './lapse-rate-utils';
 import { windSpeedToBarb, drawWindBarb, formatWindTooltip } from './wind-barb-utils';
+import {
+  drawThermalIndicator,
+  collectLineData,
+  drawSmoothLine,
+  drawMoistureShading,
+  drawLineLabel,
+} from './thermal-cloud-utils';
 
 interface WindgramChartProps {
   data: AtmosphericProfile | null;
@@ -22,8 +29,8 @@ const PRESSURE_LEVELS = [1000, 950, 900, 850, 800, 700, 600, 500] as const;
 
 // Constants for chart layout
 const CHART_PADDING = {
-  top: 40,
-  right: 60,
+  top: 50, // Increased for thermal indicators
+  right: 120, // Increased for line labels
   bottom: 50,
   left: 80,
 };
@@ -301,6 +308,84 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     });
 
     // ========================================
+    // DRAW MOISTURE/CLOUD SHADING (US-004)
+    // ========================================
+    // Draw subtle humidity hatching for areas with RH > 90%
+    for (let layerIdx = 0; layerIdx < numLayers; layerIdx++) {
+      for (let timeIdx = 0; timeIdx < daylightHours.length; timeIdx++) {
+        const x1 = CHART_PADDING.left + (timeIdx / (daylightHours.length - 1)) * chartWidth;
+        const x2 =
+          timeIdx < daylightHours.length - 1
+            ? CHART_PADDING.left + ((timeIdx + 1) / (daylightHours.length - 1)) * chartWidth
+            : CHART_PADDING.left + chartWidth;
+        const y1 = CHART_PADDING.top + (layerIdx / numLayers) * chartHeight;
+        const y2 = CHART_PADDING.top + ((layerIdx + 1) / numLayers) * chartHeight;
+
+        // Get humidity at this pressure level
+        const hour = daylightHours[timeIdx];
+        const pressureLevel = hour.pressureLevels[layerIdx];
+        if (pressureLevel) {
+          drawMoistureShading(ctx, x1, y1, x2, y2, pressureLevel.relativeHumidity, isDarkTheme);
+        }
+      }
+    }
+
+    // ========================================
+    // DRAW ATMOSPHERIC LAYER LINES (US-004)
+    // ========================================
+    // Calculate altitude range for coordinate conversion
+    const minPressure = PRESSURE_LEVELS[PRESSURE_LEVELS.length - 1]; // 500 hPa (highest altitude)
+    const maxPressure = PRESSURE_LEVELS[0]; // 1000 hPa (lowest altitude)
+    const minAltitude = pressureToAltitude(maxPressure).meters;
+    const maxAltitude = pressureToAltitude(minPressure).meters;
+
+    // Collect line data for all hours
+    const lineData = collectLineData(
+      daylightHours,
+      CHART_PADDING.top,
+      chartHeight,
+      minAltitude,
+      maxAltitude,
+      data.elevation,
+    );
+
+    // Calculate X coordinates for each hour
+    const xCoords = daylightHours.map(
+      (_, idx) => CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth,
+    );
+
+    // Draw cloud base line (dashed, cyan/blue)
+    const cloudBaseColor = isDarkTheme ? '#22d3ee' : '#06b6d4'; // cyan-400 : cyan-600
+    drawSmoothLine(ctx, xCoords, lineData.cloudBase, cloudBaseColor, 2, [8, 4]);
+
+    // Draw top of lift line (dashed, green)
+    const topOfLiftColor = isDarkTheme ? '#4ade80' : '#16a34a'; // green-400 : green-600
+    drawSmoothLine(ctx, xCoords, lineData.topOfLift, topOfLiftColor, 2, [8, 4]);
+
+    // Draw boundary layer height line (dashed, orange)
+    const boundaryLayerColor = isDarkTheme ? '#fb923c' : '#ea580c'; // orange-400 : orange-600
+    drawSmoothLine(ctx, xCoords, lineData.boundaryLayer, boundaryLayerColor, 2, [4, 4]);
+
+    // Draw labels for the lines (at the right edge)
+    const labelX = CHART_PADDING.left + chartWidth + 5;
+    const labelBg = isDarkTheme ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)';
+
+    // Find last non-null Y for each line to place labels
+    const lastCloudBase = lineData.cloudBase.filter((y) => y !== null).pop();
+    const lastTopOfLift = lineData.topOfLift.filter((y) => y !== null).pop();
+    const lastBoundaryLayer = lineData.boundaryLayer.filter((y) => y !== null).pop();
+
+    if (lastCloudBase !== undefined) {
+      drawLineLabel(ctx, 'Cloud Base', labelX, lastCloudBase, cloudBaseColor, labelBg);
+    }
+    if (lastTopOfLift !== undefined) {
+      drawLineLabel(ctx, 'Top of Lift', labelX, lastTopOfLift, topOfLiftColor, labelBg);
+    }
+    if (lastBoundaryLayer !== undefined) {
+      drawLineLabel(ctx, 'Boundary Layer', labelX, lastBoundaryLayer, boundaryLayerColor, labelBg);
+    }
+
+    // ========================================
     // DRAW WIND BARBS (US-003)
     // ========================================
     // Determine mobile vs desktop for barb density
@@ -337,6 +422,18 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
         // Draw the wind barb
         drawWindBarb(ctx, x, y, barbConfig, barbScale);
       });
+    });
+
+    // ========================================
+    // DRAW THERMAL INDICATORS (US-004)
+    // ========================================
+    // Draw thermal strength badges at the top of the chart
+    const thermalY = CHART_PADDING.top - 15;
+    daylightHours.forEach((hour, idx) => {
+      if (idx % 2 !== 0 && isMobile) return; // Thin out on mobile
+
+      const x = CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth;
+      drawThermalIndicator(ctx, x, thermalY, hour.derived.thermalIndex, isDarkTheme);
     });
 
     // Draw axis labels
