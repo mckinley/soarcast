@@ -179,6 +179,15 @@ export const forecastsCache = sqliteTable(
   }),
 );
 
+/**
+ * Per-site notification preferences
+ */
+export interface SiteNotificationPreferences {
+  enabled?: boolean; // Default true
+  minRating?: 'Good' | 'Great' | 'Epic'; // Minimum rating to trigger notification
+  notifyTime?: 'morning' | 'evening' | 'both'; // Default 'both'
+}
+
 export const settings = sqliteTable('settings', {
   id: text('id')
     .primaryKey()
@@ -192,7 +201,11 @@ export const settings = sqliteTable('settings', {
   siteNotifications: text('siteNotifications', { mode: 'json' })
     .notNull()
     .default('{}')
-    .$type<Record<string, boolean>>(),
+    .$type<Record<string, SiteNotificationPreferences>>(),
+  morningDigestEnabled: integer('morningDigestEnabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  morningDigestTime: text('morningDigestTime').default('08:00'), // HH:MM format in user's local timezone
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

@@ -4,6 +4,10 @@ import { users, sites, pushSubscriptions, settings as settingsTable } from '@/db
 import { eq } from 'drizzle-orm';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores, scoreToLabel } from '@/lib/scoring';
+import { getAtmosphericProfile } from '@/lib/weather-profile';
+import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '@/lib/notifications';
+import type { DayAnalysis } from '@/lib/notifications';
+import type { Site } from '@/types';
 import webpush from 'web-push';
 
 // Configure web-push with VAPID keys
@@ -35,6 +39,11 @@ export async function POST(request: NextRequest) {
     let totalNotificationsSent = 0;
     let totalErrors = 0;
 
+    // Determine if this is a morning digest run (check current hour in UTC)
+    const now = new Date();
+    const currentHour = now.getUTCHours();
+    const isMorningRun = currentHour >= 6 && currentHour < 8; // 6-8 AM UTC window
+
     for (const user of allUsers) {
       try {
         // Get user's settings
@@ -65,25 +74,167 @@ export async function POST(request: NextRequest) {
           continue; // Skip users without sites
         }
 
-        // Check each site for good flying days
+        // Handle morning digest if enabled
+        if (isMorningRun && userSettings.morningDigestEnabled) {
+          try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
+
+            // Collect analyses for all favorited sites
+            const siteAnalyses: Array<{ site: Site; analysis: DayAnalysis }> = [];
+
+            for (const site of userSites) {
+              const sitePrefs = (
+                userSettings.siteNotifications as Record<
+                  string,
+                  {
+                    enabled?: boolean;
+                    minRating?: 'Good' | 'Great' | 'Epic';
+                  }
+                >
+              )[site.id];
+
+              // Skip disabled sites
+              if (sitePrefs?.enabled === false) {
+                continue;
+              }
+
+              try {
+                const atmosphericProfile = await getAtmosphericProfile(
+                  parseFloat(site.latitude),
+                  parseFloat(site.longitude),
+                  1, // Only need today for morning digest
+                );
+
+                const analysis = analyzeFlyingDay(
+                  atmosphericProfile,
+                  {
+                    id: site.id,
+                    name: site.name,
+                    latitude: parseFloat(site.latitude),
+                    longitude: parseFloat(site.longitude),
+                    elevation: site.elevation,
+                    idealWindDirections: site.idealWindDirections as number[],
+                    maxWindSpeed: site.maxWindSpeed,
+                    notes: site.notes ?? undefined,
+                    createdAt: site.createdAt.toISOString(),
+                    updatedAt: site.updatedAt.toISOString(),
+                  },
+                  todayStr,
+                );
+
+                if (analysis) {
+                  siteAnalyses.push({
+                    site: {
+                      id: site.id,
+                      name: site.name,
+                      latitude: parseFloat(site.latitude),
+                      longitude: parseFloat(site.longitude),
+                      elevation: site.elevation,
+                      idealWindDirections: site.idealWindDirections as number[],
+                      maxWindSpeed: site.maxWindSpeed,
+                      notes: site.notes ?? undefined,
+                      createdAt: site.createdAt.toISOString(),
+                      updatedAt: site.updatedAt.toISOString(),
+                    },
+                    analysis,
+                  });
+                }
+              } catch (error) {
+                console.error(`Error analyzing site ${site.id} for digest:`, error);
+              }
+            }
+
+            // Generate and send digest notification
+            if (siteAnalyses.length > 0) {
+              const digestNotification = generateMorningDigest(siteAnalyses, todayStr);
+              const payload = JSON.stringify(digestNotification);
+
+              for (const subscription of subscriptions) {
+                try {
+                  await webpush.sendNotification(
+                    {
+                      endpoint: subscription.endpoint,
+                      keys: subscription.keys,
+                    },
+                    payload,
+                  );
+                  totalNotificationsSent++;
+                } catch (error: unknown) {
+                  console.error(
+                    `Failed to send digest notification to ${subscription.endpoint}:`,
+                    error,
+                  );
+
+                  if (
+                    error &&
+                    typeof error === 'object' &&
+                    'statusCode' in error &&
+                    error.statusCode === 410
+                  ) {
+                    await db
+                      .delete(pushSubscriptions)
+                      .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
+                  }
+                  totalErrors++;
+                }
+              }
+            }
+
+            // Skip individual site notifications when digest is enabled
+            continue;
+          } catch (error) {
+            console.error(`Error generating morning digest for user ${user.id}:`, error);
+            totalErrors++;
+            // Fall through to individual notifications on digest failure
+          }
+        }
+
+        // Check each site for good flying days (individual notifications)
         for (const site of userSites) {
           // Check if notifications are enabled for this site
-          const siteNotifications = userSettings.siteNotifications as Record<string, boolean>;
-          const isSiteEnabled = siteNotifications[site.id] ?? true;
+          const siteNotifications = userSettings.siteNotifications as Record<
+            string,
+            {
+              enabled?: boolean;
+              minRating?: 'Good' | 'Great' | 'Epic';
+              notifyTime?: 'morning' | 'evening' | 'both';
+            }
+          >;
+
+          const sitePrefs = siteNotifications[site.id];
+          const isSiteEnabled = sitePrefs?.enabled ?? true;
 
           if (!isSiteEnabled) {
             continue; // Skip sites with notifications disabled
           }
 
+          // Get minimum rating threshold for this site (default to global threshold)
+          const minRatingMap: Record<string, number> = {
+            Good: 51,
+            Great: 71,
+            Epic: 86,
+          };
+          const siteMinScore = sitePrefs?.minRating
+            ? minRatingMap[sitePrefs.minRating]
+            : userSettings.minScoreThreshold;
+
           try {
-            // Fetch forecast for the site
+            // Fetch both basic forecast and atmospheric profile
             const forecast = await getForecast(
               site.id,
               parseFloat(site.latitude),
               parseFloat(site.longitude),
             );
 
-            // Calculate scores for all days in the forecast
+            const atmosphericProfile = await getAtmosphericProfile(
+              parseFloat(site.latitude),
+              parseFloat(site.longitude),
+              userSettings.daysAhead,
+            );
+
+            // Calculate basic scores for all days (fallback if atmospheric analysis fails)
             const dailyScores = calculateDailyScores(forecast, {
               id: site.id,
               name: site.name,
@@ -107,22 +258,65 @@ export async function POST(request: NextRequest) {
               checkDate.setDate(checkDate.getDate() + dayOffset);
               const dateStr = checkDate.toISOString().split('T')[0];
 
-              // Find score for this date
+              // Try to use atmospheric profile analysis (enhanced notifications)
+              const analysis = analyzeFlyingDay(
+                atmosphericProfile,
+                {
+                  id: site.id,
+                  name: site.name,
+                  latitude: parseFloat(site.latitude),
+                  longitude: parseFloat(site.longitude),
+                  elevation: site.elevation,
+                  idealWindDirections: site.idealWindDirections as number[],
+                  maxWindSpeed: site.maxWindSpeed,
+                  notes: site.notes ?? undefined,
+                  createdAt: site.createdAt.toISOString(),
+                  updatedAt: site.updatedAt.toISOString(),
+                },
+                dateStr,
+              );
+
+              // Fallback to basic scoring if atmospheric analysis unavailable
               const dayScore = dailyScores.find((score) => score.date === dateStr);
 
-              // Check if score meets threshold
-              if (dayScore && dayScore.overallScore >= userSettings.minScoreThreshold) {
-                const scoreLabel = scoreToLabel(dayScore.overallScore);
+              const score = analysis?.score ?? dayScore?.overallScore ?? 0;
+
+              // Check if score meets site-specific threshold
+              if (score >= siteMinScore) {
+                let payload: string;
+
+                if (analysis) {
+                  // Use rich notification with atmospheric analysis
+                  const notification = generateNotification(
+                    {
+                      id: site.id,
+                      name: site.name,
+                      latitude: parseFloat(site.latitude),
+                      longitude: parseFloat(site.longitude),
+                      elevation: site.elevation,
+                      idealWindDirections: site.idealWindDirections as number[],
+                      maxWindSpeed: site.maxWindSpeed,
+                      notes: site.notes ?? undefined,
+                      createdAt: site.createdAt.toISOString(),
+                      updatedAt: site.updatedAt.toISOString(),
+                    },
+                    analysis,
+                  );
+
+                  payload = JSON.stringify(notification);
+                } else {
+                  // Fallback to basic notification
+                  const scoreLabel = scoreToLabel(score);
+                  payload = JSON.stringify({
+                    title: `${scoreLabel} Flying Day: ${site.name}`,
+                    body: `${dateStr}: Score ${Math.round(score)}/100`,
+                    url: `/sites/${site.id}`,
+                    siteId: site.id,
+                    tag: `site-${site.id}-${dateStr}`,
+                  });
+                }
 
                 // Send push notification to all user's subscriptions
-                const payload = JSON.stringify({
-                  title: `${scoreLabel} Flying Day: ${site.name}`,
-                  body: `${dateStr}: Score ${Math.round(dayScore.overallScore)}/100`,
-                  url: `/sites/${site.id}`,
-                  siteId: site.id,
-                  tag: `site-${site.id}-${dateStr}`,
-                });
-
                 for (const subscription of subscriptions) {
                   try {
                     await webpush.sendNotification(

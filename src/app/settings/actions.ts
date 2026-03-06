@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { settings, pushSubscriptions } from '@/db/schema';
+import { settings, pushSubscriptions, type SiteNotificationPreferences } from '@/db/schema';
 import { auth } from '@/auth';
 import type { Settings } from '@/types';
 
@@ -35,12 +35,18 @@ async function dbSettingsToApp(
     enabled = subs.length > 0;
   }
 
+  // Convert new SiteNotificationPreferences format to old boolean format for backward compat
+  const legacySitePreferences: Record<string, boolean> = {};
+  for (const [siteId, prefs] of Object.entries(dbSettings.siteNotifications)) {
+    legacySitePreferences[siteId] = prefs.enabled ?? true;
+  }
+
   return {
     notifications: {
       enabled,
       minScoreThreshold: dbSettings.minScoreThreshold,
       daysAhead: dbSettings.daysAhead,
-      sitePreferences: dbSettings.siteNotifications,
+      sitePreferences: legacySitePreferences,
     },
     updatedAt: dbSettings.updatedAt.toISOString(),
   };
@@ -95,11 +101,20 @@ export async function updateSettings(
     throw new Error('Unauthorized');
   }
 
+  // Convert legacy boolean format to new SiteNotificationPreferences format
+  let convertedSiteNotifications: Record<string, SiteNotificationPreferences> | undefined;
+  if (updates.sitePreferences !== undefined) {
+    convertedSiteNotifications = {};
+    for (const [siteId, enabled] of Object.entries(updates.sitePreferences)) {
+      convertedSiteNotifications[siteId] = { enabled };
+    }
+  }
+
   // Build update object with only provided fields
   const updateData: {
     minScoreThreshold?: number;
     daysAhead?: number;
-    siteNotifications?: Record<string, boolean>;
+    siteNotifications?: Record<string, SiteNotificationPreferences>;
     updatedAt: Date;
   } = {
     updatedAt: new Date(),
@@ -111,8 +126,8 @@ export async function updateSettings(
   if (updates.daysAhead !== undefined) {
     updateData.daysAhead = updates.daysAhead;
   }
-  if (updates.sitePreferences !== undefined) {
-    updateData.siteNotifications = updates.sitePreferences;
+  if (convertedSiteNotifications !== undefined) {
+    updateData.siteNotifications = convertedSiteNotifications;
   }
 
   // Use upsert pattern: insert or update if exists
@@ -122,7 +137,7 @@ export async function updateSettings(
       userId: session.user.id,
       minScoreThreshold: updates.minScoreThreshold ?? 70,
       daysAhead: updates.daysAhead ?? 2,
-      siteNotifications: updates.sitePreferences ?? {},
+      siteNotifications: convertedSiteNotifications ?? {},
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -145,11 +160,17 @@ export async function toggleSiteNotifications(siteId: string, enabled: boolean):
     throw new Error('Unauthorized');
   }
 
-  // Get current settings to merge site preferences
-  const currentSettings = await getSettings();
-  const updatedSitePreferences = {
-    ...currentSettings.notifications.sitePreferences,
-    [siteId]: enabled,
+  // Get current DB settings
+  const [currentDbSettings] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.userId, session.user.id))
+    .limit(1);
+
+  // Merge site preferences in new format
+  const updatedSitePreferences: Record<string, SiteNotificationPreferences> = {
+    ...currentDbSettings?.siteNotifications,
+    [siteId]: { enabled },
   };
 
   // Update with merged site preferences
@@ -157,8 +178,8 @@ export async function toggleSiteNotifications(siteId: string, enabled: boolean):
     .insert(settings)
     .values({
       userId: session.user.id,
-      minScoreThreshold: currentSettings.notifications.minScoreThreshold,
-      daysAhead: currentSettings.notifications.daysAhead,
+      minScoreThreshold: currentDbSettings?.minScoreThreshold ?? 70,
+      daysAhead: currentDbSettings?.daysAhead ?? 2,
       siteNotifications: updatedSitePreferences,
       updatedAt: new Date(),
     })
