@@ -13,8 +13,10 @@ Started: Fri Mar 6 2026
 - Use `and()` from drizzle-orm to combine multiple where conditions
 - Upsert pattern: `.insert().onConflictDoUpdate({ target: [col1, col2], set: {...} })`
 - Generate migrations with `npx drizzle-kit generate`
-- Existing lint issues: `any` types, unescaped quotes in JSX, unused vars, Math.random in render — all must be fixed
 - shadcn/ui components are in src/components/ui/ — do not modify their internals unless fixing actual bugs
+- Site data model: `launch_sites` (imported), `custom_sites` (user-created), legacy `sites` table
+- `forecasts_cache` uses siteType discriminator ('launch'|'custom'|'legacy') — always include in queries/inserts
+- Complex migrations: Use custom migration scripts, not just drizzle-kit push (it compares schema, not migrations)
 ---
 
 ## 2026-03-06 17:48 - US-001
@@ -33,4 +35,25 @@ Started: Fri Mar 6 2026
   - Error type narrowing in TypeScript: check `typeof error === 'object'` and `'statusCode' in error` before accessing properties
   - React purity rule: use `useState(() => Math.random())` instead of `useMemo` to avoid impure functions in render
   - Pre-commit hooks now enforce code quality automatically
+---
+
+## 2026-03-06 18:05 - US-002
+- Implemented database schema for launch sites, custom sites, and user favorites
+- Files changed:
+  - Created: drizzle/0003_nebulous_captain_universe.sql, scripts/run-migration.ts, scripts/complete-migration.ts
+  - Modified: src/db/schema.ts (added 3 new tables), src/lib/weather.ts (updated for new schema)
+- Database changes:
+  - Created `launch_sites` table for imported sites (23 fields including slug, orientations, landing info)
+  - Created `user_favorite_sites` junction table with custom overrides (max_wind, ideal_directions, notify)
+  - Created `custom_sites` table for user-created monitoring points
+  - Modified `forecasts_cache` to use site_type discriminator ('launch'|'custom'|'legacy') instead of FK
+  - Migrated existing user sites from `sites` table to `custom_sites` (1 site migrated)
+  - Kept legacy `sites` table for backward compatibility
+- **Learnings for future iterations:**
+  - drizzle-kit push compares schema to DB state, not migration files - use custom migration scripts for complex data migrations
+  - Use site_type discriminator pattern instead of foreign keys when a table needs to reference multiple source tables
+  - Migration script pattern: split by `--> statement-breakpoint` to execute statements sequentially
+  - Always verify data migration with SELECT COUNT(*) queries after migration
+  - Use `IF NOT EXISTS` in manual migrations to allow safe re-runs
+  - The forecasts_cache now needs siteType in all queries: `and(eq(siteId, id), eq(siteType, 'legacy'))`
 ---

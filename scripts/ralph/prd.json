@@ -50,7 +50,7 @@
         "npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Be careful with the migration — existing users have sites with forecasts. Don't lose data. The forecasts_cache FK currently points to sites.id. Consider making it a simple text field (no FK) that can reference either table, or add a site_type discriminator."
     },
     {
