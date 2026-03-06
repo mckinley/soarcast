@@ -61,7 +61,7 @@
         "npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "For distance sorting, use the browser Geolocation API with a fallback. Leaflet has marker clustering plugins (leaflet.markercluster). Keep the map responsive and fast."
     },
     {

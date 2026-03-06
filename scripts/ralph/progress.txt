@@ -48,3 +48,44 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Favorite button pattern: Show action, prompt sign-in on click rather than hiding completely
 - The middleware allows public GET access while server actions still check auth and throw errors
 ---
+## 2026-03-06 22:00 - US-002
+- Implemented comprehensive site search and discovery improvements
+- Added full-text search across site name, region, country with recent search tracking
+- Created advanced filtering UI with Sheet component:
+  - Region, country, site type filters
+  - Multi-select orientation filter (N, NE, E, SE, S, SW, W, NW)
+  - Visual filter badges with quick removal
+- Implemented multiple sort options:
+  - By name (default)
+  - By distance from user (geolocation with fallback)
+  - By elevation (high to low)
+  - By recently added
+- Enhanced map with Leaflet marker clustering (react-leaflet-cluster)
+  - Auto-fit bounds when sites change
+  - Smooth spiderfy on cluster click
+  - Performance optimized for large marker sets
+- Added localStorage-based tracking:
+  - Recent searches (max 5) with dropdown
+  - Recently viewed sites
+- All filters and sort options reflected in URL for shareable links
+- Files changed:
+  - src/app/sites/browse/actions.ts: Enhanced getLaunchSites, added getFilterOptions
+  - src/app/sites/browse/browse-client.tsx: Complete rewrite with advanced filtering
+  - src/app/sites/browse/page.tsx: Support new filter params
+  - src/components/sites-browse-map.tsx: Added clustering and auto-bounds
+  - src/lib/recent-searches.ts: localStorage utilities
+  - src/components/recent-site-tracker.tsx: Client component for tracking views
+  - src/app/sites/[slug]/page.tsx: Added recent site tracking
+- Quality checks: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- Leaflet marker clustering: Use react-leaflet-cluster (simpler than leaflet.markercluster)
+- Map bounds: Use fitBounds with array of [lat, lng] tuples, not LatLngExpression[]
+- React setState in effects: Initialize state with function () => getValue() to avoid lint errors
+- URL search params: All filters in URL for shareability - Next.js searchParams pattern
+- Client-side filtering: For 55 sites, can afford client filtering for better UX (instant sorting)
+- Geolocation API: Request permission on-demand when user selects distance sort
+- localStorage: Track recent searches/views for better UX, fail silently if unavailable
+- Filter UI: Sheet component from shadcn/ui works great for mobile filter panels
+- Active filter badges: Visual feedback with quick removal improves discoverability
+---
