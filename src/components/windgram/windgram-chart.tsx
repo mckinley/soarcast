@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,11 +17,19 @@ import {
   drawMoistureShading,
   drawLineLabel,
 } from './thermal-cloud-utils';
+import { WindgramDetailPanel } from './windgram-detail-panel';
 
 interface WindgramChartProps {
   data: AtmosphericProfile | null;
   loading?: boolean;
   className?: string;
+}
+
+interface CrosshairPosition {
+  x: number; // Canvas X coordinate
+  y: number; // Canvas Y coordinate
+  hourIndex: number; // Index in daylightHours array
+  altitude: number; // Altitude in meters MSL
 }
 
 // Pressure levels in hPa (matching weather-profile.ts)
@@ -66,8 +74,9 @@ function formatTimeLabel(isoTime: string): string {
 export function WindgramChart({ data, loading = false, className = '' }: WindgramChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [crosshair, setCrosshair] = useState<CrosshairPosition | null>(null);
+  const [isPinned, setIsPinned] = useState(false);
   const [hoveredBarb, setHoveredBarb] = useState<{
     speedKmh: number;
     direction: number;
@@ -436,6 +445,50 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
       drawThermalIndicator(ctx, x, thermalY, hour.derived.thermalIndex, isDarkTheme);
     });
 
+    // ========================================
+    // DRAW CROSSHAIR (US-005)
+    // ========================================
+    if (crosshair) {
+      const { x, y } = crosshair;
+
+      // Draw crosshair lines
+      ctx.strokeStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(x, CHART_PADDING.top);
+      ctx.lineTo(x, CHART_PADDING.top + chartHeight);
+      ctx.stroke();
+
+      // Horizontal line
+      ctx.beginPath();
+      ctx.moveTo(CHART_PADDING.left, y);
+      ctx.lineTo(CHART_PADDING.left + chartWidth, y);
+      ctx.stroke();
+
+      ctx.setLineDash([]); // Reset dash
+
+      // Draw center circle
+      ctx.fillStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // If pinned, draw a pin icon
+      if (isPinned) {
+        ctx.fillStyle = isDarkTheme ? '#60a5fa' : '#2563eb'; // blue-400 : blue-600
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Draw axis labels
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = textColorRgba;
@@ -451,79 +504,262 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.textAlign = 'center';
     ctx.fillText('Altitude', 0, 0);
     ctx.restore();
-  }, [data, dimensions, isDarkTheme]);
+  }, [data, dimensions, isDarkTheme, crosshair, isPinned]);
 
-  // Handle mouse/touch hover for tooltip
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!data || !canvasRef.current) return;
+  // Calculate crosshair position from pointer coordinates
+  const calculateCrosshair = useCallback(
+    (clientX: number, clientY: number): CrosshairPosition | null => {
+      if (!data || !canvasRef.current) return null;
 
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
 
-    // Calculate chart area
-    const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
-    const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
+      // Calculate chart area
+      const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
+      const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
 
-    // Filter to daylight hours
-    const daylightHours = data.hours.filter((hour) => {
-      const date = new Date(hour.time);
-      const localHour = date.getHours();
-      return localHour >= 6 && localHour <= 20;
-    });
+      // Check if pointer is within chart bounds
+      if (
+        x < CHART_PADDING.left ||
+        x > CHART_PADDING.left + chartWidth ||
+        y < CHART_PADDING.top ||
+        y > CHART_PADDING.top + chartHeight
+      ) {
+        return null;
+      }
 
-    if (daylightHours.length === 0) return;
+      // Filter to daylight hours
+      const daylightHours = data.hours.filter((hour) => {
+        const date = new Date(hour.time);
+        const localHour = date.getHours();
+        return localHour >= 6 && localHour <= 20;
+      });
 
-    // Determine mobile vs desktop for barb density
-    const isMobile = dimensions.width < 640;
-    const levelStep = isMobile ? 2 : 1;
-    const hourStep = isMobile ? 2 : 1;
+      if (daylightHours.length === 0) return null;
 
-    // Check if pointer is near any wind barb
-    const hoverRadius = isMobile ? 20 : 15;
-    let foundBarb: typeof hoveredBarb = null;
+      // Calculate hour index (snap to nearest hour)
+      const xFrac = (x - CHART_PADDING.left) / chartWidth;
+      const hourIndex = Math.round(xFrac * (daylightHours.length - 1));
 
-    for (let levelIdx = 0; levelIdx < PRESSURE_LEVELS.length; levelIdx++) {
-      if (levelIdx % levelStep !== 0) continue;
+      // Calculate altitude (interpolate from y position)
+      const yFrac = (y - CHART_PADDING.top) / chartHeight;
+      const minPressure = PRESSURE_LEVELS[PRESSURE_LEVELS.length - 1]; // 500 hPa (highest altitude)
+      const maxPressure = PRESSURE_LEVELS[0]; // 1000 hPa (lowest altitude)
+      const minAltitude = pressureToAltitude(maxPressure).meters;
+      const maxAltitude = pressureToAltitude(minPressure).meters;
+      const altitude = minAltitude + yFrac * (maxAltitude - minAltitude);
 
-      const pressure = PRESSURE_LEVELS[levelIdx];
-      const altitude = pressureToAltitude(pressure);
-      const barbY = CHART_PADDING.top + (levelIdx / (PRESSURE_LEVELS.length - 1)) * chartHeight;
+      // Snap x to the hour position
+      const snappedX = CHART_PADDING.left + (hourIndex / (daylightHours.length - 1)) * chartWidth;
 
-      for (let hourIdx = 0; hourIdx < daylightHours.length; hourIdx++) {
-        if (hourIdx % hourStep !== 0) continue;
+      return {
+        x: snappedX,
+        y,
+        hourIndex,
+        altitude,
+      };
+    },
+    [data, dimensions],
+  );
 
-        const barbX = CHART_PADDING.left + (hourIdx / (daylightHours.length - 1)) * chartWidth;
+  // Handle mouse/touch hover for crosshair and tooltip
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!data || !canvasRef.current || isPinned) return; // Don't update if pinned
 
-        // Check distance to barb
-        const distance = Math.sqrt(Math.pow(x - barbX, 2) + Math.pow(y - barbY, 2));
+      const newCrosshair = calculateCrosshair(e.clientX, e.clientY);
+      setCrosshair(newCrosshair);
 
-        if (distance <= hoverRadius) {
-          const hour = daylightHours[hourIdx];
-          const pressureLevel = hour.pressureLevels.find((pl) => pl.pressure === pressure);
+      // Check if pointer is near any wind barb for tooltip
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-          if (pressureLevel) {
-            foundBarb = {
-              speedKmh: pressureLevel.windSpeed,
-              direction: pressureLevel.windDirection,
-              altitude,
-              x: e.clientX,
-              y: e.clientY,
-            };
-            break;
+      const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
+      const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
+
+      const daylightHours = data.hours.filter((hour) => {
+        const date = new Date(hour.time);
+        const localHour = date.getHours();
+        return localHour >= 6 && localHour <= 20;
+      });
+
+      if (daylightHours.length === 0) return;
+
+      const isMobile = dimensions.width < 640;
+      const levelStep = isMobile ? 2 : 1;
+      const hourStep = isMobile ? 2 : 1;
+      const hoverRadius = isMobile ? 20 : 15;
+      let foundBarb: typeof hoveredBarb = null;
+
+      for (let levelIdx = 0; levelIdx < PRESSURE_LEVELS.length; levelIdx++) {
+        if (levelIdx % levelStep !== 0) continue;
+
+        const pressure = PRESSURE_LEVELS[levelIdx];
+        const altitude = pressureToAltitude(pressure);
+        const barbY = CHART_PADDING.top + (levelIdx / (PRESSURE_LEVELS.length - 1)) * chartHeight;
+
+        for (let hourIdx = 0; hourIdx < daylightHours.length; hourIdx++) {
+          if (hourIdx % hourStep !== 0) continue;
+
+          const barbX = CHART_PADDING.left + (hourIdx / (daylightHours.length - 1)) * chartWidth;
+
+          const distance = Math.sqrt(Math.pow(x - barbX, 2) + Math.pow(y - barbY, 2));
+
+          if (distance <= hoverRadius) {
+            const hour = daylightHours[hourIdx];
+            const pressureLevel = hour.pressureLevels.find((pl) => pl.pressure === pressure);
+
+            if (pressureLevel) {
+              foundBarb = {
+                speedKmh: pressureLevel.windSpeed,
+                direction: pressureLevel.windDirection,
+                altitude,
+                x: e.clientX,
+                y: e.clientY,
+              };
+              break;
+            }
           }
         }
+        if (foundBarb) break;
       }
-      if (foundBarb) break;
+
+      setHoveredBarb(foundBarb);
+    },
+    [data, dimensions, isPinned, calculateCrosshair],
+  );
+
+  // Handle click/tap to pin crosshair
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!data) return;
+
+      const newCrosshair = calculateCrosshair(e.clientX, e.clientY);
+      if (newCrosshair) {
+        if (isPinned) {
+          // If already pinned, unpin
+          setIsPinned(false);
+          setCrosshair(null);
+        } else {
+          // Pin the crosshair
+          setCrosshair(newCrosshair);
+          setIsPinned(true);
+        }
+      }
+    },
+    [data, isPinned, calculateCrosshair],
+  );
+
+  const handlePointerLeave = useCallback(() => {
+    if (!isPinned) {
+      setCrosshair(null);
     }
-
-    setHoveredBarb(foundBarb);
-  };
-
-  const handlePointerLeave = () => {
     setHoveredBarb(null);
-  };
+  }, [isPinned]);
+
+  // Keyboard navigation for crosshair
+  useEffect(() => {
+    if (!data || !canvasRef.current) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!crosshair) {
+        // If no crosshair, initialize one in the center
+        if (e.key.startsWith('Arrow')) {
+          const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
+          const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
+
+          const daylightHours = data.hours.filter((hour) => {
+            const date = new Date(hour.time);
+            const localHour = date.getHours();
+            return localHour >= 6 && localHour <= 20;
+          });
+
+          if (daylightHours.length === 0) return;
+
+          const centerX = CHART_PADDING.left + chartWidth / 2;
+          const centerY = CHART_PADDING.top + chartHeight / 2;
+
+          const newCrosshair = calculateCrosshair(
+            centerX + canvasRef.current!.getBoundingClientRect().left,
+            centerY + canvasRef.current!.getBoundingClientRect().top,
+          );
+
+          setCrosshair(newCrosshair);
+          setIsPinned(true);
+          e.preventDefault();
+          return;
+        }
+        return;
+      }
+
+      const chartWidth = dimensions.width - CHART_PADDING.left - CHART_PADDING.right;
+      const chartHeight = dimensions.height - CHART_PADDING.top - CHART_PADDING.bottom;
+
+      const daylightHours = data.hours.filter((hour) => {
+        const date = new Date(hour.time);
+        const localHour = date.getHours();
+        return localHour >= 6 && localHour <= 20;
+      });
+
+      if (daylightHours.length === 0) return;
+
+      let newHourIndex = crosshair.hourIndex;
+      let newY = crosshair.y;
+
+      const altitudeStep = chartHeight / 20; // Move ~5% of chart height
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          newHourIndex = Math.max(0, crosshair.hourIndex - 1);
+          e.preventDefault();
+          break;
+        case 'ArrowRight':
+          newHourIndex = Math.min(daylightHours.length - 1, crosshair.hourIndex + 1);
+          e.preventDefault();
+          break;
+        case 'ArrowUp':
+          newY = Math.max(CHART_PADDING.top, crosshair.y - altitudeStep);
+          e.preventDefault();
+          break;
+        case 'ArrowDown':
+          newY = Math.min(CHART_PADDING.top + chartHeight, crosshair.y + altitudeStep);
+          e.preventDefault();
+          break;
+        case 'Escape':
+          setCrosshair(null);
+          setIsPinned(false);
+          e.preventDefault();
+          return;
+        default:
+          return;
+      }
+
+      // Calculate new altitude from Y position
+      const yFrac = (newY - CHART_PADDING.top) / chartHeight;
+      const minPressure = PRESSURE_LEVELS[PRESSURE_LEVELS.length - 1];
+      const maxPressure = PRESSURE_LEVELS[0];
+      const minAltitude = pressureToAltitude(maxPressure).meters;
+      const maxAltitude = pressureToAltitude(minPressure).meters;
+      const newAltitude = minAltitude + yFrac * (maxAltitude - minAltitude);
+
+      const newX = CHART_PADDING.left + (newHourIndex / (daylightHours.length - 1)) * chartWidth;
+
+      setCrosshair({
+        x: newX,
+        y: newY,
+        hourIndex: newHourIndex,
+        altitude: newAltitude,
+      });
+      setIsPinned(true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [data, dimensions, crosshair, calculateCrosshair]);
 
   // Loading skeleton
   if (loading || !data) {
@@ -534,19 +770,56 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     );
   }
 
+  // Get current hour for detail panel
+  const daylightHours = data.hours.filter((hour) => {
+    const date = new Date(hour.time);
+    const localHour = date.getHours();
+    return localHour >= 6 && localHour <= 20;
+  });
+
+  const currentHour =
+    crosshair && daylightHours[crosshair.hourIndex] ? daylightHours[crosshair.hourIndex] : null;
+
   return (
     <div className={`w-full relative ${className}`} ref={containerRef}>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-auto border border-border rounded-lg cursor-crosshair"
-        aria-label="Windgram atmospheric profile chart"
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-      />
-      {/* Tooltip for wind barbs */}
-      {hoveredBarb && (
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Main chart */}
+        <div className="flex-1">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-auto border border-border rounded-lg cursor-crosshair"
+            aria-label="Windgram atmospheric profile chart"
+            role="img"
+            tabIndex={0}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
+            onClick={handleClick}
+          />
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            {isPinned
+              ? 'Click or press Escape to unpin • Use arrow keys to navigate'
+              : 'Click to pin detail • Hover to explore • Use arrow keys to navigate'}
+          </p>
+        </div>
+
+        {/* Detail panel - side on desktop, bottom on mobile */}
+        {crosshair && currentHour && (
+          <WindgramDetailPanel
+            hour={currentHour}
+            altitude={crosshair.altitude}
+            isPinned={isPinned}
+            onClose={() => {
+              setCrosshair(null);
+              setIsPinned(false);
+            }}
+            className="lg:w-80 lg:sticky lg:top-4 lg:self-start"
+          />
+        )}
+      </div>
+
+      {/* Tooltip for wind barbs (separate from detail panel) */}
+      {hoveredBarb && !crosshair && (
         <div
-          ref={tooltipRef}
           className="fixed z-50 px-3 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg pointer-events-none whitespace-pre-line"
           style={{
             left: `${hoveredBarb.x + 10}px`,

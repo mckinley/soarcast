@@ -1,4 +1,7 @@
 export { WindgramChart } from './windgram-chart';
+export { WindgramInteractive } from './windgram-interactive';
+export { WindgramDetailPanel } from './windgram-detail-panel';
+export { WindgramDaySelector } from './windgram-day-selector';
 export { LapseRateLegend } from './lapse-rate-legend';
 export {
   kmhToKnots,
