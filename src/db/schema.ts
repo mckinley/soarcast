@@ -212,6 +212,26 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
     .default(sql`(unixepoch() * 1000)`),
 });
 
+// Atmospheric profiles cache - separate from simple forecasts, 3-hour TTL
+export const atmosphericProfilesCache = sqliteTable(
+  'atmospheric_profiles_cache',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    locationKey: text('location_key').notNull(), // "lat,lng" rounded to 2 decimals (~1km precision)
+    fetchDate: text('fetch_date').notNull(), // ISO date string (YYYY-MM-DD)
+    data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
+    fetchedAt: integer('fetched_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => ({
+    uniqueLocationDate: unique().on(table.locationKey, table.fetchDate),
+  }),
+);
+
 // Export types for use in application code
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -242,3 +262,6 @@ export type NewSettings = typeof settings.$inferInsert;
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+export type AtmosphericProfileCache = typeof atmosphericProfilesCache.$inferSelect;
+export type NewAtmosphericProfileCache = typeof atmosphericProfilesCache.$inferInsert;
