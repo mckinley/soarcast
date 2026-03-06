@@ -72,7 +72,7 @@
         "npm run test passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "ParaglidingEarth XML format: <search><takeoff><name/><lat/><lng/><takeoff_altitude/><orientations><N>0|1|2</N>...</orientations><paragliding>1</paragliding><hanggliding>0</hanggliding>...</takeoff><landing>...</landing></search>. Rate limit politely. Generate a slug from the name (lowercase, hyphens, no special chars)."
     },
     {

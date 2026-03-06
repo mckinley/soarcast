@@ -17,6 +17,10 @@ Started: Fri Mar 6 2026
 - Site data model: `launch_sites` (imported), `custom_sites` (user-created), legacy `sites` table
 - `forecasts_cache` uses siteType discriminator ('launch'|'custom'|'legacy') — always include in queries/inserts
 - Complex migrations: Use custom migration scripts, not just drizzle-kit push (it compares schema, not migrations)
+- Lazy DB imports in utilities: Use `await import('@/db')` inside functions to avoid requiring env vars at module load (allows testing without DB)
+- CLI scripts: Add `import 'dotenv/config'` at top to load .env before accessing process.env
+- Drizzle timestamp columns expect Date objects, not numbers (use `new Date()` not `Date.now()`)
+- Vitest config: Exclude e2e folder to prevent Playwright tests from running in vitest
 ---
 
 ## 2026-03-06 17:48 - US-001
@@ -57,3 +61,31 @@ Started: Fri Mar 6 2026
   - Use `IF NOT EXISTS` in manual migrations to allow safe re-runs
   - The forecasts_cache now needs siteType in all queries: `and(eq(siteId, id), eq(siteType, 'legacy'))`
 ---
+## 2026-03-06 18:07 - US-003
+- Implemented ParaglidingEarth site scraper with full Washington State import
+- Files changed:
+  - Created: src/lib/scraper/paraglidingearth.ts (scraper service with XML parsing)
+  - Created: src/lib/scraper/__tests__/paraglidingearth.test.ts (18 unit tests, all passing)
+  - Created: scripts/import-sites.ts (CLI script with --region and --bbox support)
+  - Created: drizzle/0004_bouncy_timeslip.sql (added unique constraint on source_id)
+  - Modified: package.json (added fast-xml-parser dependency)
+  - Modified: vitest.config.ts (excluded e2e tests from vitest)
+  - Modified: src/db/schema.ts (added .unique() to sourceId field)
+- Implementation details:
+  - XML parsing with fast-xml-parser (lightweight, no dependencies)
+  - Orientation mapping: compass directions rated 2 (good) → ideal wind directions in degrees
+  - Slug generation: lowercase, remove special chars, replace spaces with hyphens
+  - Upsert pattern on source_id prevents duplicates on re-import
+  - Rate limiting: 1 second delay before each API request
+  - Successfully imported 55 sites from Washington State
+- **Learnings for future iterations:**
+  - Lazy import pattern for db: use `await import('@/db')` inside functions to avoid requiring env vars at module load time (enables testing utility functions without DB connection)
+  - Fast-xml-parser options: `ignoreAttributes: false` to preserve XML attributes, `parseTagValue: true` to auto-convert numbers
+  - ParaglidingEarth doesn't provide stable IDs - generated source_id from lat_lng coordinates for uniqueness
+  - Handle both array and single-item XML responses: `Array.isArray(parsed.search.takeoff) ? ... : [...]`
+  - Drizzle timestamp columns expect Date objects, not milliseconds (use `new Date()` not `Date.now()`)
+  - Unique constraints must exist on conflict target columns - needed migration to add missing index
+  - Vitest exclude config: add e2e folder to prevent Playwright tests from running in vitest
+  - CLI scripts need `import 'dotenv/config'` at the top to load .env file before importing modules that access process.env
+---
+
