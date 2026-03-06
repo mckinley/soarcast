@@ -4,9 +4,11 @@ import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
+import { SiteCard } from '@/components/dashboard/site-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '@/app/actions';
 import type { DayScore, Site, Forecast, Settings } from '@/types';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Table } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardClientProps {
@@ -126,7 +128,7 @@ export function DashboardClient({
         <div>
           <h1 className="text-3xl font-bold">7-Day XC Forecast</h1>
           <p className="text-muted-foreground mt-1">
-            Click any score to see detailed breakdown and hourly data
+            Click any card to see detailed windgram and hourly data
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={isPending} size="lg">
@@ -135,57 +137,82 @@ export function DashboardClient({
         </Button>
       </div>
 
-      {/* Forecast Grid */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b">
-              <th className="py-3 px-4 text-left font-semibold min-w-[160px] sticky left-0 bg-background z-10">
-                Site
-              </th>
-              {dates.map((date) => (
-                <th key={date} className="py-3 px-2 text-center font-semibold min-w-[100px]">
-                  <div className="text-sm">{formatDate(date)}</div>
-                  <div className="text-xs text-muted-foreground font-normal">
-                    {date.substring(5)}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(({ site, forecast, scores }) => (
-              <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
-                <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
-                  <div>
-                    <div className="font-semibold">{site.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {site.elevation}m • {site.maxWindSpeed}km/h max
-                    </div>
-                  </div>
-                </td>
-                {dates.map((date, dateIndex) => {
-                  const score = scores.find((s) => s.date === date) || null;
-                  const showNotification = shouldShowNotification(score, site.id, dateIndex);
-                  return (
-                    <td key={date} className="py-2 px-2">
-                      <ScoreCell
-                        score={score}
-                        showNotification={showNotification}
-                        onClick={
-                          score && forecast
-                            ? () => handleCellClick(score, site, forecast)
-                            : undefined
-                        }
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
+      {/* Tabbed View: Cards (default) vs Table */}
+      <Tabs defaultValue="cards" className="w-full">
+        <TabsList>
+          <TabsTrigger value="cards">
+            <LayoutGrid className="mr-2 h-4 w-4" />
+            Cards
+          </TabsTrigger>
+          <TabsTrigger value="table">
+            <Table className="mr-2 h-4 w-4" />
+            Table
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Card View */}
+        <TabsContent value="cards" className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.map(({ site, scores }) => (
+              <SiteCard key={site.id} site={site} scores={scores} />
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </TabsContent>
+
+        {/* Table View */}
+        <TabsContent value="table" className="mt-4">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-3 px-4 text-left font-semibold min-w-[160px] sticky left-0 bg-background z-10">
+                    Site
+                  </th>
+                  {dates.map((date) => (
+                    <th key={date} className="py-3 px-2 text-center font-semibold min-w-[100px]">
+                      <div className="text-sm">{formatDate(date)}</div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {date.substring(5)}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map(({ site, forecast, scores }) => (
+                  <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
+                      <div>
+                        <div className="font-semibold">{site.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {site.elevation}m • {site.maxWindSpeed}km/h max
+                        </div>
+                      </div>
+                    </td>
+                    {dates.map((date, dateIndex) => {
+                      const score = scores.find((s) => s.date === date) || null;
+                      const showNotification = shouldShowNotification(score, site.id, dateIndex);
+                      return (
+                        <td key={date} className="py-2 px-2">
+                          <ScoreCell
+                            score={score}
+                            showNotification={showNotification}
+                            onClick={
+                              score && forecast
+                                ? () => handleCellClick(score, site, forecast)
+                                : undefined
+                            }
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Error Messages */}
       {data.some((d) => d.error) && (
