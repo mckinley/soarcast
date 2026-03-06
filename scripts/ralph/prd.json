@@ -1,166 +1,121 @@
 {
   "project": "SoarCast",
-  "branchName": "ralph/phase2-windgrams",
-  "description": "Phase 2 — Interactive Windgram Visualizations. Build dynamic, interactive windgram-style charts that show atmospheric profiles over time at any location. These replace static windgram images with responsive, interactive web components. Washington State launch sites are the primary testing ground.",
+  "branchName": "ralph/phase3-ux-polish",
+  "description": "Phase 3 — UX Polish, Push Notifications, and Production Hardening. Make SoarCast feel like a polished, production-ready app that pilots actually want to use daily. Focus on UX refinement, smart notifications, performance, and reliability.",
   "context": {
     "stack": "Next.js 16 + Turso (Drizzle ORM) + shadcn/ui + Leaflet + Tailwind v4",
-    "weatherAPI": "Open-Meteo pressure-level data already fetched by src/lib/weather-profile.ts",
-    "existingData": "AtmosphericProfile type with hourly data at 8 pressure levels (1000-500 hPa), surface data, computed lapse rates, thermal index, cloud base estimates",
-    "existingAPI": "GET /api/weather/profile?lat=X&lng=Y&days=2 and GET /api/sites/[slug]/profile",
-    "windgramReference": "Traditional RASP windgrams show: X-axis=time (hours), Y-axis=altitude/pressure, wind barbs at each level/hour, background color=lapse rate (stability), thermal velocity at top, cloud symbols, humidity hatching. See http://wxtofly.net/v2/windgrams.html for reference.",
-    "designValues": "Beautiful yet minimalistic. Friendly UIs. Strong UX focus. Non-technical pilots should understand it at a glance. Power users can dig into raw data."
+    "existingFeatures": "Interactive windgrams with lapse rate, wind barbs, thermal indicators, interactivity. 55 WA launch sites imported. Atmospheric profile API. Flyability scoring and summaries. Dashboard with thumbnails.",
+    "designValues": "Beautiful yet minimalistic. Friendly UIs. Strong UX focus. Clean code, symmetry. Ship things useful to people.",
+    "deployment": "Vercel, auto-deploy from main"
   },
   "userStories": [
     {
       "id": "US-001",
-      "title": "Windgram Chart Component — Core Layout",
-      "description": "Build the foundational windgram chart component using a canvas-based or SVG approach. This is the core visual: a time × altitude grid with proper axes, labels, and responsive sizing.",
+      "title": "Smart Push Notifications with Windgram Data",
+      "description": "Upgrade the existing push notification system to use atmospheric profile data for smarter, more accurate fly/no-fly alerts. Currently notifications just use the simple scoring — integrate windgram-quality analysis.",
       "acceptanceCriteria": [
-        "New component at src/components/windgram/windgram-chart.tsx",
-        "X-axis: time (hours of day, e.g. 6AM-8PM local time)",
-        "Y-axis: altitude in meters AND feet (dual labels), with pressure levels marked",
-        "Grid lines at each hour and each pressure level",
-        "Responsive: works on mobile (360px) through desktop (1400px)",
-        "Accepts AtmosphericProfile data as props",
-        "Uses either D3.js, visx, or HTML Canvas — choose what's best for performance and interactivity",
-        "Light and dark theme support (use CSS variables from the existing theme)",
-        "Loading skeleton state while data fetches",
+        "Notification check (/api/notifications/check) uses atmospheric profile data in addition to simple scoring",
+        "Notifications include: flyability rating, best window, key concerns, thermal strength estimate",
+        "Notification message is plain-language: 'Tiger Mountain looks Epic tomorrow! Best thermals 11AM-2PM, light SW winds. Cloud base ~5000ft.'",
+        "Users can configure notification preferences per site: minimum rating threshold, time of day to receive",
+        "Morning digest option: one notification at user's preferred time summarizing all favorited sites",
         "npm run build succeeds",
-        "npm run lint passes"
+        "npm run test passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Performance matters — this chart will re-render on interactions. Canvas may be better than SVG for the background fill. Consider using visx (React bindings for D3) for a more React-native approach. The chart should feel smooth on mobile."
+      "passes": false,
+      "notes": "The existing notification system checks twice daily at 6AM and 6PM UTC. Keep that schedule but make the messages much richer using the atmospheric profile analysis."
     },
     {
       "id": "US-002",
-      "title": "Windgram — Lapse Rate Background",
-      "description": "Add the most important visual layer: background color fill showing atmospheric stability (lapse rate) at each altitude/time cell. This is what tells a pilot at a glance whether thermals will form.",
+      "title": "Site Search & Discovery Improvements",
+      "description": "Make it easy to find and discover launch sites. Current browse page has basic search — make it great.",
       "acceptanceCriteria": [
-        "Each cell (time × altitude) colored by lapse rate",
-        "Color scale: unstable (warm orange/yellow, lapse rate >= 3°C/1000ft) → neutral (white/light gray, ~2°C/1000ft) → stable (cool blue/purple, <= 1°C/1000ft) → inversion (deep purple, negative lapse rate)",
-        "Color scale is visually intuitive — warm colors = good for flying, cool colors = bad",
-        "Smooth gradient between cells (not blocky)",
-        "Legend showing the color scale with labels: 'Unstable', 'Neutral', 'Stable', 'Inversion'",
-        "Lapse rate data comes from the computed derivedParams in AtmosphericProfile",
+        "Full-text search across site name, region, country",
+        "Filter by: flyability today (show only sites rated Good+), orientation, site type, country/region",
+        "Sort by: distance from user (geolocation), flyability score today, name, recently added",
+        "Map clusters when zoomed out (don't show 55 individual markers at state level)",
+        "URL reflects current filters (shareable links: /sites/browse?region=washington&minScore=good)",
+        "Recent searches / recently viewed sites for quick access",
         "npm run build succeeds",
-        "Unit test for color mapping function"
+        "npm run lint passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "The lapse rate between levels is already computed in weather-profile.ts. Use bilinear interpolation for smooth gradients between the discrete pressure levels and hours. The dry adiabatic lapse rate is ~3°C/1000ft — anything above that is unstable (good thermals)."
+      "passes": false,
+      "notes": "For distance sorting, use the browser Geolocation API with a fallback. Leaflet has marker clustering plugins (leaflet.markercluster). Keep the map responsive and fast."
     },
     {
       "id": "US-003",
-      "title": "Windgram — Wind Barbs",
-      "description": "Add wind barb symbols at each pressure level and time step, showing wind speed and direction at a glance — the signature element of a windgram.",
+      "title": "Onboarding Flow for New Users",
+      "description": "First-time users should immediately understand SoarCast and get value without signing in. Guide them to their first useful forecast.",
       "acceptanceCriteria": [
-        "Wind barbs rendered at each pressure level for each hour",
-        "Standard meteorological wind barb convention: shaft points into wind direction, half barb = 5 kt, full barb = 10 kt, flag = 50 kt",
-        "Wind speed in knots (convert from km/h in the data)",
-        "Barbs sized appropriately — not too dense, readable on mobile",
-        "On mobile: optionally thin out barbs (show every other level or every other hour) to avoid clutter",
-        "Color-coded by speed: light winds (green), moderate (yellow), strong (orange), dangerous (red)",
-        "Tooltip on hover/tap showing exact wind speed, direction, and altitude",
+        "Landing page clearly explains what SoarCast does in 5 seconds (not a generic tech landing page)",
+        "Immediate value without sign-in: browse sites, view windgrams, check forecasts",
+        "Gentle prompt to sign in when they try to favorite a site or enable notifications",
+        "After sign-in: guided flow to favorite their home site(s) or pick from nearby sites (geolocation)",
+        "Onboarding is skippable — experienced users can dismiss and go straight to dashboard",
+        "Mobile-first: the onboarding works great on phones (pilots often on mobile)",
         "npm run build succeeds",
-        "Unit test for wind barb rendering logic (knots to barb configuration)"
+        "npm run lint passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Wind barbs are SVG elements overlaid on the chart. The km/h to knots conversion is: knots = km/h * 0.539957. Standard barb rules: speed rounded to nearest 5 kt, then decompose into flags (50), full barbs (10), half barbs (5)."
+      "passes": false,
+      "notes": "Most paraglider pilots will discover SoarCast on their phone, shared by another pilot. First impression matters. Show a beautiful windgram for a well-known site as the hero, then let them explore."
     },
     {
       "id": "US-004",
-      "title": "Windgram — Thermal & Cloud Indicators",
-      "description": "Add visual indicators for thermal activity, cloud base, top of lift, and boundary layer height — the key soaring-specific information.",
+      "title": "Performance & Loading Optimization",
+      "description": "Make everything fast. Atmospheric data fetches can be slow — optimize with smart caching, prefetching, and progressive loading.",
       "acceptanceCriteria": [
-        "Thermal velocity shown as text/icons along the top of the chart for each hour (like windgrams show 'W*')",
-        "Color-coded thermal strength: none (gray), weak <1m/s (light blue), moderate 1-2m/s (green), strong >2m/s (orange)",
-        "Cloud base line drawn across the chart showing estimated cloud base altitude over time",
-        "Top of lift line showing maximum useful thermal height",
-        "Boundary layer height line (from surface data)",
-        "Humidity/cloud layer shading: areas where relative humidity > 90% at a pressure level get a subtle cloud overlay pattern",
-        "These indicators are visually distinct but don't overwhelm the lapse rate background",
+        "Site detail page loads site info instantly, then progressively loads windgram data",
+        "Dashboard prefetches today's atmospheric data for favorited sites in the background",
+        "API responses have appropriate Cache-Control headers (profile data: 1 hour, site info: 24 hours)",
+        "Windgram chart renders progressively: layout first, then lapse rate, then wind barbs, then indicators",
+        "Service worker caches site data and recent profiles for offline-capable viewing",
+        "Lighthouse performance score >= 80 on mobile for the dashboard page",
         "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Cloud base, top of lift, and thermal velocity are already computed in weather-profile.ts derivedParams. The boundary layer height comes from surface data. Keep these overlays subtle — dashed lines, semi-transparent fills. The lapse rate background should remain the primary visual."
+      "passes": false,
+      "notes": "The existing service worker (public/sw.js) handles basic caching. Extend it to cache atmospheric profile responses. Use stale-while-revalidate for profile data. Consider using React Server Components more effectively to reduce client JS."
     },
     {
       "id": "US-005",
-      "title": "Windgram — Interactivity & Detail Panel",
-      "description": "Make the windgram interactive: hover/tap to see detailed data, zoom, and switch between days.",
+      "title": "Error Handling & Reliability",
+      "description": "Handle failures gracefully. Open-Meteo could be down, Turso could timeout, the user could be offline. The app should degrade gracefully, not crash.",
       "acceptanceCriteria": [
-        "Hover crosshair that follows mouse/finger showing current time and altitude",
-        "Detail panel (side or bottom) showing exact values at the crosshair position: temperature, wind speed/direction, humidity, lapse rate, thermal index",
-        "Click/tap to pin the crosshair and keep the detail panel open",
-        "Day selector tabs to switch between forecast days (up to 7 days)",
-        "Smooth transitions when switching days",
-        "Touch-friendly: works with finger on mobile, not just mouse",
-        "Keyboard accessible: arrow keys move crosshair",
+        "Open-Meteo API failure: show cached data with 'Last updated X hours ago' badge, or a friendly error message if no cache",
+        "Turso timeout: retry with backoff, show appropriate error state",
+        "Offline: show cached data, indicate offline status, queue favorites/settings changes for sync",
+        "Windgram component handles missing/incomplete atmospheric data gracefully (empty pressure levels, null values)",
+        "Global error boundary catches unexpected crashes with a useful error page (not a white screen)",
+        "All error states have a retry button",
+        "Sentry or similar error tracking configured (use NEXT_PUBLIC_SENTRY_DSN env var, optional)",
         "npm run build succeeds",
-        "npm run lint passes"
+        "npm run test passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "The detail panel is crucial for non-technical pilots — they hover over the chart and get plain-language explanations. Consider using a floating tooltip on desktop and a fixed bottom sheet on mobile."
+      "passes": false,
+      "notes": "The existing error.tsx and global-error.tsx are minimal. Make them actually useful. For offline support, rely on the service worker cache and add a visible indicator. Don't add Sentry as a hard dependency — make it optional via env var."
     },
     {
       "id": "US-006",
-      "title": "Windgram — Simple Flyability Summary",
-      "description": "Above the windgram chart, show a simple at-a-glance flyability assessment for pilots who don't want to interpret the chart themselves.",
+      "title": "Responsive Design Audit & Mobile Polish",
+      "description": "Go through every page on mobile (360px-428px) and tablet (768px) and fix any layout issues. SoarCast must feel native-app quality on mobile since most pilots use it on their phones.",
       "acceptanceCriteria": [
-        "Summary bar above the windgram for each day",
-        "Shows: flyability rating (Epic/Great/Good/Fair/Poor with color), best window (e.g. '11AM-3PM'), key concerns (e.g. 'Strong upper winds', 'Low cloud base')",
-        "Plain language: 'Looks like a great XC day! Best window 11AM-3PM. Watch for increasing winds after 2PM.'",
-        "Uses existing scoring algorithm plus atmospheric profile data for richer assessment",
-        "Expandable to show more detail (wind at launch altitude, thermal strength estimate)",
-        "Designed for the pilot who just wants to know: should I drive to launch today?",
+        "All pages render correctly at 360px, 390px, 428px, 768px, 1024px, 1440px",
+        "Windgram chart is touch-friendly: pinch to zoom, swipe between days, tap for details",
+        "Navigation works smoothly on mobile (sidebar collapses to bottom nav or hamburger)",
+        "No horizontal scroll on any page at any breakpoint",
+        "Font sizes readable on mobile without zooming",
+        "Buttons and tap targets are at least 44px (Apple HIG minimum)",
+        "PWA: app icon, splash screen, fullscreen mode all work correctly",
+        "Playwright tests for key flows at mobile viewport (390px width)",
         "npm run build succeeds"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "This is the UX layer that makes SoarCast accessible to non-weather-nerds. The windgram is the power tool; this summary is the quick answer. Use the atmospheric profile data to generate more nuanced assessments than the current simple scoring."
-    },
-    {
-      "id": "US-007",
-      "title": "Integrate Windgrams into Site Pages",
-      "description": "Wire the windgram component into the site detail pages so users can see atmospheric profiles for any launch site or custom location.",
-      "acceptanceCriteria": [
-        "Site detail page (/sites/[slug]) shows windgram as the hero visualization",
-        "Flyability summary above the windgram",
-        "Custom site pages (/sites/custom/[id]) also show windgram",
-        "Map click: clicking any point on the browse map (/sites/browse) shows a windgram for that location (bottom sheet or modal)",
-        "Loading states while atmospheric data fetches",
-        "Error states if Open-Meteo is unavailable",
-        "The old simple forecast table/cards are available in an 'Advanced' or 'Table View' tab",
-        "npm run build succeeds",
-        "npm run lint passes",
-        "Playwright E2E test: navigate to a WA launch site, verify windgram renders"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "The windgram fetch can be slow (multiple pressure levels). Use React Suspense or SWR for client-side data fetching with good loading states. The site detail page should feel fast — show site info immediately, then load the windgram. Consider prefetching profiles for favorited sites."
-    },
-    {
-      "id": "US-008",
-      "title": "Multi-Day Dashboard Thumbnails",
-      "description": "On the dashboard, show small windgram thumbnails for each favorited site giving an at-a-glance 7-day overview.",
-      "acceptanceCriteria": [
-        "Dashboard shows each favorited/custom site as a card",
-        "Each card has a small windgram thumbnail (simplified: just lapse rate colors, no barbs) for today",
-        "Flyability rating badge on each card (Epic/Great/Good/Fair/Poor)",
-        "7-day mini bar showing flyability rating for each day (colored dots or small bars)",
-        "Click card → navigate to full site detail page with full windgram",
-        "Cards are responsive: 1 column on mobile, 2-3 on desktop",
-        "Performance: thumbnails should load quickly (simplified rendering, smaller data fetch)",
-        "npm run build succeeds",
-        "npm run lint passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Thumbnails are a simplified version of the windgram — just the background colors, maybe 100x60px. Don't fetch full atmospheric profiles for thumbnails; use the existing simple forecast data for the 7-day bar and only the first day's profile for the thumbnail. Lazy-load thumbnails as they scroll into view."
+      "passes": false,
+      "notes": "Use Playwright's setViewportSize for mobile testing. The windgram chart needs special attention on mobile — consider a simplified view that shows key info without requiring precise hover targeting."
     }
   ]
 }
