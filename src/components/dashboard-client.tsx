@@ -87,7 +87,11 @@ export function DashboardClient({
   };
 
   // Determine if a notification indicator should be shown for a given score/site/date
-  const shouldShowNotification = (score: DayScore | null, siteId: string, dayIndex: number): boolean => {
+  const shouldShowNotification = (
+    score: DayScore | null,
+    siteId: string,
+    dayIndex: number,
+  ): boolean => {
     if (!score) return false;
 
     // Check if site notifications are enabled (default to true if not set)
@@ -108,8 +112,8 @@ export function DashboardClient({
         <div className="p-6 border border-primary/30 bg-primary/5 rounded-lg">
           <h2 className="text-xl font-semibold mb-2">Welcome to SoarCast</h2>
           <p className="text-muted-foreground mb-4">
-            You're viewing demo sites with live weather data. Sign in to add your own flying sites
-            and customize your XC soaring forecasts.
+            You&apos;re viewing demo sites with live weather data. Sign in to add your own flying
+            sites and customize your XC soaring forecasts.
           </p>
           <Link href="/auth/signin">
             <Button size="lg">Sign In to Add Your Sites</Button>
@@ -150,7 +154,7 @@ export function DashboardClient({
             </tr>
           </thead>
           <tbody>
-            {data.map(({ site, forecast, scores, error }) => (
+            {data.map(({ site, forecast, scores }) => (
               <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
                 <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
                   <div>

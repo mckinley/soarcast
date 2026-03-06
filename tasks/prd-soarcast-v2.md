@@ -29,8 +29,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 ## User Stories
 
 ### US-001: Turso + Drizzle Database Setup
+
 **Description:** As a developer, I want to replace JSON file storage with Turso and Drizzle ORM so the app works on serverless platforms.
 **Acceptance Criteria:**
+
 - Install `@libsql/client` and `drizzle-orm` + `drizzle-kit`
 - Create Drizzle schema in `src/db/schema.ts` with tables: users, accounts, sessions, sites, forecasts_cache, settings, push_subscriptions
 - Sites table: id, userId, name, latitude, longitude, elevation, idealWindDirections (JSON), maxWindSpeed, notes, createdAt, updatedAt
@@ -45,8 +47,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-002: NextAuth Authentication
+
 **Description:** As a user, I want to sign in with Google or GitHub so my sites and settings are saved to my account.
 **Acceptance Criteria:**
+
 - Install `next-auth@beta` (Auth.js v5)
 - Configure NextAuth with Drizzle adapter for Turso
 - Google and GitHub OAuth providers configured via env vars
@@ -59,8 +63,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-003: Migrate Site Management to Turso
+
 **Description:** As a user, I want my sites stored in the database so they persist across devices.
 **Acceptance Criteria:**
+
 - Rewrite site server actions to use Drizzle queries instead of JSON file ops
 - All CRUD operations (create, read, update, delete) work with Turso
 - Sites are scoped to the authenticated user (userId foreign key)
@@ -69,8 +75,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-004: Migrate Settings to Turso
+
 **Description:** As a user, I want my notification settings stored in the database.
 **Acceptance Criteria:**
+
 - Rewrite settings server actions to use Drizzle
 - Settings scoped to authenticated user
 - Per-site notification toggles stored as JSON column or separate join table
@@ -79,8 +87,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-005: Fix Weather Fetching + Add Winds Aloft
+
 **Description:** As a pilot, I want weather data that includes upper-air conditions so I can better assess XC potential.
 **Acceptance Criteria:**
+
 - Keep Open-Meteo as the data source (free, no API key)
 - Add hourly parameters: `boundary_layer_height`, `wind_speed_850hPa`, `wind_direction_850hPa`, `lifted_index` (if available), `convective_inhibition`
 - Update Forecast TypeScript types to include new fields
@@ -90,8 +100,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-006: Fix Scoring Algorithm
+
 **Description:** As a pilot, I want accurate scoring that properly handles wind direction and includes upper-air data.
 **Acceptance Criteria:**
+
 - Fix wind direction averaging to use circular mean (atan2-based vector averaging)
 - Add boundary layer height to scoring: higher BLH = better thermals (new factor, 10% weight)
 - Add 850hPa wind to scoring: strong upper winds reduce XC safety (new factor, 5% weight, replaces some weight from surface wind)
@@ -102,8 +114,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-007: Dashboard Updates
+
 **Description:** As a user, I want the dashboard to show forecasts for my sites or demo sites if not logged in.
 **Acceptance Criteria:**
+
 - Authenticated users: show their own sites with full interactivity
 - Unauthenticated users: show 3 demo seed sites (Tiger Mountain, Dog Mountain, Chelan Butte) read-only
 - Score detail dialog shows the new factors (BLH, upper wind) in the breakdown
@@ -113,8 +127,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-008: Map-Based Site Picker
+
 **Description:** As a pilot, I want to pick my flying site on a map so I don't need to know exact coordinates.
 **Acceptance Criteria:**
+
 - Install `leaflet` and `react-leaflet` (both free, OpenStreetMap tiles)
 - Add a map component to the Add Site dialog
 - Click on map to set latitude/longitude (auto-fills the coordinate fields)
@@ -125,8 +141,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-009: Site Detail Page Improvements
+
 **Description:** As a pilot, I want richer detail views with the new weather parameters.
 **Acceptance Criteria:**
+
 - Hourly table includes: boundary layer height, 850hPa wind speed/direction
 - Add a wind rose or compass visualization showing ideal vs actual wind direction
 - Score breakdown chart shows all 7 factors with visual bars
@@ -135,8 +153,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-010: Web Push Notifications
+
 **Description:** As a pilot, I want to receive push notifications on my phone/browser when good conditions are forecasted.
 **Acceptance Criteria:**
+
 - Generate VAPID keys (add to env vars)
 - Service worker registration for push notifications (`public/sw.js`)
 - "Enable notifications" button on Settings page that triggers browser permission request
@@ -149,8 +169,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-011: PWA Support
+
 **Description:** As a mobile pilot, I want to install SoarCast as an app on my phone.
 **Acceptance Criteria:**
+
 - Web app manifest (`public/manifest.json`) with app name, icons, theme color, display: standalone
 - Generate PWA icons (192x192, 512x512) from the SoarCast logo/icon
 - Service worker caches app shell for offline access (pages load without network)
@@ -159,8 +181,10 @@ SoarCast v2 upgrades from a JSON-file prototype to a production-ready multi-user
 - Typecheck passes
 
 ### US-012: Seed Data + Demo Mode + Polish
+
 **Description:** As a new visitor, I want to see the app working immediately with demo data, and the app should be polished for production.
 **Acceptance Criteria:**
+
 - Demo sites (Tiger Mountain, Dog Mountain, Chelan Butte) shown on dashboard for unauthenticated users
 - Demo data fetched fresh from Open-Meteo (not hardcoded forecasts)
 - Landing hero section on dashboard for unauthenticated users explaining the app with "Sign in to add your own sites" CTA

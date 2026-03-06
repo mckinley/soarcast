@@ -1,24 +1,25 @@
 import { getSites, addSite, updateSite, deleteSite } from './actions';
-import { SiteFormDialog } from '@/components/site-form-dialog';
+import { SiteFormDialog, type SiteFormData } from '@/components/site-form-dialog';
 import { SiteCard } from '@/components/site-card';
 import { Button } from '@/components/ui/button';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'My Sites',
-  description: 'Manage your paragliding flying sites - add, edit, or remove locations to track weather conditions.',
+  description:
+    'Manage your paragliding flying sites - add, edit, or remove locations to track weather conditions.',
 };
 
 export default async function SitesPage() {
   const sites = await getSites();
 
   // Wrapper functions that will be passed to client components
-  const handleAdd = async (data: any) => {
+  const handleAdd = async (data: SiteFormData) => {
     'use server';
     await addSite(data);
   };
 
-  const handleUpdate = async (id: string, data: any) => {
+  const handleUpdate = async (id: string, data: SiteFormData) => {
     'use server';
     await updateSite(id, data);
   };
@@ -46,20 +47,12 @@ export default async function SitesPage() {
           <p className="text-muted-foreground mb-4">
             Add your first flying site to start tracking conditions
           </p>
-          <SiteFormDialog
-            onSubmit={handleAdd}
-            trigger={<Button>Add Your First Site</Button>}
-          />
+          <SiteFormDialog onSubmit={handleAdd} trigger={<Button>Add Your First Site</Button>} />
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (
-            <SiteCard
-              key={site.id}
-              site={site}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-            />
+            <SiteCard key={site.id} site={site} onUpdate={handleUpdate} onDelete={handleDelete} />
           ))}
         </div>
       )}

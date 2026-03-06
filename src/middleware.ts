@@ -11,20 +11,12 @@ export default auth((req) => {
   const protectedRoutes = ['/sites', '/settings'];
 
   // Protected API routes (mutation endpoints)
-  const protectedApiRoutes = [
-    '/api/sites',
-    '/api/settings',
-    '/api/notifications',
-  ];
+  const protectedApiRoutes = ['/api/sites', '/api/settings', '/api/notifications'];
 
   // Check if current path matches protected routes
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  const isProtectedApi = protectedApiRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isProtectedApi = protectedApiRoutes.some((route) => pathname.startsWith(route));
 
   // Redirect to sign-in if accessing protected route without authentication
   if ((isProtectedRoute || isProtectedApi) && !isAuthenticated) {

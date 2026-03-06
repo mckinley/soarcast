@@ -30,11 +30,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function SiteDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function SiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sites = await getSites();
   const site = sites.find((s) => s.id === id);
@@ -74,10 +70,7 @@ export default async function SiteDetailPage({
           </p>
           <p>Elevation: {site.elevation}m</p>
           {site.idealWindDirections.length > 0 && (
-            <p>
-              Ideal Wind Directions:{' '}
-              {site.idealWindDirections.map((d) => `${d}°`).join(', ')}
-            </p>
+            <p>Ideal Wind Directions: {site.idealWindDirections.map((d) => `${d}°`).join(', ')}</p>
           )}
           <p>Max Wind Speed: {site.maxWindSpeed} km/h</p>
           {site.notes && <p className="italic">{site.notes}</p>}

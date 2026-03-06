@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import * as React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Cloud,
   MapPin,
@@ -13,12 +13,12 @@ import {
   Moon,
   LogOut,
   User,
-} from "lucide-react";
-import { useTheme } from "next-themes";
-import { useSession, signIn, signOut } from "next-auth/react";
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +26,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -39,22 +39,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar';
 
 const navItems = [
   {
-    title: "Dashboard",
-    href: "/",
+    title: 'Dashboard',
+    href: '/',
     icon: LayoutDashboard,
   },
   {
-    title: "Sites",
-    href: "/sites",
+    title: 'Sites',
+    href: '/sites',
     icon: MapPin,
   },
   {
-    title: "Settings",
-    href: "/settings",
+    title: 'Settings',
+    href: '/settings',
     icon: Settings,
   },
 ];
@@ -80,14 +80,10 @@ function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       className="h-9 w-9"
     >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
+      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       <span className="sr-only">Toggle theme</span>
     </Button>
   );
@@ -96,10 +92,8 @@ function ThemeToggle() {
 function UserMenu() {
   const { data: session, status } = useSession();
 
-  if (status === "loading") {
-    return (
-      <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
-    );
+  if (status === 'loading') {
+    return <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />;
   }
 
   if (!session?.user) {
@@ -110,12 +104,15 @@ function UserMenu() {
     );
   }
 
-  const userInitials = session.user.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || session.user.email?.[0]?.toUpperCase() || '?';
+  const userInitials =
+    session.user.name
+      ?.split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) ||
+    session.user.email?.[0]?.toUpperCase() ||
+    '?';
 
   return (
     <DropdownMenu>
@@ -131,9 +128,7 @@ function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{session.user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {session.user.email}
-            </p>
+            <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -216,7 +211,7 @@ function MobileNav() {
               href={item.href}
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                pathname === item.href ? "bg-accent" : ""
+                pathname === item.href ? 'bg-accent' : ''
               }`}
             >
               <item.icon className="h-4 w-4" />

@@ -45,9 +45,7 @@ export async function getSites(): Promise<Site[]> {
 /**
  * Add a new site for the authenticated user
  */
-export async function addSite(
-  site: Omit<Site, 'id' | 'createdAt' | 'updatedAt'>
-): Promise<Site> {
+export async function addSite(site: Omit<Site, 'id' | 'createdAt' | 'updatedAt'>): Promise<Site> {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -77,7 +75,7 @@ export async function addSite(
  */
 export async function updateSite(
   id: string,
-  updates: Partial<Omit<Site, 'id' | 'createdAt' | 'updatedAt'>>
+  updates: Partial<Omit<Site, 'id' | 'createdAt' | 'updatedAt'>>,
 ): Promise<Site | null> {
   const session = await auth();
 
@@ -92,7 +90,8 @@ export async function updateSite(
   if (updates.latitude !== undefined) updateData.latitude = updates.latitude.toString();
   if (updates.longitude !== undefined) updateData.longitude = updates.longitude.toString();
   if (updates.elevation !== undefined) updateData.elevation = updates.elevation;
-  if (updates.idealWindDirections !== undefined) updateData.idealWindDirections = updates.idealWindDirections;
+  if (updates.idealWindDirections !== undefined)
+    updateData.idealWindDirections = updates.idealWindDirections;
   if (updates.maxWindSpeed !== undefined) updateData.maxWindSpeed = updates.maxWindSpeed;
   if (updates.notes !== undefined) updateData.notes = updates.notes ?? null;
 
@@ -123,9 +122,7 @@ export async function deleteSite(id: string): Promise<void> {
     throw new Error('Unauthorized');
   }
 
-  await db
-    .delete(sites)
-    .where(and(eq(sites.id, id), eq(sites.userId, session.user.id)));
+  await db.delete(sites).where(and(eq(sites.id, id), eq(sites.userId, session.user.id)));
 
   revalidatePath('/sites');
 }

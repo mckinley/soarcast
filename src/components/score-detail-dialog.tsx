@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import type { DayScore, Site, Forecast } from '@/types';
 
@@ -30,10 +25,7 @@ function FactorBar({ label, score, weight }: { label: string; score: number; wei
         <span className="font-medium">{score}/100</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${score}%` }}
-        />
+        <div className="h-full bg-primary transition-all" style={{ width: `${score}%` }} />
       </div>
     </div>
   );
@@ -108,9 +100,7 @@ export function ScoreDetailDialog({
               <Badge variant="outline" className="text-lg">
                 {score.label}
               </Badge>
-              <div className="text-sm text-muted-foreground mt-1">
-                XC Soaring Score
-              </div>
+              <div className="text-sm text-muted-foreground mt-1">XC Soaring Score</div>
             </div>
           </div>
 
@@ -121,7 +111,11 @@ export function ScoreDetailDialog({
             </h3>
             <FactorBar label="CAPE / Thermal Strength" score={score.factors.cape} weight="25%" />
             <FactorBar label="Wind Speed" score={score.factors.windSpeed} weight="20%" />
-            <FactorBar label="Wind Direction Match" score={score.factors.windDirection} weight="15%" />
+            <FactorBar
+              label="Wind Direction Match"
+              score={score.factors.windDirection}
+              weight="15%"
+            />
             <FactorBar label="Boundary Layer Height" score={score.factors.blh} weight="15%" />
             <FactorBar label="Upper Wind (850hPa)" score={score.factors.upperWind} weight="10%" />
             <FactorBar label="Cloud Cover" score={score.factors.cloudCover} weight="10%" />
@@ -157,8 +151,12 @@ export function ScoreDetailDialog({
                         <td className="py-2 text-right">{hour.windSpeed.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.windDir.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.cape.toFixed(0)}</td>
-                        <td className="py-2 text-right">{hour.blh !== null ? hour.blh.toFixed(0) : '-'}</td>
-                        <td className="py-2 text-right">{hour.upperWind !== null ? hour.upperWind.toFixed(0) : '-'}</td>
+                        <td className="py-2 text-right">
+                          {hour.blh !== null ? hour.blh.toFixed(0) : '-'}
+                        </td>
+                        <td className="py-2 text-right">
+                          {hour.upperWind !== null ? hour.upperWind.toFixed(0) : '-'}
+                        </td>
                         <td className="py-2 text-right">{hour.cloudCover.toFixed(0)}</td>
                         <td className="py-2 text-right">{hour.precip.toFixed(0)}</td>
                       </tr>

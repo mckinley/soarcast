@@ -10,9 +10,5 @@ export function SessionProvider({
   children: React.ReactNode;
   session: Session | null;
 }) {
-  return (
-    <NextAuthSessionProvider session={session}>
-      {children}
-    </NextAuthSessionProvider>
-  );
+  return <NextAuthSessionProvider session={session}>{children}</NextAuthSessionProvider>;
 }

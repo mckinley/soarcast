@@ -48,7 +48,7 @@ export const verificationTokens = sqliteTable(
   },
   (table) => ({
     compositePk: primaryKey({ columns: [table.identifier, table.token] }),
-  })
+  }),
 );
 
 // Application tables
@@ -63,9 +63,7 @@ export const sites = sqliteTable('sites', {
   latitude: text('latitude').notNull(), // Store as text to preserve precision
   longitude: text('longitude').notNull(),
   elevation: integer('elevation').notNull(), // meters
-  idealWindDirections: text('idealWindDirections', { mode: 'json' })
-    .notNull()
-    .$type<number[]>(),
+  idealWindDirections: text('idealWindDirections', { mode: 'json' }).notNull().$type<number[]>(),
   maxWindSpeed: integer('maxWindSpeed').notNull(), // km/h
   notes: text('notes'),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' })
@@ -76,23 +74,27 @@ export const sites = sqliteTable('sites', {
     .default(sql`(unixepoch() * 1000)`),
 });
 
-export const forecastsCache = sqliteTable('forecasts_cache', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  siteId: text('siteId')
-    .notNull()
-    .references(() => sites.id, { onDelete: 'cascade' }),
-  fetchDate: text('fetchDate').notNull(), // ISO date string (YYYY-MM-DD)
-  data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
-  fetchedAt: integer('fetchedAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
-}, (table) => ({
-  // Unique constraint for cache key (one forecast per site per day)
-  uniqueSiteDate: unique().on(table.siteId, table.fetchDate),
-}));
+export const forecastsCache = sqliteTable(
+  'forecasts_cache',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    siteId: text('siteId')
+      .notNull()
+      .references(() => sites.id, { onDelete: 'cascade' }),
+    fetchDate: text('fetchDate').notNull(), // ISO date string (YYYY-MM-DD)
+    data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
+    fetchedAt: integer('fetchedAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => ({
+    // Unique constraint for cache key (one forecast per site per day)
+    uniqueSiteDate: unique().on(table.siteId, table.fetchDate),
+  }),
+);
 
 export const settings = sqliteTable('settings', {
   id: text('id')
@@ -121,9 +123,7 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   endpoint: text('endpoint').notNull().unique(),
-  keys: text('keys', { mode: 'json' })
-    .notNull()
-    .$type<{ p256dh: string; auth: string }>(),
+  keys: text('keys', { mode: 'json' }).notNull().$type<{ p256dh: string; auth: string }>(),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

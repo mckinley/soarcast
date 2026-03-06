@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import type { DayScore } from '@/types';
 import { Bell } from 'lucide-react';
 

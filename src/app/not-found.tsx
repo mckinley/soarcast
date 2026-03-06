@@ -8,7 +8,7 @@ export default function NotFound() {
       <MapPinOff className="h-16 w-16 text-muted-foreground mb-6" />
       <h1 className="text-3xl font-bold mb-2">Page Not Found</h1>
       <p className="text-muted-foreground mb-6 text-center max-w-md">
-        The page you're looking for doesn't exist. It may have been moved or deleted.
+        The page you&apos;re looking for doesn&apos;t exist. It may have been moved or deleted.
       </p>
       <div className="flex gap-3">
         <Link href="/">

@@ -1,0 +1,29 @@
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Dependencies
+node_modules/
+
+# Drizzle migrations
+drizzle/
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Cache
+.turbo/
+.vercel/
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Misc
+.DS_Store
+*.log

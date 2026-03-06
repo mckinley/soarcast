@@ -5,7 +5,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Settings',
-  description: 'Configure notification preferences, score thresholds, and push notification settings.',
+  description:
+    'Configure notification preferences, score thresholds, and push notification settings.',
 };
 
 export default async function SettingsPage() {

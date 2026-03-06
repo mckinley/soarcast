@@ -25,12 +25,7 @@ export function MapDisplay({ latitude, longitude }: MapDisplayProps) {
 
   return (
     <div className="h-[300px] rounded-md overflow-hidden border">
-      <MapContainer
-        center={position}
-        zoom={12}
-        scrollWheelZoom={false}
-        className="h-full w-full"
-      >
+      <MapContainer center={position} zoom={12} scrollWheelZoom={false} className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

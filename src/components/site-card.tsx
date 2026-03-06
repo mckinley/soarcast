@@ -11,12 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { SiteFormDialog } from '@/components/site-form-dialog';
+import { SiteFormDialog, type SiteFormData } from '@/components/site-form-dialog';
 import type { Site } from '@/types';
 
 interface SiteCardProps {
   site: Site;
-  onUpdate: (id: string, data: any) => Promise<void>;
+  onUpdate: (id: string, data: SiteFormData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -66,19 +66,20 @@ export function SiteCard({ site, onUpdate, onDelete }: SiteCardProps) {
       </CardContent>
       <CardFooter className="flex gap-2">
         <Link href={`/sites/${site.id}`}>
-          <Button variant="default" size="sm">View Forecast</Button>
+          <Button variant="default" size="sm">
+            View Forecast
+          </Button>
         </Link>
         <SiteFormDialog
           site={site}
-          trigger={<Button variant="outline" size="sm">Edit</Button>}
+          trigger={
+            <Button variant="outline" size="sm">
+              Edit
+            </Button>
+          }
           onSubmit={(data) => onUpdate(site.id, data)}
         />
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleDelete}
-          disabled={deleting}
-        >
+        <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
           {deleting ? 'Deleting...' : 'Delete'}
         </Button>
       </CardFooter>

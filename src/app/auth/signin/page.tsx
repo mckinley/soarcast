@@ -7,9 +7,7 @@ export default function SignInPage() {
       <div className="w-full max-w-md space-y-8 px-4">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight">SoarCast</h1>
-          <p className="mt-2 text-muted-foreground">
-            Sign in to access your flying sites
-          </p>
+          <p className="mt-2 text-muted-foreground">Sign in to access your flying sites</p>
         </div>
 
         <div className="mt-8 space-y-4">
@@ -48,12 +46,7 @@ export default function SignInPage() {
               await signIn('github', { redirectTo: '/' });
             }}
           >
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              variant="outline"
-            >
+            <Button type="submit" className="w-full" size="lg" variant="outline">
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -66,8 +59,7 @@ export default function SignInPage() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          By signing in, you agree to access weather forecasts for your flying
-          sites.
+          By signing in, you agree to access weather forecasts for your flying sites.
         </p>
       </div>
     </div>

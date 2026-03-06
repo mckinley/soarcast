@@ -94,7 +94,7 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    })
+    }),
   );
 
   return results;
@@ -125,7 +125,7 @@ export async function refreshAllForecasts(): Promise<{ success: boolean; message
         id: s.id,
         latitude: s.latitude,
         longitude: s.longitude,
-      }))
+      })),
     );
 
     revalidatePath('/');

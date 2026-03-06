@@ -128,9 +128,9 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       }
 
       setPushEnabled(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error enabling push notifications:', error);
-      setPushError(error.message || 'Failed to enable push notifications');
+      setPushError(error instanceof Error ? error.message : 'Failed to enable push notifications');
     } finally {
       setPushLoading(false);
     }
@@ -164,9 +164,9 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       }
 
       setPushEnabled(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error disabling push notifications:', error);
-      setPushError(error.message || 'Failed to disable push notifications');
+      setPushError(error instanceof Error ? error.message : 'Failed to disable push notifications');
     } finally {
       setPushLoading(false);
     }
@@ -252,8 +252,8 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
           {pushEnabled && (
             <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <p>
-                ✓ Push notifications are enabled. You'll be notified when any of your sites have
-                conditions that meet your minimum score threshold.
+                ✓ Push notifications are enabled. You&apos;ll be notified when any of your sites
+                have conditions that meet your minimum score threshold.
               </p>
             </div>
           )}
@@ -288,7 +288,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               className="max-w-xs"
             />
             <p className="text-sm text-muted-foreground">
-              You'll be notified when a day's XC score meets or exceeds this threshold.
+              You&apos;ll be notified when a day&apos;s XC score meets or exceeds this threshold.
             </p>
           </div>
 
@@ -321,9 +321,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       <Card>
         <CardHeader>
           <CardTitle>Site Notifications</CardTitle>
-          <CardDescription>
-            Enable or disable notifications for individual sites.
-          </CardDescription>
+          <CardDescription>Enable or disable notifications for individual sites.</CardDescription>
         </CardHeader>
         <CardContent>
           {sites.length === 0 ? (
@@ -348,15 +346,14 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                       <div>
                         <div className="font-medium">{site.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}m
+                          {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}
+                          m
                         </div>
                       </div>
                     </div>
                     <Switch
                       checked={isEnabled}
-                      onCheckedChange={(checked) =>
-                        handleToggleSiteNotifications(site.id, checked)
-                      }
+                      onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
                       disabled={isPending}
                     />
                   </div>
@@ -375,9 +372,9 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
-                Notifications are checked twice daily (6 AM and 6 PM UTC). You'll receive a push
-                notification for each site where the forecast meets your minimum score threshold
-                within your notification window.
+                Notifications are checked twice daily (6 AM and 6 PM UTC). You&apos;ll receive a
+                push notification for each site where the forecast meets your minimum score
+                threshold within your notification window.
               </p>
             </div>
           </div>

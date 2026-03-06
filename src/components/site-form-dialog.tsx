@@ -17,17 +17,14 @@ import { Label } from '@/components/ui/label';
 import type { Site } from '@/types';
 
 // Dynamically import map picker (Leaflet requires window/document)
-const MapPicker = dynamic(
-  () => import('@/components/map-picker').then((mod) => mod.MapPicker),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[400px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading map...</p>
-      </div>
-    ),
-  }
-);
+const MapPicker = dynamic(() => import('@/components/map-picker').then((mod) => mod.MapPicker), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[400px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
+      <p className="text-sm text-muted-foreground">Loading map...</p>
+    </div>
+  ),
+});
 
 interface SiteFormDialogProps {
   site?: Site;
@@ -61,7 +58,7 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
   });
 
   const [windDirectionsInput, setWindDirectionsInput] = useState<string>(
-    site?.idealWindDirections?.join(', ') || ''
+    site?.idealWindDirections?.join(', ') || '',
   );
 
   const validateForm = (): boolean => {
@@ -144,9 +141,7 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || <Button>Add Site</Button>}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || <Button>Add Site</Button>}</DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>

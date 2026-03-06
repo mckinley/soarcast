@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { settings, pushSubscriptions } from '@/db/schema';
 import { auth } from '@/auth';
@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
  */
 async function dbSettingsToApp(
   dbSettings: typeof settings.$inferSelect,
-  userId?: string
+  userId?: string,
 ): Promise<Settings> {
   // Check if user has active push subscriptions
   let enabled = false;
@@ -88,7 +88,7 @@ export async function getSettings(): Promise<Settings> {
  * Update settings for authenticated user
  */
 export async function updateSettings(
-  updates: Partial<Settings['notifications']>
+  updates: Partial<Settings['notifications']>,
 ): Promise<Settings> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -139,10 +139,7 @@ export async function updateSettings(
 /**
  * Toggle notifications for a specific site
  */
-export async function toggleSiteNotifications(
-  siteId: string,
-  enabled: boolean
-): Promise<void> {
+export async function toggleSiteNotifications(siteId: string, enabled: boolean): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

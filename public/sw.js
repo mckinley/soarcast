@@ -14,24 +14,28 @@ const urlsToCache = [
 // Install event - cache app shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting()),
   );
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          }),
+        );
+      })
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -44,36 +48,34 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
+    caches.match(event.request).then((response) => {
+      // Cache hit - return response
+      if (response) {
+        return response;
+      }
+
+      // Clone the request
+      const fetchRequest = event.request.clone();
+
+      return fetch(fetchRequest).then((response) => {
+        // Check if valid response
+        if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
 
-        // Clone the request
-        const fetchRequest = event.request.clone();
+        // Clone the response
+        const responseToCache = response.clone();
 
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
+        // Cache static assets only (not API calls)
+        if (!event.request.url.includes('/api/')) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
 
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Cache static assets only (not API calls)
-          if (!event.request.url.includes('/api/')) {
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-          }
-
-          return response;
-        });
-      })
+        return response;
+      });
+    }),
   );
 });
 
@@ -106,9 +108,7 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // Notification click event - open app at relevant page
@@ -118,18 +118,17 @@ self.addEventListener('notificationclick', (event) => {
   const urlToOpen = event.notification.data?.url || '/';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Check if there's already a window open
-        for (const client of clientList) {
-          if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus();
-          }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
         }
-        // If not, open a new window
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
+      }
+      // If not, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    }),
   );
 });

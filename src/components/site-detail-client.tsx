@@ -94,7 +94,7 @@ function getTemperatureRange(forecast: Forecast, date: string): [number, number]
   return temps.length > 0 ? [Math.min(...temps), Math.max(...temps)] : [0, 0];
 }
 
-export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientProps) {
+export function SiteDetailClient({ forecast, scores }: SiteDetailClientProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(scores[0]?.date || null);
 
   const selectedScore = scores.find((s) => s.date === selectedDate);
@@ -111,46 +111,38 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
             const dayHourly = getHourlyDataForDay(forecast, score.date);
             const avgWindSpeed =
               dayHourly.length > 0
-                ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + h.windSpeed, 0) / dayHourly.length
-                  )
+                ? Math.round(dayHourly.reduce((sum, h) => sum + h.windSpeed, 0) / dayHourly.length)
                 : 0;
             const avgWindDirection =
               dayHourly.length > 0
                 ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + h.windDirection, 0) / dayHourly.length
+                    dayHourly.reduce((sum, h) => sum + h.windDirection, 0) / dayHourly.length,
                   )
                 : 0;
             const avgCape =
               dayHourly.length > 0
                 ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + (h.cape || 0), 0) / dayHourly.length
+                    dayHourly.reduce((sum, h) => sum + (h.cape || 0), 0) / dayHourly.length,
                   )
                 : 0;
             const avgCloudCover =
               dayHourly.length > 0
-                ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + h.cloudCover, 0) / dayHourly.length
-                  )
+                ? Math.round(dayHourly.reduce((sum, h) => sum + h.cloudCover, 0) / dayHourly.length)
                 : 0;
             const avgPrecip =
               dayHourly.length > 0
                 ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + h.precipProbability, 0) /
-                      dayHourly.length
+                    dayHourly.reduce((sum, h) => sum + h.precipProbability, 0) / dayHourly.length,
                   )
                 : 0;
             const avgBlh =
               dayHourly.length > 0
-                ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + (h.blh || 0), 0) / dayHourly.length
-                  )
+                ? Math.round(dayHourly.reduce((sum, h) => sum + (h.blh || 0), 0) / dayHourly.length)
                 : 0;
             const avgWind850 =
               dayHourly.length > 0
                 ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + (h.wind850hPa || 0), 0) /
-                      dayHourly.length
+                    dayHourly.reduce((sum, h) => sum + (h.wind850hPa || 0), 0) / dayHourly.length,
                   )
                 : 0;
 
@@ -195,7 +187,9 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                   {/* 850hPa Wind */}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">850hPa Wind:</span>
-                    <span className="font-medium">{avgWind850 > 0 ? `${avgWind850} km/h` : '-'}</span>
+                    <span className="font-medium">
+                      {avgWind850 > 0 ? `${avgWind850} km/h` : '-'}
+                    </span>
                   </div>
 
                   {/* Cloud cover */}
@@ -273,9 +267,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                               />
                             </div>
                             {/* Hour label */}
-                            <div className="text-[10px] text-muted-foreground">
-                              {hour.hour}h
-                            </div>
+                            <div className="text-[10px] text-muted-foreground">{hour.hour}h</div>
                           </div>
                         );
                       })}
@@ -324,9 +316,15 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                             </div>
                           </td>
                           <td className="py-2 px-2">{Math.round(hour.windGusts)} km/h</td>
-                          <td className="py-2 px-2">{hour.cape ? Math.round(hour.cape) : 0} J/kg</td>
-                          <td className="py-2 px-2">{hour.blh !== null ? `${Math.round(hour.blh)}m` : '-'}</td>
-                          <td className="py-2 px-2">{hour.wind850hPa !== null ? `${Math.round(hour.wind850hPa)} km/h` : '-'}</td>
+                          <td className="py-2 px-2">
+                            {hour.cape ? Math.round(hour.cape) : 0} J/kg
+                          </td>
+                          <td className="py-2 px-2">
+                            {hour.blh !== null ? `${Math.round(hour.blh)}m` : '-'}
+                          </td>
+                          <td className="py-2 px-2">
+                            {hour.wind850hPa !== null ? `${Math.round(hour.wind850hPa)} km/h` : '-'}
+                          </td>
                           <td className="py-2 px-2">{Math.round(hour.cloudCover)}%</td>
                           <td className="py-2 px-2">{Math.round(hour.precipProbability)}%</td>
                           <td className="py-2 px-2">{Math.round(hour.temperature)}°C</td>

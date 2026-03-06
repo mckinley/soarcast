@@ -17,11 +17,7 @@ export function WindIndicator({ direction, size = 20 }: WindIndicatorProps) {
       style={{ transform: `rotate(${direction}deg)` }}
       className="inline-block"
     >
-      <path
-        d="M12 2 L16 10 L12 8 L8 10 Z"
-        fill="currentColor"
-        className="text-primary"
-      />
+      <path d="M12 2 L16 10 L12 8 L8 10 Z" fill="currentColor" className="text-primary" />
       <circle cx="12" cy="12" r="2" fill="currentColor" className="text-muted-foreground" />
     </svg>
   );

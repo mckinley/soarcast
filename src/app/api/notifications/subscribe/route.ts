@@ -15,10 +15,7 @@ export async function POST(request: NextRequest) {
     const { endpoint, keys } = body;
 
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      return NextResponse.json(
-        { error: 'Invalid subscription data' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid subscription data' }, { status: 400 });
     }
 
     // Check if subscription already exists
@@ -42,10 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error subscribing to push notifications:', error);
-    return NextResponse.json(
-      { error: 'Failed to subscribe' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
   }
 }
 
@@ -60,23 +54,15 @@ export async function DELETE(request: NextRequest) {
     const { endpoint } = body;
 
     if (!endpoint) {
-      return NextResponse.json(
-        { error: 'Endpoint required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Endpoint required' }, { status: 400 });
     }
 
     // Delete subscription
-    await db
-      .delete(pushSubscriptions)
-      .where(eq(pushSubscriptions.endpoint, endpoint));
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error unsubscribing from push notifications:', error);
-    return NextResponse.json(
-      { error: 'Failed to unsubscribe' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to unsubscribe' }, { status: 500 });
   }
 }

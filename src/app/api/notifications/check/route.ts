@@ -11,11 +11,7 @@ const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
 if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(
-    'mailto:notifications@soarcast.app',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
+  webpush.setVapidDetails('mailto:notifications@soarcast.app', vapidPublicKey, vapidPrivateKey);
 }
 
 export async function POST(request: NextRequest) {
@@ -30,10 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.error('VAPID keys not configured');
-      return NextResponse.json(
-        { error: 'Push notifications not configured' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Push notifications not configured' }, { status: 500 });
     }
 
     // Get all users with push subscriptions
@@ -66,10 +59,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get user's sites
-        const userSites = await db
-          .select()
-          .from(sites)
-          .where(eq(sites.userId, user.id));
+        const userSites = await db.select().from(sites).where(eq(sites.userId, user.id));
 
         if (userSites.length === 0) {
           continue; // Skip users without sites
@@ -90,7 +80,7 @@ export async function POST(request: NextRequest) {
             const forecast = await getForecast(
               site.id,
               parseFloat(site.latitude),
-              parseFloat(site.longitude)
+              parseFloat(site.longitude),
             );
 
             // Calculate scores for all days in the forecast
@@ -140,14 +130,22 @@ export async function POST(request: NextRequest) {
                         endpoint: subscription.endpoint,
                         keys: subscription.keys,
                       },
-                      payload
+                      payload,
                     );
                     totalNotificationsSent++;
-                  } catch (error: any) {
-                    console.error(`Failed to send notification to ${subscription.endpoint}:`, error);
+                  } catch (error: unknown) {
+                    console.error(
+                      `Failed to send notification to ${subscription.endpoint}:`,
+                      error,
+                    );
 
                     // If subscription is invalid (410 Gone), delete it
-                    if (error.statusCode === 410) {
+                    if (
+                      error &&
+                      typeof error === 'object' &&
+                      'statusCode' in error &&
+                      error.statusCode === 410
+                    ) {
                       await db
                         .delete(pushSubscriptions)
                         .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
@@ -178,9 +176,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in notification check:', error);
-    return NextResponse.json(
-      { error: 'Failed to check notifications' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to check notifications' }, { status: 500 });
   }
 }

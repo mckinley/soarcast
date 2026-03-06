@@ -28,7 +28,10 @@ interface MapPickerProps {
 /**
  * Component that handles map clicks to select a location
  */
-function LocationMarker({ position, onLocationSelect }: {
+function LocationMarker({
+  position,
+  onLocationSelect,
+}: {
   position: [number, number];
   onLocationSelect: (lat: number, lng: number) => void;
 }) {
@@ -53,7 +56,10 @@ interface NominatimResult {
 }
 
 export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerProps) {
-  const [position, setPosition] = useState<[number, number]>([latitude || 47.4829, longitude || -121.9410]);
+  const [position, setPosition] = useState<[number, number]>([
+    latitude || 47.4829,
+    longitude || -121.941,
+  ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -90,7 +96,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
           headers: {
             'User-Agent': 'SoarCast Weather App',
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -135,12 +141,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
             }
           }}
         />
-        <Button
-          type="button"
-          onClick={handleSearch}
-          disabled={searching}
-          variant="outline"
-        >
+        <Button type="button" onClick={handleSearch} disabled={searching} variant="outline">
           {searching ? 'Searching...' : 'Search'}
         </Button>
       </div>
@@ -162,9 +163,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
       )}
 
       {/* Search error */}
-      {searchError && (
-        <p className="text-sm text-red-500">{searchError}</p>
-      )}
+      {searchError && <p className="text-sm text-red-500">{searchError}</p>}
 
       {/* Map */}
       <div className="h-[400px] rounded-md overflow-hidden border">

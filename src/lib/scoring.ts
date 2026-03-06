@@ -24,10 +24,7 @@ const FLYABLE_END_HOUR = 17;
  * @param site - Site configuration
  * @returns Array of DayScore objects (one per day)
  */
-export function calculateDailyScores(
-  forecast: Forecast,
-  site: Site
-): DayScore[] {
+export function calculateDailyScores(forecast: Forecast, site: Site): DayScore[] {
   const hourly = forecast.hourly;
   const scores: DayScore[] = [];
 
@@ -101,23 +98,18 @@ function scoreSingleDay(day: DayData, site: Site): DayScore {
   const avgWindSpeed = calculateAverage(day.hours.map((h) => h.windSpeed));
   const avgWindDirection = calculateCircularMean(day.hours.map((h) => h.windDirection));
   const avgCloudCover = calculateAverage(day.hours.map((h) => h.cloudCover));
-  const avgPrecipProb = calculateAverage(
-    day.hours.map((h) => h.precipProbability)
-  );
+  const avgPrecipProb = calculateAverage(day.hours.map((h) => h.precipProbability));
   const avgBLH = calculateAverage(
-    day.hours.map((h) => h.boundaryLayerHeight ?? null).filter((v): v is number => v !== null)
+    day.hours.map((h) => h.boundaryLayerHeight ?? null).filter((v): v is number => v !== null),
   );
   const avgUpperWind = calculateAverage(
-    day.hours.map((h) => h.windSpeed850hPa ?? null).filter((v): v is number => v !== null)
+    day.hours.map((h) => h.windSpeed850hPa ?? null).filter((v): v is number => v !== null),
   );
 
   // Score each factor (0-100)
   const capeScore = scoreCAPE(avgCape);
   const windSpeedScore = scoreWindSpeed(avgWindSpeed, site.maxWindSpeed);
-  const windDirectionScore = scoreWindDirection(
-    avgWindDirection,
-    site.idealWindDirections
-  );
+  const windDirectionScore = scoreWindDirection(avgWindDirection, site.idealWindDirections);
   const cloudCoverScore = scoreCloudCover(avgCloudCover);
   const precipScore = scorePrecipitation(avgPrecipProb);
   const blhScore = scoreBoundaryLayerHeight(avgBLH);
@@ -223,10 +215,7 @@ function scoreWindSpeed(windSpeed: number, maxWindSpeed: number): number {
  * Scores wind direction match to ideal directions
  * Closer to ideal = better score
  */
-function scoreWindDirection(
-  windDirection: number,
-  idealDirections: number[]
-): number {
+function scoreWindDirection(windDirection: number, idealDirections: number[]): number {
   if (idealDirections.length === 0) return 50; // No ideal defined, neutral score
 
   // Find the closest ideal direction

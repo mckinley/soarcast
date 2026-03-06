@@ -47,7 +47,7 @@ interface OpenMeteoResponse {
 export async function fetchWeatherForecast(
   siteId: string,
   latitude: number,
-  longitude: number
+  longitude: number,
 ): Promise<Forecast> {
   // Build API URL with all required hourly parameters
   const params = new URLSearchParams({
@@ -79,9 +79,7 @@ export async function fetchWeatherForecast(
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Open-Meteo API error: ${response.status} ${response.statusText}`
-      );
+      throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText}`);
     }
 
     const data: OpenMeteoResponse = await response.json();
@@ -109,10 +107,13 @@ export async function fetchWeatherForecast(
         precipitation_probability: data.hourly.precipitation_probability,
         pressure_msl: data.hourly.pressure_msl,
         // Upper-air parameters (handle missing values gracefully with empty arrays of nulls)
-        boundary_layer_height: data.hourly.boundary_layer_height ?? data.hourly.time.map(() => null),
+        boundary_layer_height:
+          data.hourly.boundary_layer_height ?? data.hourly.time.map(() => null),
         wind_speed_850hPa: data.hourly.wind_speed_850hPa ?? data.hourly.time.map(() => null),
-        wind_direction_850hPa: data.hourly.wind_direction_850hPa ?? data.hourly.time.map(() => null),
-        convective_inhibition: data.hourly.convective_inhibition ?? data.hourly.time.map(() => null),
+        wind_direction_850hPa:
+          data.hourly.wind_direction_850hPa ?? data.hourly.time.map(() => null),
+        convective_inhibition:
+          data.hourly.convective_inhibition ?? data.hourly.time.map(() => null),
       },
     };
 
@@ -145,7 +146,7 @@ function isDemoSite(siteId: string): boolean {
 export async function getForecast(
   siteId: string,
   latitude: number,
-  longitude: number
+  longitude: number,
 ): Promise<Forecast> {
   // Demo sites skip DB caching entirely — just fetch fresh data
   if (isDemoSite(siteId)) {
@@ -159,12 +160,7 @@ export async function getForecast(
   const [cachedRow] = await db
     .select()
     .from(forecastsCache)
-    .where(
-      and(
-        eq(forecastsCache.siteId, siteId),
-        eq(forecastsCache.fetchDate, today)
-      )
-    )
+    .where(and(eq(forecastsCache.siteId, siteId), eq(forecastsCache.fetchDate, today)))
     .limit(1);
 
   // Check if cache exists and is still valid
@@ -204,13 +200,13 @@ export async function getForecast(
  * @returns Map of siteId to Forecast
  */
 export async function fetchAllForecasts(
-  sites: Array<{ id: string; latitude: number; longitude: number }>
+  sites: Array<{ id: string; latitude: number; longitude: number }>,
 ): Promise<Record<string, Forecast>> {
   const forecastPromises = sites.map((site) =>
     getForecast(site.id, site.latitude, site.longitude).then((forecast) => ({
       id: site.id,
       forecast,
-    }))
+    })),
   );
 
   const results = await Promise.all(forecastPromises);
@@ -233,7 +229,5 @@ export async function clearExpiredForecasts(): Promise<void> {
 
   // Delete expired forecasts from Turso using SQL template
   // Drizzle ORM doesn't have lt() operator, so we use sql template for date comparison
-  await db
-    .delete(forecastsCache)
-    .where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
+  await db.delete(forecastsCache).where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
 }

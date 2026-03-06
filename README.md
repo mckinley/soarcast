@@ -7,6 +7,7 @@ SoarCast analyzes weather data from Open-Meteo to score each day's cross-country
 ## ✨ Features
 
 ### Core Features
+
 - 🗺️ **Map-Based Site Picker** — Click on a map to add your flying sites, or search by location name
 - 📊 **7-Day Dashboard** — Grid view showing XC scores (0-100) for all your sites across the next week
 - 🔍 **Detailed Forecasts** — Site-specific pages with daily summaries, hourly weather timelines, and interactive charts
@@ -18,6 +19,7 @@ SoarCast analyzes weather data from Open-Meteo to score each day's cross-country
 - 📱 **Responsive Design** — Mobile-friendly layout optimized for use in the field
 
 ### Demo Mode
+
 - 👀 **Public Dashboard** — View demo sites with live weather data without signing in
 - 🎯 **Try Before Sign In** — Experience the full interface before creating an account
 
@@ -72,12 +74,14 @@ turso db tokens create soarcast
 ### 3. Configure OAuth Apps
 
 **Google OAuth:**
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Create OAuth 2.0 Client ID
 3. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (and your production URL)
 4. Copy Client ID and Client Secret
 
 **GitHub OAuth:**
+
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Create new OAuth App
 3. Authorization callback URL: `http://localhost:3000/api/auth/callback/github` (and your production URL)
@@ -166,6 +170,7 @@ Each day receives a score from 0-100 based on:
 7. **Precipitation (5%)** — Lower probability is better
 
 Only flyable hours (10:00-17:00 local time) are analyzed. Scores are labeled:
+
 - **0-30**: Poor ❌
 - **31-50**: Fair 🌤️
 - **51-70**: Good ☀️
@@ -183,6 +188,7 @@ SoarCast uses web push notifications to alert you of great flying conditions:
 5. You'll receive push notifications when conditions meet your threshold
 
 Notifications include:
+
 - Site name
 - Date
 - Score and label (e.g., "Great" or "Epic")
@@ -204,6 +210,7 @@ The app includes a `vercel.json` with cron configuration for automated notificat
 ### Environment Variables for Production
 
 Make sure to set in Vercel dashboard:
+
 - All `AUTH_*` variables with production OAuth apps
 - `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`
