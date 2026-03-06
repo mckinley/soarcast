@@ -34,3 +34,31 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Component location:** Windgram components live in src/components/windgram/ directory
 
 ---
+
+## Fri Mar 6 18:40:00 +07 2026 - US-002
+- ✅ Implemented lapse rate background visualization for windgram
+- Created utilities for lapse rate calculation and color mapping:
+  - `computeLapseRatesForHour()`: Calculates lapse rates between all adjacent pressure levels
+  - `lapseRateToColor()`: Maps lapse rate to intuitive color scale (warm=unstable, cool=stable)
+  - `bilinearInterpolate()`: Smooth color gradients between discrete grid cells
+  - `getLapseRateLegend()`: Returns legend entries for the color scale
+- Created `LapseRateLegend` component for user reference
+- Updated `WindgramChart` to render colored background with sub-cell sampling (2×2) for smooth gradients
+- 17 unit tests covering color mapping, interpolation, and edge cases
+
+**Files changed:**
+- src/components/windgram/lapse-rate-utils.ts (new)
+- src/components/windgram/lapse-rate-utils.test.ts (new)
+- src/components/windgram/lapse-rate-legend.tsx (new)
+- src/components/windgram/windgram-chart.tsx (updated)
+- src/components/windgram/index.ts (updated exports)
+
+**Learnings for future iterations:**
+- **Lapse rate is the key metric:** Each layer between pressure levels has its own lapse rate. The existing weather-profile.ts only computes ONE lapse rate (850-700 hPa), but windgrams need lapse rates for ALL layers.
+- **Color psychology for pilots:** Warm colors (orange/yellow) = unstable air = good thermals. Cool colors (blue/purple) = stable air = poor lift. This matches pilot intuition.
+- **Bilinear interpolation for smooth gradients:** Without interpolation, the windgram looks blocky. Sub-cell rendering (2×2 samples per grid cell) creates smooth color transitions while keeping performance good.
+- **Handle missing data gracefully:** Bilinear interpolation can fail if any corner is null. Fall back to nearest non-null neighbor to avoid blank cells.
+- **Dry adiabatic lapse rate is ~3°C/1000ft:** This is the threshold for unstable air. Anything above this creates thermals.
+- **Theme-aware color mapping:** Same lapse rate needs different RGB values in light vs dark mode for good contrast and readability.
+
+---

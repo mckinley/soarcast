@@ -47,7 +47,7 @@
         "Unit test for color mapping function"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "The lapse rate between levels is already computed in weather-profile.ts. Use bilinear interpolation for smooth gradients between the discrete pressure levels and hours. The dry adiabatic lapse rate is ~3°C/1000ft — anything above that is unstable (good thermals)."
     },
     {
