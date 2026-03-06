@@ -140,7 +140,7 @@
         "Playwright E2E test: navigate to a WA launch site, verify windgram renders"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "The windgram fetch can be slow (multiple pressure levels). Use React Suspense or SWR for client-side data fetching with good loading states. The site detail page should feel fast — show site info immediately, then load the windgram. Consider prefetching profiles for favorited sites."
     },
     {

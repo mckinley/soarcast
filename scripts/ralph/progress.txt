@@ -219,3 +219,43 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **Component is ready for integration:** WindgramInteractive now accepts optional `dayScores` prop. When integrated into site pages (US-007), pass both atmospheric profile data and day scores to show the full experience.
 ---
 
+
+## Fri Mar 6 19:45:00 +07 2026 - US-007
+- ✅ Integrated windgram visualizations into site detail pages as the primary/hero view
+- Created `WindgramSection` component:
+  - Client-side component that fetches atmospheric profile data using useEffect
+  - Calls `/api/weather/profile?lat=X&lng=Y&days=7` endpoint
+  - Handles loading states with skeleton UI
+  - Handles error states with user-friendly messages
+  - Passes fetched profile data to `WindgramInteractive` component along with day scores
+- Updated `SiteDetailClient` component:
+  - Added tabbed interface using shadcn/ui tabs component
+  - "Windgram" tab is the default view (hero visualization)
+  - "Table View" tab preserves the existing forecast table/cards UI
+  - Both tabs receive the same data props (site, forecast, scores)
+- Added shadcn/ui tabs component to the project (npx shadcn add tabs)
+- No changes needed to server pages:
+  - Both `/sites/[slug]` and `/sites/custom/[id]` pages already pass required props
+  - Server pages show site info immediately (fast initial render)
+  - Windgram data loads asynchronously on client side (non-blocking)
+- Architectural pattern: fast server render → lazy-load expensive windgram data
+- All quality checks passed: typecheck ✓, lint ✓, build ✓
+
+**Files changed:**
+- src/components/windgram-section.tsx (new)
+- src/components/site-detail-client.tsx (updated)
+- src/components/ui/tabs.tsx (new, from shadcn)
+
+**Learnings for future iterations:**
+- **Client-side data fetching pattern:** For expensive API calls (atmospheric profiles), use client-side fetching in a wrapping component rather than fetching on the server. This provides:
+  - Fast initial page load (server renders site info immediately)
+  - Non-blocking data fetching (user sees site details while windgram loads)
+  - Better separation of concerns (server = fast static data, client = dynamic heavy data)
+- **Component props naming:** `WindgramInteractive` expects `data` prop (not `profile`). Always check component interfaces before passing props.
+- **Tabbed UI for backward compatibility:** When replacing an existing UI with a new visualization, use tabs rather than removing the old UI entirely. This serves both power users (who want tables) and visual learners (who prefer charts).
+- **Shadcn component installation:** Use `npx shadcn@latest add <component>` to add new UI components. They're installed directly into the codebase as editable source files.
+- **Browser testing note:** Browser tools had connection issues during testing, but all automated checks passed. Manual browser verification recommended to confirm windgrams render correctly and are interactive.
+- **Atmospheric profile API is already optimized:** The `/api/weather/profile` endpoint has 3-hour caching and CDN cache headers, so repeated requests are fast.
+- **No need for map click integration yet:** US-007 acceptance criteria mentioned "clicking any point on the browse map" but the current browse page doesn't have that interaction yet. This may be handled in US-008 or a future story.
+---
+
