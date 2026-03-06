@@ -52,6 +52,89 @@ export const verificationTokens = sqliteTable(
 );
 
 // Application tables
+
+// Global launch sites imported from external sources (ParaglidingEarth, etc.)
+export const launchSites = sqliteTable('launch_sites', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  countryCode: text('country_code'),
+  region: text('region'),
+  latitude: text('latitude').notNull(), // real as text for precision
+  longitude: text('longitude').notNull(),
+  elevation: integer('elevation'), // meters (takeoff)
+  landingElevation: integer('landing_elevation'), // meters
+  orientations: text('orientations', { mode: 'json' }).$type<Record<string, number>>(), // {N: 2, NE: 1, ...}
+  siteType: text('site_type'), // "takeoff", "landing", etc.
+  flyingTypes: text('flying_types', { mode: 'json' }).$type<string[]>(), // ["paragliding", "hanggliding"]
+  source: text('source').notNull(), // "paraglidingearth"
+  sourceId: text('source_id').notNull(), // external ID
+  description: text('description'),
+  landingLat: text('landing_lat'),
+  landingLng: text('landing_lng'),
+  landingDescription: text('landing_description'),
+  maxWindSpeed: integer('max_wind_speed'), // km/h
+  idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).$type<number[]>(), // derived from orientations
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+// User favorites of launch sites with optional customizations
+export const userFavoriteSites = sqliteTable(
+  'user_favorite_sites',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    siteId: text('site_id')
+      .notNull()
+      .references(() => launchSites.id, { onDelete: 'cascade' }),
+    notes: text('notes'),
+    customMaxWind: integer('custom_max_wind'), // km/h, overrides site default
+    customIdealDirections: text('custom_ideal_directions', { mode: 'json' }).$type<number[]>(),
+    notify: integer('notify', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => ({
+    uniqueUserSite: unique().on(table.userId, table.siteId),
+  }),
+);
+
+// User-created custom monitoring points
+export const customSites = sqliteTable('custom_sites', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  latitude: text('latitude').notNull(), // Store as text to preserve precision
+  longitude: text('longitude').notNull(),
+  elevation: integer('elevation').notNull(), // meters
+  maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
+  idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+// Legacy sites table - kept for backward compatibility during transition
 export const sites = sqliteTable('sites', {
   id: text('id')
     .primaryKey()
@@ -74,15 +157,15 @@ export const sites = sqliteTable('sites', {
     .default(sql`(unixepoch() * 1000)`),
 });
 
+// Forecasts cache - supports both launch_sites and custom_sites via discriminator
 export const forecastsCache = sqliteTable(
   'forecasts_cache',
   {
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    siteId: text('siteId')
-      .notNull()
-      .references(() => sites.id, { onDelete: 'cascade' }),
+    siteId: text('siteId').notNull(), // ID reference (no FK, flexible)
+    siteType: text('site_type').notNull(), // 'launch' | 'custom' | 'legacy'
     fetchDate: text('fetchDate').notNull(), // ISO date string (YYYY-MM-DD)
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
     fetchedAt: integer('fetchedAt', { mode: 'timestamp_ms' })
@@ -92,7 +175,7 @@ export const forecastsCache = sqliteTable(
   },
   (table) => ({
     // Unique constraint for cache key (one forecast per site per day)
-    uniqueSiteDate: unique().on(table.siteId, table.fetchDate),
+    uniqueSiteDate: unique().on(table.siteId, table.siteType, table.fetchDate),
   }),
 );
 
@@ -138,6 +221,15 @@ export type NewAccount = typeof accounts.$inferInsert;
 
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+
+export type LaunchSite = typeof launchSites.$inferSelect;
+export type NewLaunchSite = typeof launchSites.$inferInsert;
+
+export type UserFavoriteSite = typeof userFavoriteSites.$inferSelect;
+export type NewUserFavoriteSite = typeof userFavoriteSites.$inferInsert;
+
+export type CustomSite = typeof customSites.$inferSelect;
+export type NewCustomSite = typeof customSites.$inferInsert;
 
 export type Site = typeof sites.$inferSelect;
 export type NewSite = typeof sites.$inferInsert;

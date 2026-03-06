@@ -160,7 +160,13 @@ export async function getForecast(
   const [cachedRow] = await db
     .select()
     .from(forecastsCache)
-    .where(and(eq(forecastsCache.siteId, siteId), eq(forecastsCache.fetchDate, today)))
+    .where(
+      and(
+        eq(forecastsCache.siteId, siteId),
+        eq(forecastsCache.siteType, 'legacy'),
+        eq(forecastsCache.fetchDate, today),
+      ),
+    )
     .limit(1);
 
   // Check if cache exists and is still valid
@@ -177,13 +183,14 @@ export async function getForecast(
     .insert(forecastsCache)
     .values({
       siteId,
+      siteType: 'legacy',
       fetchDate: today,
       data: freshForecast,
       fetchedAt: new Date(freshForecast.fetchedAt),
       expiresAt: new Date(freshForecast.expiresAt),
     })
     .onConflictDoUpdate({
-      target: [forecastsCache.siteId, forecastsCache.fetchDate],
+      target: [forecastsCache.siteId, forecastsCache.siteType, forecastsCache.fetchDate],
       set: {
         data: freshForecast,
         fetchedAt: new Date(freshForecast.fetchedAt),
