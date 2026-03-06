@@ -84,7 +84,7 @@
         "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Cloud base, top of lift, and thermal velocity are already computed in weather-profile.ts derivedParams. The boundary layer height comes from surface data. Keep these overlays subtle — dashed lines, semi-transparent fills. The lapse rate background should remain the primary visual."
     },
     {
