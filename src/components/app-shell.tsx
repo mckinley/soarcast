@@ -13,6 +13,7 @@ import {
   Moon,
   LogOut,
   User,
+  Compass,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSession, signIn, signOut } from 'next-auth/react';
@@ -48,9 +49,14 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Sites',
+    title: 'My Sites',
     href: '/sites',
     icon: MapPin,
+  },
+  {
+    title: 'Browse Sites',
+    href: '/sites/browse',
+    icon: Compass,
   },
   {
     title: 'Settings',

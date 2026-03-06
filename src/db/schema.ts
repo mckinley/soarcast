@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql, relations } from 'drizzle-orm';
 import { text, integer, sqliteTable, primaryKey, unique } from 'drizzle-orm/sqlite-core';
 
 // NextAuth adapter tables
@@ -265,3 +265,19 @@ export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 
 export type AtmosphericProfileCache = typeof atmosphericProfilesCache.$inferSelect;
 export type NewAtmosphericProfileCache = typeof atmosphericProfilesCache.$inferInsert;
+
+// Drizzle relations for query features
+export const launchSitesRelations = relations(launchSites, ({ many }) => ({
+  favorites: many(userFavoriteSites),
+}));
+
+export const userFavoriteSitesRelations = relations(userFavoriteSites, ({ one }) => ({
+  user: one(users, {
+    fields: [userFavoriteSites.userId],
+    references: [users.id],
+  }),
+  site: one(launchSites, {
+    fields: [userFavoriteSites.siteId],
+    references: [launchSites.id],
+  }),
+}));

@@ -1,6 +1,7 @@
 'use server';
 
 import { getSites } from './sites/actions';
+import { getUserFavoriteSites } from './sites/browse/actions';
 import { getForecast, fetchAllForecasts } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import type { Site, Forecast, DayScore } from '@/types';
@@ -59,7 +60,7 @@ const DEMO_SITES: Site[] = [
 
 /**
  * Get forecast data for all sites with scoring
- * Authenticated users see their own sites
+ * Authenticated users see their favorited launch sites + custom sites
  * Unauthenticated users see demo sites
  */
 export async function getDashboardData(): Promise<SiteForecastData[]> {
@@ -67,9 +68,30 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
 
   // Determine which sites to show
   let sites: Site[];
+  const launchSiteIds: Set<string> = new Set();
+
   if (session?.user?.id) {
-    // Authenticated: show user's sites
-    sites = await getSites();
+    // Authenticated: show user's custom sites + favorited launch sites
+    const [customSites, favoriteSites] = await Promise.all([getSites(), getUserFavoriteSites()]);
+
+    // Convert favorited launch sites to Site type
+    const favoritesAsSites: Site[] = favoriteSites.map((fav) => {
+      launchSiteIds.add(fav.id); // Track launch site IDs
+      return {
+        id: fav.id,
+        name: fav.name,
+        latitude: parseFloat(fav.latitude),
+        longitude: parseFloat(fav.longitude),
+        elevation: fav.elevation || 0,
+        idealWindDirections: fav.favorite.customIdealDirections || fav.idealWindDirections || [],
+        maxWindSpeed: fav.favorite.customMaxWind || fav.maxWindSpeed || 40,
+        notes: fav.favorite.notes ?? undefined,
+        createdAt: new Date(fav.createdAt).toISOString(),
+        updatedAt: new Date(fav.updatedAt).toISOString(),
+      };
+    });
+
+    sites = [...customSites, ...favoritesAsSites];
   } else {
     // Unauthenticated: show demo sites
     sites = DEMO_SITES;
@@ -78,7 +100,9 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
   const results = await Promise.all(
     sites.map(async (site) => {
       try {
-        const forecast = await getForecast(site.id, site.latitude, site.longitude);
+        // Determine siteType based on whether it's in the launch sites set
+        const siteType = launchSiteIds.has(site.id) ? 'launch' : 'legacy';
+        const forecast = await getForecast(site.id, site.latitude, site.longitude, siteType);
         const scores = calculateDailyScores(forecast, site);
 
         return {

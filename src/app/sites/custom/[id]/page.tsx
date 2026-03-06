@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getSites } from '../actions';
+import { getSites } from '../../actions';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import { SiteDetailClient } from '@/components/site-detail-client';

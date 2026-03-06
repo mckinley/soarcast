@@ -141,12 +141,14 @@ function isDemoSite(siteId: string): boolean {
  * @param siteId - Unique site identifier
  * @param latitude - Site latitude
  * @param longitude - Site longitude
+ * @param siteType - Type of site: 'launch' | 'custom' | 'legacy' (default: 'legacy')
  * @returns Cached or fresh forecast data
  */
 export async function getForecast(
   siteId: string,
   latitude: number,
   longitude: number,
+  siteType: 'launch' | 'custom' | 'legacy' = 'legacy',
 ): Promise<Forecast> {
   // Demo sites skip DB caching entirely — just fetch fresh data
   if (isDemoSite(siteId)) {
@@ -163,7 +165,7 @@ export async function getForecast(
     .where(
       and(
         eq(forecastsCache.siteId, siteId),
-        eq(forecastsCache.siteType, 'legacy'),
+        eq(forecastsCache.siteType, siteType),
         eq(forecastsCache.fetchDate, today),
       ),
     )
@@ -183,7 +185,7 @@ export async function getForecast(
     .insert(forecastsCache)
     .values({
       siteId,
-      siteType: 'legacy',
+      siteType,
       fetchDate: today,
       data: freshForecast,
       fetchedAt: new Date(freshForecast.fetchedAt),
