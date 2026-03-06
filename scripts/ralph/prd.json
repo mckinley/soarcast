@@ -1,7 +1,7 @@
 {
   "project": "SoarCast",
   "branchName": "ralph/phase3-ux-polish",
-  "description": "Phase 3 — UX Polish, Push Notifications, and Production Hardening. Make SoarCast feel like a polished, production-ready app that pilots actually want to use daily. Focus on UX refinement, smart notifications, performance, and reliability.",
+  "description": "Phase 3 \u2014 UX Polish, Push Notifications, and Production Hardening. Make SoarCast feel like a polished, production-ready app that pilots actually want to use daily. Focus on UX refinement, smart notifications, performance, and reliability.",
   "context": {
     "stack": "Next.js 16 + Turso (Drizzle ORM) + shadcn/ui + Leaflet + Tailwind v4",
     "existingFeatures": "Interactive windgrams with lapse rate, wind barbs, thermal indicators, interactivity. 55 WA launch sites imported. Atmospheric profile API. Flyability scoring and summaries. Dashboard with thumbnails.",
@@ -10,9 +10,29 @@
   },
   "userStories": [
     {
+      "id": "US-000",
+      "title": "Make Browse & Site Pages Public",
+      "description": "Site browse page and individual site detail pages (with windgrams) must be accessible without authentication. Only user-specific actions (favoriting, custom sites, settings) require sign-in.",
+      "acceptanceCriteria": [
+        "GET /sites/browse is accessible without sign-in",
+        "GET /sites/[slug] is accessible without sign-in (windgram visible)",
+        "GET /api/weather/profile is accessible without sign-in",
+        "GET /api/sites (read-only list) is accessible without sign-in",
+        "GET /api/sites/[slug] is accessible without sign-in",
+        "Favorite button shows sign-in prompt for unauthenticated users instead of hiding",
+        "Dashboard, My Sites, Settings still require authentication",
+        "Custom site creation/editing still requires authentication",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 0,
+      "passes": false,
+      "notes": "The middleware in src/middleware.ts currently blocks ALL /sites/* routes. Update protectedRoutes to only protect mutation endpoints and user-specific pages. The API routes /api/sites and /api/weather/profile should be public for read access."
+    },
+    {
       "id": "US-001",
       "title": "Smart Push Notifications with Windgram Data",
-      "description": "Upgrade the existing push notification system to use atmospheric profile data for smarter, more accurate fly/no-fly alerts. Currently notifications just use the simple scoring — integrate windgram-quality analysis.",
+      "description": "Upgrade the existing push notification system to use atmospheric profile data for smarter, more accurate fly/no-fly alerts. Currently notifications just use the simple scoring \u2014 integrate windgram-quality analysis.",
       "acceptanceCriteria": [
         "Notification check (/api/notifications/check) uses atmospheric profile data in addition to simple scoring",
         "Notifications include: flyability rating, best window, key concerns, thermal strength estimate",
@@ -29,7 +49,7 @@
     {
       "id": "US-002",
       "title": "Site Search & Discovery Improvements",
-      "description": "Make it easy to find and discover launch sites. Current browse page has basic search — make it great.",
+      "description": "Make it easy to find and discover launch sites. Current browse page has basic search \u2014 make it great.",
       "acceptanceCriteria": [
         "Full-text search across site name, region, country",
         "Filter by: flyability today (show only sites rated Good+), orientation, site type, country/region",
@@ -53,7 +73,7 @@
         "Immediate value without sign-in: browse sites, view windgrams, check forecasts",
         "Gentle prompt to sign in when they try to favorite a site or enable notifications",
         "After sign-in: guided flow to favorite their home site(s) or pick from nearby sites (geolocation)",
-        "Onboarding is skippable — experienced users can dismiss and go straight to dashboard",
+        "Onboarding is skippable \u2014 experienced users can dismiss and go straight to dashboard",
         "Mobile-first: the onboarding works great on phones (pilots often on mobile)",
         "npm run build succeeds",
         "npm run lint passes"
@@ -65,7 +85,7 @@
     {
       "id": "US-004",
       "title": "Performance & Loading Optimization",
-      "description": "Make everything fast. Atmospheric data fetches can be slow — optimize with smart caching, prefetching, and progressive loading.",
+      "description": "Make everything fast. Atmospheric data fetches can be slow \u2014 optimize with smart caching, prefetching, and progressive loading.",
       "acceptanceCriteria": [
         "Site detail page loads site info instantly, then progressively loads windgram data",
         "Dashboard prefetches today's atmospheric data for favorited sites in the background",
@@ -96,7 +116,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": "The existing error.tsx and global-error.tsx are minimal. Make them actually useful. For offline support, rely on the service worker cache and add a visible indicator. Don't add Sentry as a hard dependency — make it optional via env var."
+      "notes": "The existing error.tsx and global-error.tsx are minimal. Make them actually useful. For offline support, rely on the service worker cache and add a visible indicator. Don't add Sentry as a hard dependency \u2014 make it optional via env var."
     },
     {
       "id": "US-006",
@@ -115,7 +135,7 @@
       ],
       "priority": 6,
       "passes": false,
-      "notes": "Use Playwright's setViewportSize for mobile testing. The windgram chart needs special attention on mobile — consider a simplified view that shows key info without requiring precise hover targeting."
+      "notes": "Use Playwright's setViewportSize for mobile testing. The windgram chart needs special attention on mobile \u2014 consider a simplified view that shows key info without requiring precise hover targeting."
     }
   ]
 }
