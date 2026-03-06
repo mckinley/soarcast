@@ -172,3 +172,68 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Prefetch priorities: First 3 sites immediately (most likely to be viewed), remaining sites delayed
 - Service worker cache matching: Use cache.match() for instant cached responses, fetch in background for fresh data
 ---
+## 2026-03-06 23:45 - US-005
+- Implemented comprehensive error handling and graceful degradation
+- Enhanced error pages (error.tsx, global-error.tsx):
+  - Network error detection with contextual messaging
+  - Retry buttons with icons (RefreshCw, Home)
+  - Error ID display with GitHub issue reporting links
+  - Beautiful global error page with gradient styling and responsive design
+- API failure handling with cache fallback:
+  - Modified getAtmosphericProfile() to return AtmosphericProfileResult type
+  - Modified getForecast() to return ForecastResult type
+  - Both functions fall back to stale cache when API fails
+  - Returns metadata: isStale, cacheAgeHours, error message
+  - Updated /api/weather/profile to add X-Cache-Status headers
+  - Fixed all call sites across the codebase (notifications, dashboard, site pages)
+- Database retry logic:
+  - Created src/lib/db-retry.ts with exponential backoff
+  - withRetry() function: 3 retries, 10s timeout, 2x backoff multiplier
+  - Detects retryable errors (timeout, connection reset, etc.)
+  - queryWithRetry() and transactionWithRetry() wrapper functions
+- Offline support:
+  - Created OfflineIndicator component (fixed top-right, z-50)
+  - Yellow badge when offline: "You're offline • Showing cached data"
+  - Green badge when reconnected: "Back online" (auto-dismisses after 3s)
+  - Uses navigator.onLine and online/offline events
+  - Created StaleDataBadge component for showing cache age
+- Optional Sentry integration:
+  - Created src/lib/sentry.ts with stub implementation
+  - initSentry(), captureException(), captureMessage(), setUser()
+  - Integrated into src/app/layout.tsx via SentryInit component
+  - Currently disabled (no @sentry/nextjs dependency)
+  - Can be enabled by installing package and setting env var
+- Files changed:
+  - src/app/error.tsx, src/app/global-error.tsx (enhanced UX)
+  - src/lib/weather-profile.ts, src/lib/weather.ts (cache fallback)
+  - src/app/api/weather/profile/route.ts (cache headers)
+  - src/app/api/notifications/check/route.ts (type updates)
+  - src/app/dashboard/actions.ts (type updates)
+  - src/app/sites/[slug]/site-detail-forecast.tsx (type updates)
+  - src/app/sites/custom/[id]/page.tsx (type updates)
+  - src/components/offline-indicator.tsx (new)
+  - src/components/stale-data-badge.tsx (new)
+  - src/components/sentry-init.tsx (new)
+  - src/lib/db-retry.ts (new)
+  - src/lib/sentry.ts (new)
+  - src/app/layout.tsx (added offline indicator and Sentry init)
+- Quality checks: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- API failure handling: Return result types with metadata instead of throwing errors
+- This allows graceful degradation with stale cache while providing context to UI
+- Type system propagation: Changing return types requires updating ALL call sites
+- Use global search (grep/ripgrep) to find all usages before changing signatures
+- Optional dependencies: Cannot use dynamic imports in build-time code
+- For optional integrations like Sentry, use stub implementations or feature flags
+- Error boundaries: Always provide retry buttons and contextual error messages
+- Network errors vs app errors need different messaging for better UX
+- Offline detection: navigator.onLine + online/offline events, initialize state in useState
+- Avoid setState in useEffect body - use initializer function instead
+- Exponential backoff: Standard pattern is initialDelay * (multiplier ^ attempt)
+- Detect retryable errors by message patterns (timeout, connection reset, etc.)
+- Cache metadata: isStale flag + cacheAgeHours allows UI to show "Last updated X ago"
+- Service worker (from US-004) already handles API caching, just need UI indicators
+- Windgram null safety: Existing code already handles null values gracefully
+- No changes needed - defensive programming from initial implementation
+---

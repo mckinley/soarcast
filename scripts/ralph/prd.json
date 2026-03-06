@@ -115,7 +115,7 @@
         "npm run test passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The existing error.tsx and global-error.tsx are minimal. Make them actually useful. For offline support, rely on the service worker cache and add a visible indicator. Don't add Sentry as a hard dependency \u2014 make it optional via env var."
     },
     {
