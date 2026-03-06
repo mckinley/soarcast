@@ -159,7 +159,7 @@
         "npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Thumbnails are a simplified version of the windgram — just the background colors, maybe 100x60px. Don't fetch full atmospheric profiles for thumbnails; use the existing simple forecast data for the 7-day bar and only the first day's profile for the thumbnail. Lazy-load thumbnails as they scroll into view."
     }
   ]

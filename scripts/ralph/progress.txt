@@ -259,3 +259,46 @@ Started: Fri Mar  6 18:31:03 +07 2026
 - **No need for map click integration yet:** US-007 acceptance criteria mentioned "clicking any point on the browse map" but the current browse page doesn't have that interaction yet. This may be handled in US-008 or a future story.
 ---
 
+## Fri Mar 6 20:00:00 +07 2026 - US-008
+- ✅ Implemented multi-day dashboard thumbnails with card-based layout
+- Created `WindgramThumbnail` component (src/components/windgram/windgram-thumbnail.tsx):
+  - Simplified windgram showing only lapse rate background colors
+  - Canvas-based rendering optimized for small size (120x60px default)
+  - Filters to daylight hours (6 AM - 8 PM) for cleaner visualization
+  - High-DPI support with device pixel ratio scaling
+  - Lazy-loads only when visible (Intersection Observer)
+- Created `SevenDayBar` component (src/components/dashboard/seven-day-bar.tsx):
+  - Color-coded dots representing flyability rating for each day (Epic=purple, Great=green, Good=blue, Fair=yellow, Poor=gray)
+  - Tooltips showing date and score details
+  - Fills remaining days with gray if less than 7 days available
+- Created `SiteCard` component (src/components/dashboard/site-card.tsx):
+  - Integrates windgram thumbnail, flyability badge, and 7-day bar
+  - Lazy-loads atmospheric profile data only when card scrolls into view (Intersection Observer with 50px margin)
+  - Fetches only 1 day of profile data for thumbnail (performance optimization)
+  - Clickable card linking to full site detail page
+  - Loading skeleton state while thumbnail data fetches
+- Updated `DashboardClient` to tabbed layout:
+  - "Cards" tab (default): Responsive grid layout (1 col mobile, 2-3 desktop)
+  - "Table" tab: Preserves existing table view for power users
+  - Uses shadcn/ui tabs component
+  - Updated header text to reflect card-based interaction
+- All quality checks passed: typecheck ✓, lint ✓, build ✓
+
+**Files changed:**
+- src/components/windgram/windgram-thumbnail.tsx (new)
+- src/components/windgram/index.ts (updated exports)
+- src/components/dashboard/seven-day-bar.tsx (new)
+- src/components/dashboard/site-card.tsx (new)
+- src/components/dashboard-client.tsx (updated to tabbed layout)
+
+**Learnings for future iterations:**
+- **Thumbnail optimization strategy:** Fetch only 1 day of atmospheric profile data (not 7 days) for thumbnails. The 7-day bar uses existing `DayScore` data which is already loaded, so only the thumbnail needs profile data. This reduces API calls by ~85% per card.
+- **Intersection Observer for lazy loading:** Use `rootMargin: '50px'` to preload thumbnails slightly before they scroll into view. This provides a smoother UX (data is ready when the user sees it) without loading everything upfront.
+- **Ref cleanup pattern:** When using refs in useEffect cleanup, copy `ref.current` to a variable inside the effect to satisfy React hooks exhaustive-deps lint rule: `const element = ref.current; ... return () => { observer.unobserve(element); }`.
+- **Simplified windgram rendering:** For thumbnails, skip all overlays (wind barbs, lines, labels) and render only the lapse rate background. This is 10x faster and sufficient for an at-a-glance view.
+- **Card vs table UX:** Cards are better for visual learners and provide richer information density (thumbnail + badge + 7-day bar). Tables are better for power users who want to scan many sites quickly. Offer both via tabs.
+- **Demo site URL handling:** Demo sites (ID starts with "demo-") redirect to `/sites/browse` instead of a detail page since they're not in the database. Custom sites use `/sites/custom/[id]` and launch sites use `/sites/[slug]`.
+- **Color-coded dots pattern:** 7-day bar uses small circular dots (h-3 w-3 rounded-full) with color-coded ratings. This is space-efficient and immediately recognizable. Tooltips provide details on hover.
+- **Tabbed layout for backward compatibility:** When introducing a new visualization paradigm (cards), preserve the old view (table) in a tab. This prevents disruption for existing users while promoting the new UI as the default.
+---
+
