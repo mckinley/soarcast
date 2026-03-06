@@ -127,7 +127,16 @@ export async function fetchWeatherForecast(
 }
 
 /**
+ * Check if a site ID is a demo site (not stored in the database)
+ */
+function isDemoSite(siteId: string): boolean {
+  return siteId.startsWith('demo-');
+}
+
+/**
  * Gets cached forecast for a site or fetches fresh data if cache is stale/missing
+ * Demo sites (IDs starting with "demo-") skip DB caching since they have no
+ * foreign key in the sites table.
  * @param siteId - Unique site identifier
  * @param latitude - Site latitude
  * @param longitude - Site longitude
@@ -138,6 +147,11 @@ export async function getForecast(
   latitude: number,
   longitude: number
 ): Promise<Forecast> {
+  // Demo sites skip DB caching entirely — just fetch fresh data
+  if (isDemoSite(siteId)) {
+    return fetchWeatherForecast(siteId, latitude, longitude);
+  }
+
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const now = new Date();
 
