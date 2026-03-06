@@ -133,7 +133,7 @@
         "npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "The /api/weather/profile route was created in US-004. This story adds the site-specific routes and ensures consistent API design across all endpoints. Consider rate limiting for the profile endpoints since they hit Open-Meteo."
     }
   ]

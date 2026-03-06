@@ -148,3 +148,27 @@ Started: Fri Mar 6 2026
   - Pre-commit hooks ran automatically after commit (lint-staged + husky)
 ---
 
+## 2026-03-06 18:20 - US-006
+- Implemented REST API endpoints for site and atmospheric data access
+- Files changed:
+  - Created: src/app/api/sites/route.ts (list sites with filters)
+  - Created: src/app/api/sites/[slug]/route.ts (single site details)
+  - Created: src/app/api/sites/[slug]/profile/route.ts (site atmospheric profile)
+  - Verified: src/app/api/weather/profile/route.ts exists from US-004
+- Implementation details:
+  - GET /api/sites supports region, type, and search query params
+  - Flying type filter requires JSON array parsing (not DB-level since JSON column)
+  - All endpoints return { count, sites } or single object with consistent error format
+  - Cache-Control: public, s-maxage=3600, stale-while-revalidate for CDN optimization
+  - Error responses: { error: string, status: number } with matching HTTP status
+  - Atmospheric profile endpoints reuse fetchAtmosphericProfile from weather-profile.ts
+  - Days parameter validated 1-7 range with default of 2
+- **Learnings for future iterations:**
+  - Next.js API routes: Use NextResponse.json() for proper content-type headers
+  - CDN caching: s-maxage controls shared cache (Vercel Edge), max-age controls browser
+  - stale-while-revalidate allows serving stale data while fetching fresh in background
+  - JSON columns in SQLite: Can't filter at DB level, must filter in JS after query
+  - Route params in Next.js 15: Must await params object before destructuring
+  - Consistent error format across all endpoints helps API consumers handle errors uniformly
+---
+
