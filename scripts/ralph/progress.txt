@@ -1,0 +1,18 @@
+# Ralph Progress Log
+Started: Fri Mar 6 2026
+---
+
+## Codebase Patterns
+- Use Drizzle ORM with `drizzle-orm/libsql` for Turso database access
+- SQLite stores JSON as text — use `text('field', { mode: 'json' }).$type<T>()` for type-safe JSON columns
+- Use `crypto.randomUUID()` for generating primary keys in schema defaults
+- Environment variables for Turso: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN
+- NextAuth v5: Config in `src/auth.ts`, use `auth()` server-side, `useSession()` client-side
+- Protected routes: Middleware redirects pages to sign-in, returns 401 for API routes
+- Leaflet MUST be dynamically imported with next/dynamic ssr:false via a wrapper client component
+- Use `and()` from drizzle-orm to combine multiple where conditions
+- Upsert pattern: `.insert().onConflictDoUpdate({ target: [col1, col2], set: {...} })`
+- Generate migrations with `npx drizzle-kit generate`
+- Existing lint issues: `any` types, unescaped quotes in JSX, unused vars, Math.random in render — all must be fixed
+- shadcn/ui components are in src/components/ui/ — do not modify their internals unless fixing actual bugs
+---

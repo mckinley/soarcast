@@ -1,0 +1,140 @@
+{
+  "project": "SoarCast",
+  "branchName": "ralph/phase1-foundation",
+  "description": "Phase 1 Foundation — Tooling, launch site database, atmospheric profile data, and updated UI. Washington State is the high-fidelity testbed; global coverage is broad but lighter-weight.",
+  "context": {
+    "stack": "Next.js 16 + Turso (Drizzle ORM) + shadcn/ui + Leaflet + Tailwind v4",
+    "weatherAPI": "Open-Meteo (free, no API key). Pressure-level params: temperature_XhPa, windspeed_XhPa, winddirection_XhPa, relativehumidity_XhPa, geopotential_height_XhPa, cloudcover_XhPa where X = 1000, 950, 900, 850, 800, 700, 600, 500",
+    "siteDataAPI": "ParaglidingEarth bounding-box API: GET https://www.paragliding.earth/api/getBoundingBoxSites.php?north=X&south=X&east=X&west=X&limit=100&style=detailled — returns XML, no API key needed",
+    "washingtonBBox": { "north": 49.0, "south": 45.5, "east": -116.9, "west": -124.8 },
+    "deployment": "Vercel",
+    "database": "Turso (libsql, SQLite-compatible)"
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Code Quality Tooling",
+      "description": "Set up Prettier, Vitest, and Playwright. Add lint-staged + husky for pre-commit hooks.",
+      "acceptanceCriteria": [
+        "Prettier installed and configured (.prettierrc with singleQuote, trailingComma all, printWidth 100)",
+        ".prettierignore excludes build outputs, node_modules, drizzle migrations",
+        "All existing source files formatted with prettier",
+        "Vitest installed with path aliases matching tsconfig (@/* -> ./src/*)",
+        "At least one example unit test passing",
+        "Playwright installed with chromium, basic smoke test (homepage loads)",
+        "Husky + lint-staged configured: pre-commit runs eslint --fix + prettier --write on staged .ts/.tsx/.js files",
+        "npm scripts added: test, test:e2e, format, format:check",
+        "All existing ESLint errors in the codebase are FIXED (not suppressed) before committing",
+        "npm run build succeeds",
+        "npm run lint passes with zero errors",
+        "npm run format:check passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "IMPORTANT: The existing codebase has lint errors (any types, unescaped quotes, unused vars, Math.random in render). Fix ALL of them as part of this story. Do not commit until lint is clean."
+    },
+    {
+      "id": "US-002",
+      "title": "Launch Site Database Schema",
+      "description": "Create new database tables for global launch sites (from ParaglidingEarth) separate from user-created custom sites. Users can favorite launch sites and add personal custom monitoring points.",
+      "acceptanceCriteria": [
+        "launch_sites table created with: id, name, slug (unique), country_code, region, latitude (real), longitude (real), elevation, landing_elevation, orientations (json), site_type, flying_types (json), source, source_id, description, landing_lat, landing_lng, landing_description, max_wind_speed, ideal_wind_directions (json), last_synced_at, created_at, updated_at",
+        "user_favorite_sites table created with: id, user_id (FK), site_id (FK to launch_sites), notes, custom_max_wind, custom_ideal_directions (json), notify (boolean), created_at. UNIQUE(user_id, site_id)",
+        "custom_sites table created with: id, user_id (FK), name, latitude, longitude, elevation, max_wind_speed, ideal_wind_directions (json), created_at, updated_at",
+        "Drizzle migration generated and applies cleanly",
+        "Existing user sites data preserved (migrated to custom_sites)",
+        "Old sites table kept for backward compat during transition OR cleanly migrated",
+        "forecasts_cache updated to work with both launch_sites and custom_sites",
+        "TypeScript types exported for all new tables",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Be careful with the migration — existing users have sites with forecasts. Don't lose data. The forecasts_cache FK currently points to sites.id. Consider making it a simple text field (no FK) that can reference either table, or add a site_type discriminator."
+    },
+    {
+      "id": "US-003",
+      "title": "ParaglidingEarth Site Scraper",
+      "description": "Build a scraper to import paragliding launch sites from ParaglidingEarth's API. Washington State first, global capability built in.",
+      "acceptanceCriteria": [
+        "Scraper service at src/lib/scraper/paraglidingearth.ts",
+        "Parses XML response correctly (use a lightweight XML parser like fast-xml-parser)",
+        "Maps ParaglidingEarth data to launch_sites schema including orientations, flying types, landing info",
+        "Derives ideal_wind_directions array from orientations (directions rated 2=good become ideal)",
+        "CLI script at scripts/import-sites.ts runnable via npx tsx scripts/import-sites.ts",
+        "Supports --region washington (pre-defined bbox) and --bbox north,south,east,west",
+        "Upserts on source_id to avoid duplicates on re-import",
+        "Rate limiting: max 1 request per second to ParaglidingEarth",
+        "Washington State import succeeds and imports 50+ sites",
+        "Unit tests for XML parsing and orientation-to-direction conversion",
+        "npm run build succeeds",
+        "npm run test passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "ParaglidingEarth XML format: <search><takeoff><name/><lat/><lng/><takeoff_altitude/><orientations><N>0|1|2</N>...</orientations><paragliding>1</paragliding><hanggliding>0</hanggliding>...</takeoff><landing>...</landing></search>. Rate limit politely. Generate a slug from the name (lowercase, hyphens, no special chars)."
+    },
+    {
+      "id": "US-004",
+      "title": "Pressure-Level Atmospheric Data Service",
+      "description": "Upgrade the weather service to fetch full vertical atmospheric profiles from Open-Meteo at multiple pressure levels, enabling windgram-style visualizations in Phase 2.",
+      "acceptanceCriteria": [
+        "New function fetchAtmosphericProfile(lat, lng, days?) in src/lib/weather-profile.ts",
+        "Fetches pressure-level data at 1000, 950, 900, 850, 800, 700, 600, 500 hPa",
+        "At each level: temperature, wind_speed, wind_direction, relative_humidity, geopotential_height, cloud_cover",
+        "Surface data: temperature_2m, wind_speed_10m, wind_direction_10m, wind_gusts_10m, cloud_cover, cape, precipitation_probability, boundary_layer_height, convective_inhibition, lifted_index, shortwave_radiation",
+        "TypeScript types defined: AtmosphericProfile, AtmosphericHour, PressureLevel, SurfaceData",
+        "Computed derived parameters: lapse rate between levels (°C/1000ft), thermal index, estimated cloud base (from surface temp/dewpoint spread), estimated top of lift",
+        "Separate cache table (atmospheric_profiles_cache) in Turso with 3-hour TTL",
+        "API route: GET /api/weather/profile?lat=X&lng=Y&days=2 returns JSON AtmosphericProfile",
+        "Existing simple forecast (weather.ts, scoring.ts) still works unchanged",
+        "Unit tests for lapse rate calculation, thermal index, cloud base estimation",
+        "npm run build succeeds",
+        "npm run test passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Open-Meteo param format: temperature_1000hPa (not temperature_1000hpa). The geopotential_height gives actual altitude at each pressure level. Lapse rate = (T_lower - T_upper) / (height_upper - height_lower) * 304.8 to get °C/1000ft. Dry adiabatic lapse rate is ~3°C/1000ft. Keep existing weather.ts untouched — this is a NEW service alongside it."
+    },
+    {
+      "id": "US-005",
+      "title": "Updated Site Pages & Navigation",
+      "description": "Update the UI to browse imported launch sites, favorite them, and see enriched data. Keep existing custom site functionality working.",
+      "acceptanceCriteria": [
+        "Browse Sites page (/sites/browse) showing all imported WA launch sites on a Leaflet map",
+        "Site markers on map, clicking opens popup with name + elevation + link to detail page",
+        "Search/filter by name and region on browse page",
+        "Site detail page (/sites/[slug]) shows enriched data: name, elevation, orientations, landing info, source attribution",
+        "Authenticated users can favorite/unfavorite launch sites",
+        "Dashboard shows user's favorited launch sites + custom sites",
+        "Existing custom site create/edit/delete still works",
+        "Mobile-friendly layout (responsive)",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Use slugs for launch site URLs (not UUIDs). Keep the existing /sites page for user's own sites and favorites. The /sites/browse page is for discovery. Leaflet must be dynamically imported (no SSR) — use the existing map-display-wrapper.tsx pattern."
+    },
+    {
+      "id": "US-006",
+      "title": "API Routes for Site & Atmospheric Data",
+      "description": "Create clean REST API endpoints for sites and atmospheric profiles that the Phase 2 windgram component will consume.",
+      "acceptanceCriteria": [
+        "GET /api/sites?region=washington&type=paragliding — returns filtered launch sites",
+        "GET /api/sites/[slug] — returns single site with full details",
+        "GET /api/sites/[slug]/profile — returns atmospheric profile for a specific site",
+        "GET /api/weather/profile?lat=X&lng=Y&days=2 — returns atmospheric profile for arbitrary location",
+        "All routes return proper JSON with appropriate HTTP status codes",
+        "Cache-Control headers set appropriately (atmospheric data: max-age=3600)",
+        "Error responses are consistent: { error: string, status: number }",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The /api/weather/profile route was created in US-004. This story adds the site-specific routes and ensures consistent API design across all endpoints. Consider rate limiting for the profile endpoints since they hit Open-Meteo."
+    }
+  ]
+}
