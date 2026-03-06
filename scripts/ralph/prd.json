@@ -29,7 +29,7 @@
         "npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Performance matters — this chart will re-render on interactions. Canvas may be better than SVG for the background fill. Consider using visx (React bindings for D3) for a more React-native approach. The chart should feel smooth on mobile."
     },
     {

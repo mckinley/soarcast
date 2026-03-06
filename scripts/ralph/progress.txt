@@ -1,3 +1,36 @@
 # Ralph Progress Log
 Started: Fri Mar  6 18:31:03 +07 2026
 ---
+
+## Codebase Patterns
+- Use HTML Canvas for performance-critical visualizations (better than SVG/D3 for mobile)
+- Theme integration: read CSS custom properties via getComputedStyle and convert HSL to rgba
+- Responsive components: use ResizeObserver to track container size changes
+- High-DPI rendering: multiply canvas width/height by devicePixelRatio and scale context
+- Loading states: use Skeleton component from src/components/ui/skeleton
+
+---
+
+## Fri Mar 6 18:35:00 +07 2026 - US-001
+- ✅ Implemented foundational windgram chart component using HTML Canvas
+- Created `src/components/windgram/windgram-chart.tsx` with:
+  - Time × altitude grid (6 AM - 8 PM local time filter)
+  - Dual altitude labels (meters + feet) with pressure level markers
+  - Responsive sizing with ResizeObserver (360px - 1400px+)
+  - Theme-aware rendering using CSS custom properties
+  - High-DPI screen support
+  - Loading skeleton state
+- Created `src/components/windgram/index.ts` for exports
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx (new)
+- src/components/windgram/index.ts (new)
+
+**Learnings for future iterations:**
+- **Canvas over SVG for windgrams:** React 19 has peer dependency conflicts with visx. Canvas provides better performance for the dense grid visualization and avoids library compatibility issues.
+- **Barometric formula for altitude:** pressureToAltitude() uses simplified standard atmosphere formula: h ≈ 44330 * (1 - (P/P0)^0.1903)
+- **Theme integration pattern:** Extract HSL values from CSS custom properties (--foreground, --border) and convert to rgba for canvas rendering
+- **Daylight hours filtering:** Filter atmospheric data to 6 AM - 8 PM local time for cleaner pilot-focused visualization
+- **Component location:** Windgram components live in src/components/windgram/ directory
+
+---
