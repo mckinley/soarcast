@@ -2,11 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
+import type { DayScore } from '@/types';
 import { WindgramChart } from './windgram-chart';
 import { WindgramDaySelector } from './windgram-day-selector';
+import { FlyabilitySummary } from './flyability-summary';
 
 interface WindgramInteractiveProps {
   data: AtmosphericProfile | null;
+  /**
+   * Optional daily scores for flyability summaries.
+   * Array should match the days in the atmospheric profile data.
+   */
+  dayScores?: DayScore[];
   loading?: boolean;
   className?: string;
 }
@@ -17,6 +24,7 @@ interface WindgramInteractiveProps {
  */
 export function WindgramInteractive({
   data,
+  dayScores = [],
   loading = false,
   className = '',
 }: WindgramInteractiveProps) {
@@ -26,20 +34,21 @@ export function WindgramInteractive({
   const days = useMemo(() => {
     if (!data) return [];
 
-    const dayMap = new Map<string, typeof data.hours>();
+    const dayMap = new Map<string, { date: string; hours: typeof data.hours }>();
 
     for (const hour of data.hours) {
-      const date = new Date(hour.time);
-      const dayKey = date.toDateString();
+      const date = hour.time.split('T')[0]; // YYYY-MM-DD format to match DayScore.date
+      const dayKey = new Date(hour.time).toDateString();
 
       if (!dayMap.has(dayKey)) {
-        dayMap.set(dayKey, []);
+        dayMap.set(dayKey, { date, hours: [] });
       }
-      dayMap.get(dayKey)!.push(hour);
+      dayMap.get(dayKey)!.hours.push(hour);
     }
 
-    return Array.from(dayMap.entries()).map(([dayKey, hours]) => ({
+    return Array.from(dayMap.entries()).map(([dayKey, { date, hours }]) => ({
       date: new Date(dayKey),
+      dateString: date, // YYYY-MM-DD for matching with DayScore
       hours,
     }));
   }, [data]);
@@ -53,6 +62,13 @@ export function WindgramInteractive({
       hours: days[selectedDayIndex].hours,
     };
   }, [data, days, selectedDayIndex]);
+
+  // Get score for selected day
+  const selectedDayScore: DayScore | undefined = useMemo(() => {
+    if (!days[selectedDayIndex]) return undefined;
+    const dateString = days[selectedDayIndex].dateString;
+    return dayScores.find((score) => score.date === dateString);
+  }, [days, selectedDayIndex, dayScores]);
 
   if (loading || !data) {
     return <WindgramChart data={null} loading={true} className={className} />;
@@ -68,6 +84,17 @@ export function WindgramInteractive({
           onDayChange={setSelectedDayIndex}
           className="mb-4"
         />
+      )}
+
+      {/* Flyability summary (if score data available) */}
+      {selectedDayScore && selectedDayData && (
+        <div className="mb-4">
+          <FlyabilitySummary
+            dayScore={selectedDayScore}
+            atmosphericData={selectedDayData}
+            date={days[selectedDayIndex].dateString}
+          />
+        </div>
       )}
 
       {/* Chart with smooth transition */}

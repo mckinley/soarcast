@@ -3,6 +3,7 @@ export { WindgramInteractive } from './windgram-interactive';
 export { WindgramDetailPanel } from './windgram-detail-panel';
 export { WindgramDaySelector } from './windgram-day-selector';
 export { LapseRateLegend } from './lapse-rate-legend';
+export { FlyabilitySummary } from './flyability-summary';
 export {
   kmhToKnots,
   windSpeedToBarb,
