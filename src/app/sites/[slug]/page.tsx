@@ -1,14 +1,16 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getLaunchSiteBySlug, isSiteFavorited } from '../browse/actions';
-import { getForecast } from '@/lib/weather';
-import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { LaunchSiteFavoriteButton } from './favorite-button';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
+import { SiteDetailForecast } from './site-detail-forecast';
 import { auth } from '@/auth';
 
 export async function generateMetadata({
@@ -31,57 +33,43 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * Loading fallback for forecast section
+ */
+function ForecastSkeleton() {
+  return (
+    <Card className="p-6">
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    </Card>
+  );
+}
+
 export default async function LaunchSiteDetailPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  // Fetch site info first (fast) - this doesn't block the page
   const site = await getLaunchSiteBySlug(slug);
-  const session = await auth();
 
   if (!site) {
     notFound();
   }
 
-  const isFavorited = await isSiteFavorited(site.id);
-
-  // Fetch forecast for this site
-  let forecast = null;
-  let scores = null;
-  let error = null;
-
-  try {
-    const { calculateDailyScores } = await import('@/lib/scoring');
-    const lat = parseFloat(site.latitude);
-    const lng = parseFloat(site.longitude);
-    forecast = await getForecast(site.id, lat, lng, 'launch');
-
-    if (forecast) {
-      // Convert launch site to the format expected by scoring
-      const siteForScoring = {
-        id: site.id,
-        name: site.name,
-        latitude: lat,
-        longitude: lng,
-        elevation: site.elevation || 0,
-        idealWindDirections: site.idealWindDirections || [],
-        maxWindSpeed: site.maxWindSpeed || 40,
-        createdAt: new Date(site.createdAt).toISOString(),
-        updatedAt: new Date(site.updatedAt).toISOString(),
-      };
-      scores = calculateDailyScores(forecast, siteForScoring);
-    }
-  } catch (e) {
-    error = e instanceof Error ? e.message : 'Failed to fetch forecast';
-  }
+  // Fetch session and favorites in parallel (relatively fast)
+  const [session, isFavorited] = await Promise.all([auth(), isSiteFavorited(site.id)]);
 
   return (
     <div className="space-y-6">
       {/* Track recently viewed sites */}
       <RecentSiteTracker site={{ id: site.id, name: site.name, slug: site.slug }} />
 
-      {/* Header with back navigation */}
+      {/* Header with back navigation - renders immediately */}
       <div>
         <Link href="/sites/browse">
           <Button variant="ghost" size="sm" className="mb-4">
@@ -165,33 +153,10 @@ export default async function LaunchSiteDetailPage({
         </div>
       </div>
 
-      {/* Forecast display or error */}
-      {error ? (
-        <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
-          <p className="font-medium">Error loading forecast</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      ) : !forecast || !scores ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">No forecast data available</p>
-        </div>
-      ) : (
-        <SiteDetailClient
-          site={{
-            id: site.id,
-            name: site.name,
-            latitude: parseFloat(site.latitude),
-            longitude: parseFloat(site.longitude),
-            elevation: site.elevation || 0,
-            idealWindDirections: site.idealWindDirections || [],
-            maxWindSpeed: site.maxWindSpeed || 40,
-            createdAt: new Date(site.createdAt).toISOString(),
-            updatedAt: new Date(site.updatedAt).toISOString(),
-          }}
-          forecast={forecast}
-          scores={scores}
-        />
-      )}
+      {/* Forecast section - streams in progressively */}
+      <Suspense fallback={<ForecastSkeleton />}>
+        <SiteDetailForecast site={site} />
+      </Suspense>
     </div>
   );
 }

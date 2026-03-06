@@ -2,6 +2,7 @@ import { getDashboardData, refreshAllForecasts } from './actions';
 import { getSettings, getOnboardingStatus } from '@/app/settings/actions';
 import { DashboardClient } from '@/components/dashboard-client';
 import { OnboardingFlow } from '@/components/onboarding-flow';
+import { PrefetchProfiles } from '@/components/dashboard/prefetch-profiles';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { launchSites } from '@/db/schema';
@@ -39,6 +40,13 @@ export default async function DashboardPage() {
       .limit(5);
   }
 
+  // Extract sites for prefetching
+  const sitesToPrefetch = data.map((d) => ({
+    id: d.site.id,
+    latitude: d.site.latitude,
+    longitude: d.site.longitude,
+  }));
+
   return (
     <>
       {!onboardingCompleted && session?.user?.id && <OnboardingFlow nearbySites={nearbySites} />}
@@ -48,6 +56,8 @@ export default async function DashboardPage() {
         refreshAction={refreshAllForecasts}
         isAuthenticated={!!session?.user?.id}
       />
+      {/* Prefetch atmospheric profile data in the background */}
+      <PrefetchProfiles sites={sitesToPrefetch} />
     </>
   );
 }

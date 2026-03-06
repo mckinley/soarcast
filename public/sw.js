@@ -1,7 +1,8 @@
 // Service Worker for SoarCast
-// Handles push notifications and PWA functionality
+// Handles push notifications, PWA functionality, and API caching
 
-const CACHE_NAME = 'soarcast-v1';
+const CACHE_NAME = 'soarcast-v2';
+const API_CACHE_NAME = 'soarcast-api-v1';
 const urlsToCache = [
   '/',
   '/sites',
@@ -29,7 +30,7 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
+            if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
               return caches.delete(cacheName);
             }
           }),
@@ -40,6 +41,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch event - serve from cache, fallback to network
+// Uses stale-while-revalidate strategy for API responses
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
@@ -47,36 +49,66 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http(s) requests
   if (!event.request.url.startsWith('http')) return;
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Cache hit - return response
-      if (response) {
-        return response;
-      }
+  const url = new URL(event.request.url);
 
-      // Clone the request
-      const fetchRequest = event.request.clone();
+  // Check if this is an API request that should use stale-while-revalidate
+  const isApiRequest =
+    url.pathname.startsWith('/api/weather/profile') || url.pathname.startsWith('/api/sites');
 
-      return fetch(fetchRequest).then((response) => {
-        // Check if valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+  if (isApiRequest) {
+    // Stale-while-revalidate strategy for API responses
+    event.respondWith(
+      caches.open(API_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          const fetchPromise = fetch(event.request)
+            .then((networkResponse) => {
+              // Cache the fresh response
+              if (networkResponse && networkResponse.status === 200) {
+                cache.put(event.request, networkResponse.clone());
+              }
+              return networkResponse;
+            })
+            .catch(() => {
+              // Network failed, return cached response if available
+              return cachedResponse;
+            });
+
+          // Return cached response immediately if available, otherwise wait for network
+          return cachedResponse || fetchPromise;
+        });
+      }),
+    );
+  } else {
+    // Regular cache-first strategy for static assets
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        // Cache hit - return response
+        if (response) {
           return response;
         }
 
-        // Clone the response
-        const responseToCache = response.clone();
+        // Clone the request
+        const fetchRequest = event.request.clone();
 
-        // Cache static assets only (not API calls)
-        if (!event.request.url.includes('/api/')) {
+        return fetch(fetchRequest).then((response) => {
+          // Check if valid response
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+
+          // Clone the response
+          const responseToCache = response.clone();
+
+          // Cache static assets
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
-        }
 
-        return response;
-      });
-    }),
-  );
+          return response;
+        });
+      }),
+    );
+  }
 });
 
 // Push event - show notification
