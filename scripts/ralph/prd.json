@@ -96,7 +96,7 @@
         "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The existing service worker (public/sw.js) handles basic caching. Extend it to cache atmospheric profile responses. Use stale-while-revalidate for profile data. Consider using React Server Components more effectively to reduce client JS."
     },
     {

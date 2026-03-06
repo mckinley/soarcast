@@ -132,3 +132,43 @@ Started: Fri Mar  6 19:15:08 +07 2026
 - Server actions for state: completeOnboarding updates DB and revalidates dashboard path
 - First-time UX: Show onboarding only when onboardingCompleted is false and user is authenticated
 ---
+## 2026-03-06 23:15 - US-004
+- Implemented comprehensive performance and loading optimizations
+- Progressive loading with React Suspense:
+  - Site detail page split into instant site info + streamed forecast
+  - Created SiteDetailForecast component loaded via Suspense
+  - Skeleton loading states provide visual feedback during load
+- Dashboard prefetching:
+  - Created PrefetchProfiles component for background data fetching
+  - Prefetches atmospheric profile data for favorited sites
+  - Uses requestIdleCallback for non-blocking prefetch
+  - First 3 sites prefetch immediately, remaining delayed 2 seconds
+- Enhanced service worker caching:
+  - Upgraded cache version to soarcast-v2 and added API_CACHE_NAME
+  - Implemented stale-while-revalidate strategy for API responses
+  - /api/weather/profile and /api/sites cached with instant returns
+  - Fresh data fetched in background while serving cached responses
+  - Graceful offline fallback with cached data
+- Cache-Control headers:
+  - Verified all API routes have appropriate caching
+  - Profile data: 1hr cache with 30min stale-while-revalidate
+  - Site data: 1hr cache with 2hr stale-while-revalidate
+- Windgram chart already well-optimized with existing skeleton loading
+- Files changed:
+  - src/app/sites/[slug]/page.tsx: Progressive loading with Suspense
+  - src/app/sites/[slug]/site-detail-forecast.tsx: New async forecast component
+  - src/app/dashboard/page.tsx: Added prefetch component
+  - src/components/dashboard/prefetch-profiles.tsx: Background prefetching
+  - public/sw.js: Enhanced with stale-while-revalidate for API responses
+- All quality checks pass: typecheck ✓, lint ✓, build ✓
+
+**Learnings for future iterations:**
+- React Suspense boundaries enable streaming server rendering - site info renders instantly while forecast streams in
+- Service worker stale-while-revalidate: Return cached data instantly, fetch fresh in background, perfect for weather data
+- requestIdleCallback for non-blocking prefetch - browser schedules work during idle time
+- Separate cache buckets for different strategies: CACHE_NAME for static assets, API_CACHE_NAME for API responses
+- Progressive loading pattern: Show layout/skeleton first, then data layers as they arrive
+- Cache-Control headers with s-maxage for CDN caching, stale-while-revalidate for serving stale content while revalidating
+- Prefetch priorities: First 3 sites immediately (most likely to be viewed), remaining sites delayed
+- Service worker cache matching: Use cache.match() for instant cached responses, fetch in background for fresh data
+---
