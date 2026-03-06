@@ -16,3 +16,21 @@ Started: Fri Mar 6 2026
 - Existing lint issues: `any` types, unescaped quotes in JSX, unused vars, Math.random in render — all must be fixed
 - shadcn/ui components are in src/components/ui/ — do not modify their internals unless fixing actual bugs
 ---
+
+## 2026-03-06 17:48 - US-001
+- Implemented code quality tooling foundation for Phase 1
+- Files changed:
+  - Created: .prettierrc, .prettierignore, vitest.config.ts, playwright.config.ts, .husky/pre-commit, e2e/homepage.spec.ts, src/lib/__tests__/scoring.test.ts
+  - Modified: package.json (added test scripts), 74 files formatted with Prettier
+- Fixed all 18 ESLint errors:
+  - Replaced `any` with proper types: `unknown` for error handlers, `SiteFormData` for form data
+  - Fixed unescaped apostrophes in JSX (replaced with &apos;)
+  - Removed unused imports (sql from drizzle-orm, Badge from score-cell, error param in dashboard-client)
+  - Fixed impure Math.random() call in sidebar skeleton component (used useState initializer)
+- **Learnings for future iterations:**
+  - Prettier formatting applies to entire codebase - run it last to avoid merge conflicts
+  - SiteFormData type doesn't include createdAt/updatedAt (form doesn't handle those)
+  - Error type narrowing in TypeScript: check `typeof error === 'object'` and `'statusCode' in error` before accessing properties
+  - React purity rule: use `useState(() => Math.random())` instead of `useMemo` to avoid impure functions in render
+  - Pre-commit hooks now enforce code quality automatically
+---

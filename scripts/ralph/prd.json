@@ -30,7 +30,7 @@
         "npm run format:check passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "IMPORTANT: The existing codebase has lint errors (any types, unescaped quotes, unused vars, Math.random in render). Fix ALL of them as part of this story. Do not commit until lint is clean."
     },
     {
