@@ -13,7 +13,8 @@ export {
   type WindBarbConfig,
 } from './wind-barb-utils';
 export {
-  getThermalStrength,
-  formatThermalIndex,
+  calculateThermalVelocity,
+  getThermalStrengthFromVelocity,
+  formatThermalVelocity,
   type ThermalStrength,
 } from './thermal-cloud-utils';

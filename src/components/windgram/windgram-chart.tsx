@@ -434,15 +434,21 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     });
 
     // ========================================
-    // DRAW THERMAL INDICATORS (US-004)
+    // DRAW THERMAL INDICATORS (US-002)
     // ========================================
-    // Draw thermal strength badges at the top of the chart
+    // Draw "W*" label above thermal velocity indicators
+    ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = textColorRgba;
+    ctx.textAlign = 'left';
+    ctx.fillText('W* (m/s)', CHART_PADDING.left, CHART_PADDING.top - 30);
+
+    // Draw thermal velocity (W*) badges at the top of the chart
     const thermalY = CHART_PADDING.top - 15;
     daylightHours.forEach((hour, idx) => {
       if (idx % 2 !== 0 && isMobile) return; // Thin out on mobile
 
       const x = CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth;
-      drawThermalIndicator(ctx, x, thermalY, hour.derived.thermalIndex, isDarkTheme);
+      drawThermalIndicator(ctx, x, thermalY, hour.surface.cape, isDarkTheme);
     });
 
     // ========================================

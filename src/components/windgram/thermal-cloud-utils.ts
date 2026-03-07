@@ -3,78 +3,106 @@
 import type { AtmosphericHour } from '@/lib/weather-profile';
 
 /**
- * Thermal strength categories based on thermal index
+ * Thermal strength categories based on thermal velocity (W*)
  */
-export type ThermalStrength = 'none' | 'weak' | 'moderate' | 'strong';
+export type ThermalStrength = 'none' | 'weak' | 'moderate' | 'strong' | 'very_strong';
 
 /**
- * Gets thermal strength category from thermal index
- * @param thermalIndex - 0-100 scale thermal index (null = unknown)
+ * Calculates thermal updraft velocity (W*) from CAPE
+ * Uses simplified approximation: W* ≈ 0.12 * sqrt(CAPE)
+ * @param cape - Convective Available Potential Energy (J/kg)
+ * @returns Thermal velocity in m/s, or null if CAPE is invalid
+ */
+export function calculateThermalVelocity(cape: number | null): number | null {
+  if (cape === null || cape <= 0) return null;
+
+  // Simplified formula: W* ≈ 0.12 * sqrt(CAPE)
+  // This gives reasonable estimates for thermal updraft velocity
+  const wStar = 0.12 * Math.sqrt(cape);
+
+  // Note: For more accuracy, could use: W* = (g * BLH * heat_flux / (density * Cp * T))^(1/3)
+  // but that requires heat flux data we don't have from Open-Meteo
+  // The simplified formula is widely used and gives good results for soaring forecasts
+
+  return wStar;
+}
+
+/**
+ * Gets thermal strength category from thermal velocity (W*) in m/s
+ * @param wStar - Thermal updraft velocity in m/s (null = no thermals)
  * @returns Thermal strength category and display color
  */
-export function getThermalStrength(thermalIndex: number | null): {
+export function getThermalStrengthFromVelocity(wStar: number | null): {
   strength: ThermalStrength;
   color: string;
   label: string;
 } {
-  if (thermalIndex === null || thermalIndex < 20) {
+  if (wStar === null || wStar < 0.5) {
     return {
       strength: 'none',
       color: '#9ca3af', // gray-400
       label: 'None',
     };
   }
-  if (thermalIndex < 40) {
+  if (wStar < 1) {
     return {
       strength: 'weak',
       color: '#60a5fa', // blue-400
       label: 'Weak',
     };
   }
-  if (thermalIndex < 65) {
+  if (wStar < 2) {
     return {
       strength: 'moderate',
       color: '#34d399', // green-400
       label: 'Moderate',
     };
   }
+  if (wStar < 3) {
+    return {
+      strength: 'strong',
+      color: '#fb923c', // orange-400
+      label: 'Strong',
+    };
+  }
   return {
-    strength: 'strong',
-    color: '#fb923c', // orange-400
-    label: 'Strong',
+    strength: 'very_strong',
+    color: '#ef4444', // red-500
+    label: 'Very Strong',
   };
 }
 
 /**
- * Formats thermal index for display (e.g., "45" or "—")
+ * Formats thermal velocity for display (e.g., "2.3" or "—")
  */
-export function formatThermalIndex(thermalIndex: number | null): string {
-  if (thermalIndex === null) return '—';
-  return Math.round(thermalIndex).toString();
+export function formatThermalVelocity(wStar: number | null): string {
+  if (wStar === null) return '—';
+  return wStar.toFixed(1);
 }
 
 /**
- * Draws thermal velocity indicator at top of chart
- * Shows thermal strength as colored text/badge
+ * Draws thermal velocity (W*) indicator at top of chart
+ * Shows thermal updraft strength in m/s as colored badge
  */
 export function drawThermalIndicator(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  thermalIndex: number | null,
+  cape: number | null,
   isDark: boolean,
 ): void {
-  const { color } = getThermalStrength(thermalIndex);
-  const displayValue = thermalIndex !== null ? Math.round(thermalIndex) : '—';
+  const wStar = calculateThermalVelocity(cape);
+  const { color } = getThermalStrengthFromVelocity(wStar);
+  const displayValue = formatThermalVelocity(wStar);
 
   // Draw background badge
-  const badgeWidth = 36;
+  const badgeWidth = 38;
   const badgeHeight = 20;
   ctx.fillStyle = color;
   ctx.fillRect(x - badgeWidth / 2, y - badgeHeight / 2, badgeWidth, badgeHeight);
 
-  // Draw thermal index value
-  ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+  // Draw W* value
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
   ctx.fillStyle = isDark ? '#000000' : '#ffffff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
