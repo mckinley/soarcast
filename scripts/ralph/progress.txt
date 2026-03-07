@@ -47,3 +47,49 @@ Files changed:
 - SiteForecastData interface should carry metadata (siteType, slug) to enable proper URL generation in child components
 - The getDashboardData pattern: create a metadata Map to track siteType/slug during the site conversion process
 ---
+## 2026-03-07 18:45 - US-003
+- Created migration script to detect and fix duplicate sites
+- Script successfully migrated Tiger Mountain from custom_site (0m) to user_favorite_sites → launch_site (543m)
+- Created shared site utilities module (src/lib/site-utils.ts) with reusable functions:
+  - calculateDistance(): Haversine formula for lat/lng distance
+  - namesAreSimilar(): Fuzzy name matching
+  - findNearbySites(): Find launch sites near a location (for future custom site creation UI)
+- Migration preserves user preferences (maxWindSpeed, idealDirections)
+- Uses 5km radius threshold (increased from 1km to handle mountain sites with multiple launch points)
+
+Files changed:
+- scripts/migrate-duplicate-sites.ts: Main migration script
+- src/lib/site-utils.ts: Shared utilities for distance calculation and duplicate detection
+- scripts/CLAUDE.md: Documentation for scripts directory
+
+**Learnings for future iterations:**
+- Tiger Mountain sites were 3.29km apart, so 1km threshold was too strict
+- Mountain sites often have multiple launch points, so 5km radius is more appropriate
+- The migration script is idempotent and safe to run multiple times
+- Custom site creation UI doesn't exist yet - US-002 removed "My Sites" but didn't add custom site creation
+- The findNearbySites() utility is ready for when custom site creation UI is added
+- Name similarity matching must be fuzzy - normalize by removing common words like "launch", "mountain", "site"
+- Always create favorites BEFORE deleting custom sites to preserve user data
+- The database now has 0 custom_sites and 3 user_favorite_sites (Chelan Butte, Big J, Tiger Mountain)
+---
+## 2026-03-07 19:30 - US-004
+- Fixed pixelated windgram thumbnails on dashboard cards
+- Made WindgramThumbnail component responsive using ResizeObserver to measure container width
+- Canvas now renders at proper resolution with devicePixelRatio scaling (capped at 2x to balance quality and performance)
+- Removed fixed width/height props from component API - now auto-measures from parent container
+- Increased default height from 60px to 80px for better readability
+- Thumbnails render cleanly at any card width without stretching or pixelation
+
+Files changed:
+- src/components/dashboard/site-card.tsx: Removed width={240} height={60} props, increased skeleton height to h-20 (80px)
+- src/components/windgram/windgram-thumbnail.tsx: Made responsive with ResizeObserver, measures container size dynamically
+
+**Learnings for future iterations:**
+- The pixelation was caused by passing fixed canvas dimensions (240×60) but then stretching with w-full CSS class
+- Canvas elements need their pixel dimensions to match their CSS display size, otherwise browsers stretch/blur the pixels
+- For retina displays, multiply canvas width/height by devicePixelRatio (typically 2x) but cap at 2x to avoid performance issues
+- ResizeObserver is the modern way to make canvas elements responsive - it triggers when container size changes
+- The pattern: measure container → set canvas logical size → multiply by DPI → render → scale CSS to match logical size
+- Don't mix fixed pixel widths with responsive CSS classes (w-full) - choose one approach
+- The site-card component now controls layout (h-20), while thumbnail component handles rendering at appropriate resolution
+---

@@ -61,7 +61,7 @@
         "npm run build succeeds"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Use Haversine distance formula to find nearby sites. 1km radius should catch most duplicates. Be careful not to delete user data — always prefer creating a favorite link over deleting. Run this against the production Turso database after testing locally."
     },
     {
@@ -78,7 +78,7 @@
         "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The current thumbnail probably renders at 1x resolution on a retina display, causing pixelation. Check the canvas width/height attributes vs CSS dimensions. Also check if the data for thumbnails is properly interpolated or if it's rendering raw grid cells at too low resolution."
     },
     {
