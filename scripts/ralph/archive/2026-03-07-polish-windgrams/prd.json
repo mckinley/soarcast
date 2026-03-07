@@ -1,0 +1,187 @@
+{
+  "project": "SoarCast",
+  "branchName": "ralph/audit-fixes",
+  "description": "Fix all critical bugs and UX issues identified in the UX audit. Priority: privacy fix, unify the site experience (kill My Sites, merge into Dashboard), fix windgrams, create a proper landing page.",
+  "context": {
+    "stack": "Next.js 16 + Turso (Drizzle ORM) + shadcn/ui + Leaflet + Tailwind v4",
+    "auditFile": "Read ~/Projects/SoarCast/AUDIT.md for full issue descriptions",
+    "currentSchema": "Three site tables: launch_sites (imported from ParaglidingEarth), custom_sites (user-created lat/lng), user_favorite_sites (user↔launch_site link). The Dashboard and My Sites pages don't properly query all three.",
+    "designValues": "Beautiful, minimalistic, useful. A paragliding pilot should be able to glance at the site and know: should I fly today? Clean code, strong UX, no implementation details leaking into the user experience."
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix Privacy: Protect Dashboard from Unauthenticated Access",
+      "description": "The dashboard currently shows user-specific site data to logged-out visitors. The root route (/) must show a landing page for anonymous users and only show the personalized dashboard for authenticated users.",
+      "acceptanceCriteria": [
+        "Unauthenticated users visiting / see a landing page, NOT the dashboard",
+        "Landing page shows: hero section with value prop ('Soaring forecasts for paraglider pilots'), a demo windgram or screenshot, Browse Sites CTA, Sign In button",
+        "Landing page is visually appealing — this is the first impression",
+        "Authenticated users visiting / see their personalized dashboard as before",
+        "No user-specific data (favorites, custom sites) is accessible without authentication",
+        "API routes /api/sites (read-only list of launch sites) and /api/weather/profile remain public",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Check the dashboard-client.tsx component — it likely fetches user sites without checking auth state. The middleware may also need updating. The landing page should be a new component, not a modification of the dashboard."
+    },
+    {
+      "id": "US-002",
+      "title": "Unify Sites Experience: Merge My Sites into Dashboard",
+      "description": "Remove the separate 'My Sites' page. The Dashboard becomes the single place where users see ALL their sites: favorited launch sites AND custom sites. Kill the confusing split between 'My Sites', 'Favorites', and 'Dashboard'.",
+      "acceptanceCriteria": [
+        "Remove 'My Sites' from the sidebar navigation",
+        "Dashboard shows both: favorited launch sites (from user_favorite_sites JOIN launch_sites) AND custom sites (from custom_sites) in a unified list",
+        "Each site card shows: name, elevation (from launch_sites data if available), flyability badge, windgram thumbnail",
+        "Favorited launch sites link to /sites/[slug] (the enriched detail page with windgram)",
+        "Custom sites link to /sites/custom/[id] (existing custom site detail)",
+        "Dashboard heading changed from '7-Day XC Forecast' to '7-Day Flying Forecast'",
+        "If user has no sites, show empty state: 'No sites yet. Browse launch sites to find your home site.' with link to Browse Sites",
+        "The 'Add Site' action on dashboard offers two paths: 'Browse Launch Sites' (primary) or 'Add Custom Location' (secondary)",
+        "Old /sites route redirects to / (dashboard)",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "The dashboard query needs to UNION results from user_favorite_sites JOIN launch_sites AND custom_sites. Normalize the shape so the UI component can render both types uniformly. The launch_site favorite should use the launch_site's elevation, orientations, etc — not the custom_site's empty fields. Delete the old sites-client.tsx page or redirect it."
+    },
+    {
+      "id": "US-003",
+      "title": "Fix Duplicate Sites and Elevation Data",
+      "description": "Tiger Mountain exists as both a custom_site (0m elevation, no data) and a launch_site (543m, full ParaglidingEarth data). Detect and resolve duplicates. When a custom_site matches a launch_site by name or proximity, offer to link them.",
+      "acceptanceCriteria": [
+        "Write a migration/cleanup script that finds custom_sites within 1km of a launch_site with similar name",
+        "For matched pairs: convert the custom_site into a user_favorite_sites entry pointing to the launch_site, preserving any custom max_wind or ideal_directions the user set",
+        "Delete the orphaned custom_site after migration",
+        "Dashboard now shows Tiger Mountain with correct 543m elevation from launch_sites data",
+        "The 'Add Custom Site' form warns if a launch_site exists nearby: 'Did you mean [Tiger Mountain]? Add it to favorites instead.'",
+        "npm run build succeeds"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Use Haversine distance formula to find nearby sites. 1km radius should catch most duplicates. Be careful not to delete user data — always prefer creating a favorite link over deleting. Run this against the production Turso database after testing locally."
+    },
+    {
+      "id": "US-004",
+      "title": "Fix Windgram Thumbnails on Dashboard",
+      "description": "The windgram thumbnails on dashboard cards are extremely pixelated and look broken. Replace with clean, readable mini-windgrams or a simpler visual representation.",
+      "acceptanceCriteria": [
+        "Dashboard cards show a clean mini-windgram thumbnail (not pixelated blocks)",
+        "Thumbnail renders at proper resolution (account for devicePixelRatio)",
+        "Thumbnail is simplified: just lapse rate background colors, no wind barbs or labels",
+        "Thumbnail canvas size is appropriate: ~300x80px logical, rendered at 2x for retina",
+        "Fallback: if atmospheric profile data is unavailable, show a clean placeholder (not broken image)",
+        "Loading state: subtle shimmer/skeleton while thumbnail data loads",
+        "npm run build succeeds"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The current thumbnail probably renders at 1x resolution on a retina display, causing pixelation. Check the canvas width/height attributes vs CSS dimensions. Also check if the data for thumbnails is properly interpolated or if it's rendering raw grid cells at too low resolution."
+    },
+    {
+      "id": "US-005",
+      "title": "Reorder Site Detail Page — Windgram Above the Fold",
+      "description": "The site detail page has the map taking too much space before the windgram. A pilot's first question is 'should I fly today?' — the flyability summary and windgram should be the hero content.",
+      "acceptanceCriteria": [
+        "Page layout top-to-bottom: Site name + flyability badge → Flyability summary text → Windgram → Site details (orientations, elevation, map) in a collapsible section",
+        "Windgram is visible without scrolling on desktop (above the fold)",
+        "Map is in a collapsible 'Location & Details' accordion, collapsed by default",
+        "Site metadata (orientations, ideal winds, elevation) is in the collapsible section or a compact inline display above the windgram",
+        "Orientation badges have a tooltip: ●● = 'Preferred' and ● = 'Possible'",
+        "ParaglidingEarth attribution moved to small text at the bottom of the collapsible section",
+        "Mobile: flyability summary + windgram visible with minimal scrolling",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Use shadcn/ui Accordion component for the collapsible section. Keep the existing Windgram/Table View tabs. The flyability badge should use clear colors: green=Great/Epic, yellow=Good/Fair, red=Poor."
+    },
+    {
+      "id": "US-006",
+      "title": "Fix 7-Day Outlook Dots and Windgram Lines",
+      "description": "The 7-day outlook dots on dashboard cards have no legend — unclear what gray, orange, blue mean. The windgram overlay lines (Cloud Base, Boundary Layer, Top of Lift) are confusing and overlap.",
+      "acceptanceCriteria": [
+        "7-day outlook dots replaced with text labels or clearly colored dots WITH a small inline legend",
+        "Use consistent colors matching flyability ratings: green=Epic/Great, yellow=Good, orange=Fair, gray=Poor",
+        "Windgram overlay lines: each line has a distinct style — Cloud Base: dashed blue, Boundary Layer: dotted orange, Top of Lift: solid green",
+        "Lines have small inline labels at the right edge of the chart (not just in the legend)",
+        "Lines that are below the visible chart area (below surface elevation) are not drawn",
+        "Windgram stability legend already exists — verify it's clearly visible",
+        "npm run build succeeds"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The 7-day dots are in the dashboard card component. The windgram lines are in thermal-cloud-utils.ts. Make the line labels small text anchored to the right edge of the chart near each line."
+    },
+    {
+      "id": "US-007",
+      "title": "Fix Onboarding Flow",
+      "description": "The onboarding modal appears but is confusing. Fix it to guide new users through: browse sites → favorite one → see it on dashboard.",
+      "acceptanceCriteria": [
+        "Onboarding only shows for authenticated users who have zero favorites AND zero custom sites",
+        "Onboarding is a simple 2-step flow: 1) 'Find your home site' with Browse Sites button, 2) After favoriting first site, show brief success message",
+        "Onboarding does NOT show for unauthenticated users (they see the landing page instead)",
+        "Onboarding does NOT show again after user has added at least one site",
+        "Store onboarding completion in localStorage or user preferences",
+        "Dismissible: user can skip/close the onboarding at any time",
+        "npm run build succeeds"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "The current onboarding may be in a client component that checks for sites. Simplify it. The goal is to get the user to Browse Sites and favorite one — that's it."
+    },
+    {
+      "id": "US-008",
+      "title": "Launch Elevation Marker on Windgram",
+      "description": "For mountain launch sites, the lower portion of the windgram is below launch altitude and irrelevant. Mark the launch elevation on the windgram so pilots know where 'ground level' is for that site.",
+      "acceptanceCriteria": [
+        "Horizontal line on the windgram at the site's launch elevation",
+        "Line labeled 'Launch: 543m / 1,781ft' (using actual site elevation)",
+        "Line style: solid, semi-transparent, with a small label at the left edge",
+        "Area below the launch elevation is subtly dimmed (10-15% darker overlay)",
+        "Only shown when viewing a launch_site with known elevation (not for custom sites without elevation)",
+        "npm run build succeeds"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "The windgram component receives the site's elevation via props. Use the geopotential height data from pressure levels to find where the launch elevation falls on the Y-axis. Interpolate between the nearest pressure levels."
+    },
+    {
+      "id": "US-009",
+      "title": "Browse Sites Improvements",
+      "description": "The Browse Sites page dumps 55+ sites in a flat alphabetical list. Add structure to make discovery easier.",
+      "acceptanceCriteria": [
+        "Map markers show a popup on click with site name, elevation, flyability badge, and 'View Details' link",
+        "Site list can be sorted by: alphabetical (default), elevation, distance from map center",
+        "Search box filters the list AND highlights matching markers on the map",
+        "If user has already favorited a site, show a small heart icon on the list entry",
+        "Map clusters markers when zoomed out (use Leaflet.markercluster or manual clustering)",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Leaflet marker popups: use L.popup() bound to each marker. For clustering, consider react-leaflet-cluster or a simple zoom-based filter. Don't over-engineer — basic improvements matter most."
+    },
+    {
+      "id": "US-010",
+      "title": "Minor Polish Pass",
+      "description": "Fix remaining minor UX issues from the audit.",
+      "acceptanceCriteria": [
+        "Favicon and PWA icons set (use a paraglider/soaring themed icon)",
+        "Settings page renamed to 'Notifications' in the sidebar since that's all it contains",
+        "Windgram day selector: past days are grayed out and labeled 'Yesterday' etc., not shown as regular selectable tabs",
+        "npm run build succeeds",
+        "npm run lint passes",
+        "All existing tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Keep this story small — just the quick wins. Don't expand Settings page scope here."
+    }
+  ]
+}

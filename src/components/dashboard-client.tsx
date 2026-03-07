@@ -15,7 +15,7 @@ interface DashboardClientProps {
   data: SiteForecastData[];
   settings: Settings;
   refreshAction: () => Promise<{ success: boolean; message: string }>;
-  isAuthenticated: boolean;
+  isAuthenticated: boolean; // Always true since dashboard requires auth
 }
 
 export function DashboardClient({
@@ -109,20 +109,6 @@ export function DashboardClient({
 
   return (
     <div className="space-y-4">
-      {/* Unauthenticated User Banner */}
-      {!isAuthenticated && (
-        <div className="p-6 border border-primary/30 bg-primary/5 rounded-lg">
-          <h2 className="text-xl font-semibold mb-2">Welcome to SoarCast</h2>
-          <p className="text-muted-foreground mb-4">
-            You&apos;re viewing demo sites with live weather data. Sign in to add your own flying
-            sites and customize your XC soaring forecasts.
-          </p>
-          <Link href="/auth/signin">
-            <Button size="lg">Sign In to Add Your Sites</Button>
-          </Link>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -16,86 +16,42 @@ export interface SiteForecastData {
 }
 
 /**
- * Demo sites shown to unauthenticated users
- * These use hardcoded coordinates and fetch weather live
- */
-const DEMO_SITES: Site[] = [
-  {
-    id: 'demo-tiger',
-    name: 'Tiger Mountain',
-    latitude: 47.4797,
-    longitude: -121.9908,
-    elevation: 914,
-    idealWindDirections: [315, 0, 45], // NW to NE
-    maxWindSpeed: 25,
-    notes: 'Popular Seattle-area site with reliable thermals',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-dog',
-    name: 'Dog Mountain',
-    latitude: 45.6994,
-    longitude: -121.7064,
-    elevation: 853,
-    idealWindDirections: [270, 315, 0], // W to N
-    maxWindSpeed: 30,
-    notes: 'Columbia River Gorge classic with strong conditions',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-chelan',
-    name: 'Chelan Butte',
-    latitude: 47.8411,
-    longitude: -120.0169,
-    elevation: 1067,
-    idealWindDirections: [180, 225, 270], // S to W
-    maxWindSpeed: 35,
-    notes: 'Premier XC site in Eastern Washington',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-/**
  * Get forecast data for all sites with scoring
- * Authenticated users see their favorited launch sites + custom sites
- * Unauthenticated users see demo sites
+ * Shows user's favorited launch sites + custom sites
+ * Note: This function requires authentication (enforced at the page level)
  */
 export async function getDashboardData(): Promise<SiteForecastData[]> {
   const session = await auth();
 
-  // Determine which sites to show
-  let sites: Site[];
+  // This should never happen due to page-level auth check, but guard just in case
+  if (!session?.user?.id) {
+    return [];
+  }
+
+  // Get user's custom sites + favorited launch sites
+  const [customSites, favoriteSites] = await Promise.all([getSites(), getUserFavoriteSites()]);
+
+  // Track which sites are from launch_sites table (for siteType determination)
   const launchSiteIds: Set<string> = new Set();
 
-  if (session?.user?.id) {
-    // Authenticated: show user's custom sites + favorited launch sites
-    const [customSites, favoriteSites] = await Promise.all([getSites(), getUserFavoriteSites()]);
+  // Convert favorited launch sites to Site type
+  const favoritesAsSites: Site[] = favoriteSites.map((fav) => {
+    launchSiteIds.add(fav.id); // Track launch site IDs
+    return {
+      id: fav.id,
+      name: fav.name,
+      latitude: parseFloat(fav.latitude),
+      longitude: parseFloat(fav.longitude),
+      elevation: fav.elevation || 0,
+      idealWindDirections: fav.favorite.customIdealDirections || fav.idealWindDirections || [],
+      maxWindSpeed: fav.favorite.customMaxWind || fav.maxWindSpeed || 40,
+      notes: fav.favorite.notes ?? undefined,
+      createdAt: new Date(fav.createdAt).toISOString(),
+      updatedAt: new Date(fav.updatedAt).toISOString(),
+    };
+  });
 
-    // Convert favorited launch sites to Site type
-    const favoritesAsSites: Site[] = favoriteSites.map((fav) => {
-      launchSiteIds.add(fav.id); // Track launch site IDs
-      return {
-        id: fav.id,
-        name: fav.name,
-        latitude: parseFloat(fav.latitude),
-        longitude: parseFloat(fav.longitude),
-        elevation: fav.elevation || 0,
-        idealWindDirections: fav.favorite.customIdealDirections || fav.idealWindDirections || [],
-        maxWindSpeed: fav.favorite.customMaxWind || fav.maxWindSpeed || 40,
-        notes: fav.favorite.notes ?? undefined,
-        createdAt: new Date(fav.createdAt).toISOString(),
-        updatedAt: new Date(fav.updatedAt).toISOString(),
-      };
-    });
-
-    sites = [...customSites, ...favoritesAsSites];
-  } else {
-    // Unauthenticated: show demo sites
-    sites = DEMO_SITES;
-  }
+  const sites = [...customSites, ...favoritesAsSites];
 
   const results = await Promise.all(
     sites.map(async (site) => {
@@ -126,19 +82,18 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
 
 /**
  * Refresh all forecasts by fetching fresh data
- * Works for both authenticated users and demo mode
+ * Note: Requires authentication (enforced at the page level)
  */
 export async function refreshAllForecasts(): Promise<{ success: boolean; message: string }> {
   try {
     const session = await auth();
 
-    // Determine which sites to refresh
-    let sites: Site[];
-    if (session?.user?.id) {
-      sites = await getSites();
-    } else {
-      sites = DEMO_SITES;
+    // Guard: should never happen due to page-level auth check
+    if (!session?.user?.id) {
+      return { success: false, message: 'Authentication required' };
     }
+
+    const sites = await getSites();
 
     if (sites.length === 0) {
       return { success: false, message: 'No sites configured' };
@@ -152,7 +107,7 @@ export async function refreshAllForecasts(): Promise<{ success: boolean; message
       })),
     );
 
-    revalidatePath('/');
+    revalidatePath('/dashboard');
     return { success: true, message: `Refreshed forecasts for ${sites.length} site(s)` };
   } catch (error) {
     return {

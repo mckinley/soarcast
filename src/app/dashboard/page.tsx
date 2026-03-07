@@ -4,15 +4,22 @@ import { DashboardClient } from '@/components/dashboard-client';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import { PrefetchProfiles } from '@/components/dashboard/prefetch-profiles';
 import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import { db } from '@/db';
 import { launchSites } from '@/db/schema';
 import { asc } from 'drizzle-orm';
 
 export default async function DashboardPage() {
-  const [data, settings, session, onboardingCompleted] = await Promise.all([
+  const session = await auth();
+
+  // Redirect unauthenticated users to landing page
+  if (!session?.user) {
+    redirect('/');
+  }
+
+  const [data, settings, onboardingCompleted] = await Promise.all([
     getDashboardData(),
     getSettings(),
-    auth(),
     getOnboardingStatus(),
   ]);
 
