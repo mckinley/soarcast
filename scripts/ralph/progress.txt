@@ -118,3 +118,27 @@ Files changed:
 - The cursor-help class gives the "?" cursor on hover to indicate tooltips are available
 - Badge color classes need explicit text-white to ensure readability on colored backgrounds
 ---
+## 2026-03-07 21:00 - US-006
+- Fixed 7-day outlook dots with inline legend on dashboard cards
+- Added legend showing Epic (purple), Great (green), Good (blue), Fair (yellow), Poor (gray)
+- Updated windgram overlay line styles for better visual distinction:
+  * Cloud Base: dashed blue [8,4] - maintains existing style
+  * Top of Lift: solid green [] - changed from dashed to solid for clarity
+  * Boundary Layer: dotted orange [2,3] - changed to small dots pattern
+- Fixed lines below visible chart area (below minAltitude) to not render
+- Line labels already existed at right edge from previous implementation
+
+Files changed:
+- src/components/dashboard/seven-day-bar.tsx: Added inline legend with color-coded flyability ratings
+- src/components/windgram/windgram-chart.tsx: Updated dash patterns for overlay lines
+- src/components/windgram/thermal-cloud-utils.ts: Added minAltitude check to prevent drawing lines below visible area
+
+**Learnings for future iterations:**
+- The 7-day outlook was using tooltips but had no visible legend - users couldn't understand the color scheme
+- The windgram already had line labels at the right edge (drawLineLabel calls) - just needed distinct line styles
+- The collectLineData function in thermal-cloud-utils.ts is where AGL→MSL conversion happens
+- Lines below minAltitude should return null instead of Y coordinates to prevent drawing off-chart
+- Dash patterns: [] = solid, [8,4] = dashed, [2,3] = dotted (small dots)
+- The color scheme follows the scoring thresholds: Epic (86+), Great (71-85), Good (51-70), Fair (31-50), Poor (0-30)
+- SevenDayBar changed from horizontal flex to flex-col to accommodate legend below dots
+---

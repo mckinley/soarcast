@@ -114,7 +114,7 @@
         "npm run build succeeds"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "The 7-day dots are in the dashboard card component. The windgram lines are in thermal-cloud-utils.ts. Make the line labels small text anchored to the right edge of the chart near each line."
     },
     {
