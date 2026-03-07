@@ -22,3 +22,25 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - LapseRateLegend component existed but wasn't being rendered - always check if UI components are actually imported and used
 - Changed color thresholds: stable now 0-1.5°C (was 0-1), neutral 1.5-2.5°C (was 1-2.5) to better match meteorological conventions
 ---
+## 2026-03-07 08:07 - US-002
+- Replaced thermal index (0-100 scale) with thermal velocity (W*) in m/s
+- Implemented calculateThermalVelocity() using simplified CAPE formula: W* ≈ 0.12 * sqrt(CAPE)
+- Added proper color coding based on W* values: gray (none), blue (<1), green (1-2), orange (2-3), red (>3)
+- Added "W* (m/s)" label above thermal indicators for clarity
+- Created comprehensive unit tests (14 tests total for thermal velocity calculations)
+- Updated exports in index.ts to use new thermal velocity functions
+
+**Files changed:**
+- src/components/windgram/thermal-cloud-utils.ts
+- src/components/windgram/thermal-cloud-utils.test.ts (new file)
+- src/components/windgram/windgram-chart.tsx
+- src/components/windgram/index.ts
+
+**Learnings for future iterations:**
+- CAPE (Convective Available Potential Energy) is already in the surface data from Open-Meteo API
+- The simplified formula W* ≈ 0.12 * sqrt(CAPE) is widely used in soaring forecasts and gives good results
+- More complex formulas exist using boundary layer height and heat flux, but require data we don't have
+- The thermal velocity should vary through the day: 0 early morning, peak in afternoon, 0 by evening
+- When changing function signatures, always update all call sites AND the export/index files
+- Unit tests should cover edge cases: null values, zero/negative CAPE, realistic ranges
+---

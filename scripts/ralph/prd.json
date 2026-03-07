@@ -50,7 +50,7 @@
         "Unit test for thermal velocity calculation"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Check thermal-cloud-utils.ts drawThermalIndicator function. The current implementation may be displaying wind speed at some level instead of derived thermal velocity. The atmospheric profile has cape and boundary_layer_height in surface data which can be used to estimate W*."
     },
     {
