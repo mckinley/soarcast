@@ -44,3 +44,27 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - When changing function signatures, always update all call sites AND the export/index files
 - Unit tests should cover edge cases: null values, zero/negative CAPE, realistic ranges
 ---
+## 2026-03-07 08:10 - US-003
+- Improved wind barb visibility and readability
+- Increased shaft length from 20px to 24px for better visibility
+- Increased barb length (8→10), half-barb (4→5), spacing (3.5→4) proportionally
+- Increased line width from 1.5 to 2 for better contrast
+- Changed all non-calm wind barbs to white color (RASP style) for contrast against lapse rate background
+- Calm winds remain gray (theme-dependent: light=rgb(107,114,128), dark=rgb(156,163,175))
+- Updated tooltip to show km/h instead of mph per acceptance criteria
+- Increased calm wind circle radius from 4px to 5px
+- Updated all unit tests (21 tests) to reflect new white color scheme
+- Verified mobile/desktop density already implemented correctly
+
+**Files changed:**
+- src/components/windgram/wind-barb-utils.ts
+- src/components/windgram/wind-barb-utils.test.ts
+
+**Learnings for future iterations:**
+- White wind barbs on colored backgrounds (RASP reference) provide much better contrast than color-coded barbs
+- The existing implementation already had mobile/desktop responsive density (every other vs every level/hour)
+- Wind barb size is critical for readability - even small increases (20→24px shaft) make a big difference
+- The barb drawing happens AFTER lapse rate background in windgram-chart.tsx, so they correctly overlay
+- Standard meteorological convention was already correctly implemented (half=5kt, full=10kt, pennant=50kt)
+- Tooltip formatting matters to pilots - knots AND km/h are both important for different regions
+---

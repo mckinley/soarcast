@@ -40,7 +40,7 @@ const CHART_PADDING = {
   top: 50, // Increased for thermal indicators
   right: 120, // Increased for line labels
   bottom: 50,
-  left: 80,
+  left: 100, // Increased for dual-line Y-axis labels (pressure + altitude)
 };
 
 /**
@@ -271,21 +271,31 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.fillStyle = textColorRgba;
 
     // Vertical grid lines (time axis)
-    const timeStep = Math.ceil(daylightHours.length / 12); // Show ~12 time labels
-    daylightHours.forEach((hour, idx) => {
-      if (idx % timeStep !== 0) return;
+    // Show labels every 2 hours for clean spacing (typically 6 AM, 8 AM, 10 AM, etc.)
+    const isMobileView = dimensions.width < 640;
+    const timeStep = isMobileView ? 3 : 2; // Mobile: every 3rd hour, Desktop: every 2nd hour
 
+    daylightHours.forEach((hour, idx) => {
       const x = CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth;
 
-      // Grid line
+      // Draw grid line for every hour (subtle)
+      ctx.strokeStyle = gridColorRgba;
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(x, CHART_PADDING.top);
       ctx.lineTo(x, CHART_PADDING.top + chartHeight);
       ctx.stroke();
 
-      // Time label
-      const label = formatTimeLabel(hour.time);
-      ctx.fillText(label, x, dimensions.height - CHART_PADDING.bottom / 2);
+      // Only show time labels at regular intervals
+      if (idx % timeStep === 0 || idx === daylightHours.length - 1) {
+        // Time label
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font = '11px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = textColorRgba;
+        const label = formatTimeLabel(hour.time);
+        ctx.fillText(label, x, dimensions.height - CHART_PADDING.bottom + 10);
+      }
     });
 
     // Horizontal grid lines (altitude/pressure axis)
@@ -293,27 +303,39 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
       const { meters, feet } = pressureToAltitude(pressure);
       const y = CHART_PADDING.top + (idx / (PRESSURE_LEVELS.length - 1)) * chartHeight;
 
-      // Grid line
+      // Grid line - subtle, thin lines
+      ctx.strokeStyle = gridColorRgba;
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(CHART_PADDING.left, y);
       ctx.lineTo(CHART_PADDING.left + chartWidth, y);
       ctx.stroke();
 
-      // Left label (meters)
+      // LEFT SIDE: Dual-line labels (pressure on top, altitude below)
       ctx.textAlign = 'right';
-      ctx.fillText(`${Math.round(meters)}m`, CHART_PADDING.left - 10, y);
+      ctx.textBaseline = 'middle';
 
-      // Right label (feet)
-      ctx.textAlign = 'left';
-      ctx.fillText(`${Math.round(feet)}ft`, CHART_PADDING.left + chartWidth + 10, y);
-
-      // Pressure label (left side, smaller)
+      // Pressure label (upper line, slightly dimmed)
       ctx.save();
       ctx.font = '10px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = hslToRgba(textColor, 0.6);
-      ctx.textAlign = 'right';
-      ctx.fillText(`${pressure}hPa`, CHART_PADDING.left - 35, y);
+      ctx.fillStyle = hslToRgba(textColor, 0.65);
+      ctx.fillText(`${pressure} hPa`, CHART_PADDING.left - 10, y - 7);
       ctx.restore();
+
+      // Altitude in meters label (lower line, primary)
+      ctx.font = '12px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = textColorRgba;
+      ctx.fillText(`${Math.round(meters)} m`, CHART_PADDING.left - 10, y + 7);
+
+      // RIGHT SIDE: Altitude in feet
+      ctx.textAlign = 'left';
+      ctx.font = '11px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = hslToRgba(textColor, 0.75);
+      ctx.fillText(
+        `${Math.round(feet).toLocaleString()} ft`,
+        CHART_PADDING.left + chartWidth + 10,
+        y,
+      );
     });
 
     // ========================================
@@ -496,18 +518,20 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     }
 
     // Draw axis labels
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = textColorRgba;
+    ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = hslToRgba(textColor, 0.7);
 
-    // X-axis label
+    // X-axis label (centered below chart)
     ctx.textAlign = 'center';
-    ctx.fillText('Time (Local)', dimensions.width / 2, dimensions.height - 10);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Time (Local)', dimensions.width / 2, dimensions.height - 3);
 
-    // Y-axis label (rotated)
+    // Y-axis label (rotated, left side)
     ctx.save();
-    ctx.translate(15, dimensions.height / 2);
+    ctx.translate(12, dimensions.height / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText('Altitude', 0, 0);
     ctx.restore();
   }, [data, dimensions, isDarkTheme, crosshair, isPinned]);
@@ -793,7 +817,7 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
         <div className="flex-1">
           <canvas
             ref={canvasRef}
-            className="w-full h-auto border border-border rounded-lg cursor-crosshair"
+            className="w-full h-auto border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-crosshair"
             aria-label="Windgram atmospheric profile chart"
             role="img"
             tabIndex={0}

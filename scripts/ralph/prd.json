@@ -68,7 +68,7 @@
         "npm run build succeeds"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "wind-barb-utils.ts has the drawing logic. Check that the canvas scaling / DPI handling isn't shrinking the barbs. The barbs should be drawn AFTER the lapse rate background so they sit on top."
     },
     {
