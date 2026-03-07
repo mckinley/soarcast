@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Cloud,
-  MapPin,
   Settings,
   LayoutDashboard,
   Menu,
@@ -47,11 +46,6 @@ const navItems = [
     title: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
-  },
-  {
-    title: 'My Sites',
-    href: '/sites',
-    icon: MapPin,
   },
   {
     title: 'Browse Sites',

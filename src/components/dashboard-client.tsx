@@ -54,10 +54,10 @@ export function DashboardClient({
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-3xl font-bold mb-4">Welcome to SoarCast</h1>
         <p className="text-muted-foreground mb-6 text-center max-w-md">
-          Get started by adding your flying sites to see 7-day XC soaring forecasts.
+          No sites yet. Browse launch sites to find your home site.
         </p>
-        <Link href="/sites">
-          <Button size="lg">Add Your First Site</Button>
+        <Link href="/sites/browse">
+          <Button size="lg">Browse Launch Sites</Button>
         </Link>
       </div>
     );
@@ -112,7 +112,7 @@ export function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">7-Day XC Forecast</h1>
+          <h1 className="text-3xl font-bold">7-Day Flying Forecast</h1>
           <p className="text-muted-foreground mt-1">
             Click any card to see detailed windgram and hourly data
           </p>
@@ -139,8 +139,8 @@ export function DashboardClient({
         {/* Card View */}
         <TabsContent value="cards" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.map(({ site, scores }) => (
-              <SiteCard key={site.id} site={site} scores={scores} />
+            {data.map(({ site, scores, siteType, slug }) => (
+              <SiteCard key={site.id} site={site} scores={scores} siteType={siteType} slug={slug} />
             ))}
           </div>
         </TabsContent>

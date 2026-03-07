@@ -1,17 +1,20 @@
 'use server';
 
-import { getSites } from '@/app/sites/actions';
 import { getUserFavoriteSites } from '@/app/sites/browse/actions';
 import { getForecast, fetchAllForecasts } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import type { Site, Forecast, DayScore } from '@/types';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
+import { db, customSites } from '@/db';
+import { eq } from 'drizzle-orm';
 
 export interface SiteForecastData {
   site: Site;
   forecast: Forecast | null;
   scores: DayScore[];
+  siteType: 'launch' | 'custom'; // Track if this is a launch_site or custom_site
+  slug?: string; // For launch sites, include the slug for URL generation
   error?: string;
 }
 
@@ -29,14 +32,22 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
   }
 
   // Get user's custom sites + favorited launch sites
-  const [customSites, favoriteSites] = await Promise.all([getSites(), getUserFavoriteSites()]);
+  const [userCustomSites, favoriteSites] = await Promise.all([
+    db.query.customSites.findMany({
+      where: eq(customSites.userId, session.user.id),
+      orderBy: (customSites, { desc }) => [desc(customSites.updatedAt)],
+    }),
+    getUserFavoriteSites(),
+  ]);
 
-  // Track which sites are from launch_sites table (for siteType determination)
-  const launchSiteIds: Set<string> = new Set();
+  // Track metadata for each site (siteType and slug for URL generation)
+  const siteMetadata = new Map<string, { siteType: 'launch' | 'custom'; slug?: string }>();
 
   // Convert favorited launch sites to Site type
   const favoritesAsSites: Site[] = favoriteSites.map((fav) => {
-    launchSiteIds.add(fav.id); // Track launch site IDs
+    // Store metadata for URL generation later
+    siteMetadata.set(fav.id, { siteType: 'launch', slug: fav.slug });
+
     return {
       id: fav.id,
       name: fav.name,
@@ -51,26 +62,53 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
     };
   });
 
-  const sites = [...customSites, ...favoritesAsSites];
+  // Convert custom sites to Site type
+  const customSitesAsSites: Site[] = userCustomSites.map((site) => {
+    // Store metadata for URL generation later
+    siteMetadata.set(site.id, { siteType: 'custom' });
+
+    return {
+      id: site.id,
+      name: site.name,
+      latitude: parseFloat(site.latitude),
+      longitude: parseFloat(site.longitude),
+      elevation: site.elevation,
+      idealWindDirections: site.idealWindDirections,
+      maxWindSpeed: site.maxWindSpeed,
+      notes: undefined,
+      createdAt: new Date(site.createdAt).toISOString(),
+      updatedAt: new Date(site.updatedAt).toISOString(),
+    };
+  });
+
+  const sites = [...customSitesAsSites, ...favoritesAsSites];
 
   const results = await Promise.all(
     sites.map(async (site) => {
+      const metadata = siteMetadata.get(site.id)!;
       try {
-        // Determine siteType based on whether it's in the launch sites set
-        const siteType = launchSiteIds.has(site.id) ? 'launch' : 'legacy';
-        const forecastResult = await getForecast(site.id, site.latitude, site.longitude, siteType);
+        const forecastResult = await getForecast(
+          site.id,
+          site.latitude,
+          site.longitude,
+          metadata.siteType,
+        );
         const scores = calculateDailyScores(forecastResult.forecast, site);
 
         return {
           site,
           forecast: forecastResult.forecast,
           scores,
+          siteType: metadata.siteType,
+          slug: metadata.slug,
         };
       } catch (error) {
         return {
           site,
           forecast: null,
           scores: [],
+          siteType: metadata.siteType,
+          slug: metadata.slug,
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
@@ -93,22 +131,36 @@ export async function refreshAllForecasts(): Promise<{ success: boolean; message
       return { success: false, message: 'Authentication required' };
     }
 
-    const sites = await getSites();
+    // Get both custom sites and favorited launch sites
+    const [userCustomSites, favoriteSites] = await Promise.all([
+      db.query.customSites.findMany({
+        where: eq(customSites.userId, session.user.id),
+      }),
+      getUserFavoriteSites(),
+    ]);
 
-    if (sites.length === 0) {
+    // Convert to unified site format for fetching
+    const allSites = [
+      ...userCustomSites.map((s) => ({
+        id: s.id,
+        latitude: parseFloat(s.latitude),
+        longitude: parseFloat(s.longitude),
+      })),
+      ...favoriteSites.map((s) => ({
+        id: s.id,
+        latitude: parseFloat(s.latitude),
+        longitude: parseFloat(s.longitude),
+      })),
+    ];
+
+    if (allSites.length === 0) {
       return { success: false, message: 'No sites configured' };
     }
 
-    await fetchAllForecasts(
-      sites.map((s) => ({
-        id: s.id,
-        latitude: s.latitude,
-        longitude: s.longitude,
-      })),
-    );
+    await fetchAllForecasts(allSites);
 
     revalidatePath('/dashboard');
-    return { success: true, message: `Refreshed forecasts for ${sites.length} site(s)` };
+    return { success: true, message: `Refreshed forecasts for ${allSites.length} site(s)` };
   } catch (error) {
     return {
       success: false,

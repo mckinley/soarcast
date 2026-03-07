@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface SiteCardProps {
   site: Site;
   scores: DayScore[];
+  siteType: 'launch' | 'custom';
+  slug?: string; // For launch sites
   className?: string;
 }
 
@@ -21,7 +23,7 @@ interface SiteCardProps {
  * - 7-day mini bar
  * - Site details
  */
-export function SiteCard({ site, scores, className = '' }: SiteCardProps) {
+export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteCardProps) {
   const [thumbnailData, setThumbnailData] = useState<AtmosphericProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -97,12 +99,10 @@ export function SiteCard({ site, scores, className = '' }: SiteCardProps) {
     fetchThumbnail();
   }, [isVisible, thumbnailData, isLoading, site.latitude, site.longitude]);
 
-  // Generate site detail URL
-  const siteUrl = site.id.startsWith('demo-')
-    ? `/sites/browse` // Demo sites redirect to browse page
-    : site.id.startsWith('custom-')
-      ? `/sites/custom/${site.id.replace('custom-', '')}`
-      : `/sites/${site.id}`;
+  // Generate site detail URL based on siteType
+  // Launch sites link to /sites/[slug] (enriched detail page with ParaglidingEarth data)
+  // Custom sites link to /sites/custom/[id] (simple custom site detail)
+  const siteUrl = siteType === 'launch' && slug ? `/sites/${slug}` : `/sites/custom/${site.id}`;
 
   return (
     <Link href={siteUrl}>
