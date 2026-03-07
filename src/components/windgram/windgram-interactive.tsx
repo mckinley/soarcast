@@ -18,6 +18,11 @@ interface WindgramInteractiveProps {
   dayScores?: DayScore[];
   loading?: boolean;
   className?: string;
+  /**
+   * Optional launch elevation in meters MSL.
+   * When provided, draws a horizontal line at this altitude on the windgram.
+   */
+  launchElevation?: number;
 }
 
 /**
@@ -29,6 +34,7 @@ export function WindgramInteractive({
   dayScores = [],
   loading = false,
   className = '',
+  launchElevation,
 }: WindgramInteractiveProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +113,14 @@ export function WindgramInteractive({
   });
 
   if (loading || !data) {
-    return <WindgramChart data={null} loading={true} className={className} />;
+    return (
+      <WindgramChart
+        data={null}
+        loading={true}
+        className={className}
+        launchElevation={launchElevation}
+      />
+    );
   }
 
   return (
@@ -139,7 +152,7 @@ export function WindgramInteractive({
         className="transition-opacity duration-300 relative"
         style={{ animation: 'fadeIn 0.3s ease-in-out' }}
       >
-        <WindgramChart data={selectedDayData} loading={false} />
+        <WindgramChart data={selectedDayData} loading={false} launchElevation={launchElevation} />
         {days.length > 1 && (
           <p className="text-xs text-muted-foreground text-center mt-2 md:hidden">
             👈 Swipe to change days 👉

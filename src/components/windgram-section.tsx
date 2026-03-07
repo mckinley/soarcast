@@ -12,13 +12,24 @@ interface WindgramSectionProps {
   longitude: number;
   scores: DayScore[];
   days?: number;
+  /**
+   * Optional launch elevation in meters MSL.
+   * When provided, draws a horizontal line at this altitude on the windgram.
+   */
+  launchElevation?: number;
 }
 
 /**
  * Client component that fetches and displays windgram with flyability summary
  * Uses client-side fetching to avoid blocking the server render
  */
-export function WindgramSection({ latitude, longitude, scores, days = 7 }: WindgramSectionProps) {
+export function WindgramSection({
+  latitude,
+  longitude,
+  scores,
+  days = 7,
+  launchElevation,
+}: WindgramSectionProps) {
   const [profile, setProfile] = useState<AtmosphericProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +110,12 @@ export function WindgramSection({ latitude, longitude, scores, days = 7 }: Windg
         </p>
       </div>
 
-      <WindgramInteractive key={profile?.fetchedAt} data={profile} dayScores={scores} />
+      <WindgramInteractive
+        key={profile?.fetchedAt}
+        data={profile}
+        dayScores={scores}
+        launchElevation={launchElevation}
+      />
     </div>
   );
 }

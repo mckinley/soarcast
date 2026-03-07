@@ -23,6 +23,12 @@ interface WindgramChartProps {
   data: AtmosphericProfile | null;
   loading?: boolean;
   className?: string;
+  /**
+   * Optional launch elevation in meters MSL.
+   * When provided, draws a horizontal line at this altitude
+   * and dims the area below it (irrelevant for pilots).
+   */
+  launchElevation?: number;
 }
 
 interface CrosshairPosition {
@@ -71,7 +77,12 @@ function formatTimeLabel(isoTime: string): string {
  * Core windgram chart component
  * Renders a time × altitude grid showing atmospheric conditions
  */
-export function WindgramChart({ data, loading = false, className = '' }: WindgramChartProps) {
+export function WindgramChart({
+  data,
+  loading = false,
+  className = '',
+  launchElevation,
+}: WindgramChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -461,6 +472,71 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     });
 
     // ========================================
+    // DRAW LAUNCH ELEVATION MARKER (US-008)
+    // ========================================
+    // Draw horizontal line at launch elevation (if provided)
+    if (launchElevation !== undefined && launchElevation > minAltitude) {
+      // Calculate Y position for launch elevation
+      // Interpolate between pressure levels to find Y coordinate
+      const launchY = (() => {
+        // Find Y position using linear interpolation in altitude space
+        const altitudeRange = maxAltitude - minAltitude;
+        const elevationFromMin = launchElevation - minAltitude;
+        const normalizedPosition = elevationFromMin / altitudeRange;
+        // Invert Y axis (higher altitude = lower Y coordinate)
+        return CHART_PADDING.top + chartHeight * (1 - normalizedPosition);
+      })();
+
+      // Only draw if the launch elevation is within the visible chart area
+      if (launchY >= CHART_PADDING.top && launchY <= CHART_PADDING.top + chartHeight) {
+        // Draw dimming overlay below launch elevation
+        ctx.fillStyle = isDarkTheme ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)';
+        ctx.fillRect(
+          CHART_PADDING.left,
+          launchY,
+          chartWidth,
+          CHART_PADDING.top + chartHeight - launchY,
+        );
+
+        // Draw the launch elevation line
+        ctx.strokeStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(CHART_PADDING.left, launchY);
+        ctx.lineTo(CHART_PADDING.left + chartWidth, launchY);
+        ctx.stroke();
+
+        // Draw label on the left side
+        const launchFeet = Math.round(launchElevation * 3.28084);
+        const launchLabel = `Launch: ${Math.round(launchElevation)}m / ${launchFeet.toLocaleString()}ft`;
+
+        ctx.save();
+        ctx.font = '11px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+
+        // Draw background for label
+        const labelPadding = 4;
+        const labelMetrics = ctx.measureText(launchLabel);
+        const labelWidth = labelMetrics.width + labelPadding * 2;
+        const labelHeight = 16;
+        const labelX = CHART_PADDING.left + 5;
+        const labelY = launchY - 5;
+
+        ctx.fillStyle = isDarkTheme ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(labelX, labelY - labelHeight, labelWidth, labelHeight);
+
+        // Draw label text
+        ctx.fillStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
+        ctx.fillText(launchLabel, labelX + labelPadding, labelY - labelPadding);
+
+        ctx.restore();
+      }
+    }
+
+    // ========================================
     // DRAW THERMAL INDICATORS (US-002)
     // ========================================
     // Draw "W*" label above thermal velocity indicators
@@ -539,7 +615,7 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
     ctx.textBaseline = 'middle';
     ctx.fillText('Altitude', 0, 0);
     ctx.restore();
-  }, [data, dimensions, isDarkTheme, crosshair, isPinned]);
+  }, [data, dimensions, isDarkTheme, crosshair, isPinned, launchElevation]);
 
   // Calculate crosshair position from pointer coordinates
   const calculateCrosshair = useCallback(

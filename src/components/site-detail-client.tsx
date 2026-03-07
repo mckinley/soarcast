@@ -142,6 +142,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
             longitude={site.longitude}
             scores={scores}
             days={7}
+            launchElevation={site.elevation > 0 ? site.elevation : undefined}
           />
         </TabsContent>
 
