@@ -249,7 +249,12 @@ export function collectLineData(
     const cbAgl = hour.derived.estimatedCloudBase;
     if (cbAgl !== null) {
       const cbMsl = elevation + cbAgl;
-      cloudBase.push(altitudeToY(cbMsl, chartTop, chartHeight, minAltitude, maxAltitude));
+      // Only draw if above the visible chart area (above minAltitude)
+      if (cbMsl >= minAltitude) {
+        cloudBase.push(altitudeToY(cbMsl, chartTop, chartHeight, minAltitude, maxAltitude));
+      } else {
+        cloudBase.push(null);
+      }
     } else {
       cloudBase.push(null);
     }
@@ -257,7 +262,12 @@ export function collectLineData(
     // Top of lift (already in MSL)
     const tol = hour.derived.estimatedTopOfLift;
     if (tol !== null) {
-      topOfLift.push(altitudeToY(tol, chartTop, chartHeight, minAltitude, maxAltitude));
+      // Only draw if above the visible chart area (above minAltitude)
+      if (tol >= minAltitude) {
+        topOfLift.push(altitudeToY(tol, chartTop, chartHeight, minAltitude, maxAltitude));
+      } else {
+        topOfLift.push(null);
+      }
     } else {
       topOfLift.push(null);
     }
@@ -266,7 +276,12 @@ export function collectLineData(
     const blh = hour.surface.boundaryLayerHeight;
     if (blh !== null) {
       const blhMsl = elevation + blh;
-      boundaryLayer.push(altitudeToY(blhMsl, chartTop, chartHeight, minAltitude, maxAltitude));
+      // Only draw if above the visible chart area (above minAltitude)
+      if (blhMsl >= minAltitude) {
+        boundaryLayer.push(altitudeToY(blhMsl, chartTop, chartHeight, minAltitude, maxAltitude));
+      } else {
+        boundaryLayer.push(null);
+      }
     } else {
       boundaryLayer.push(null);
     }

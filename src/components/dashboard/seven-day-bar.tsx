@@ -50,23 +50,50 @@ export function SevenDayBar({ scores, className = '' }: SevenDayBarProps) {
   };
 
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
-      {displayScores.map((score) => (
-        <div
-          key={score.date}
-          className={`h-3 w-3 rounded-full ${getLabelColor(score.label)}`}
-          title={`${formatDate(score.date)}: ${score.label} (${score.overallScore}/100)`}
-        />
-      ))}
-      {/* Fill remaining days with gray if less than 7 */}
-      {displayScores.length < 7 &&
-        Array.from({ length: 7 - displayScores.length }).map((_, idx) => (
+    <div className={`flex flex-col gap-2 ${className}`}>
+      {/* 7-day dots */}
+      <div className="flex items-center gap-1.5">
+        {displayScores.map((score) => (
           <div
-            key={`empty-${idx}`}
-            className="h-3 w-3 rounded-full bg-gray-300 opacity-30"
-            title="No forecast data"
+            key={score.date}
+            className={`h-3 w-3 rounded-full ${getLabelColor(score.label)}`}
+            title={`${formatDate(score.date)}: ${score.label} (${score.overallScore}/100)`}
           />
         ))}
+        {/* Fill remaining days with gray if less than 7 */}
+        {displayScores.length < 7 &&
+          Array.from({ length: 7 - displayScores.length }).map((_, idx) => (
+            <div
+              key={`empty-${idx}`}
+              className="h-3 w-3 rounded-full bg-gray-300 opacity-30"
+              title="No forecast data"
+            />
+          ))}
+      </div>
+
+      {/* Inline legend */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <div className="h-2 w-2 rounded-full bg-purple-500" />
+          <span>Epic</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="h-2 w-2 rounded-full bg-green-500" />
+          <span>Great</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="h-2 w-2 rounded-full bg-blue-500" />
+          <span>Good</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="h-2 w-2 rounded-full bg-yellow-500" />
+          <span>Fair</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="h-2 w-2 rounded-full bg-gray-400" />
+          <span>Poor</span>
+        </div>
+      </div>
     </div>
   );
 }

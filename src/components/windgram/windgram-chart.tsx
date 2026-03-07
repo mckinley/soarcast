@@ -390,17 +390,17 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
       (_, idx) => CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth,
     );
 
-    // Draw cloud base line (dashed, cyan/blue)
+    // Draw cloud base line (dashed blue - long dashes)
     const cloudBaseColor = isDarkTheme ? '#22d3ee' : '#06b6d4'; // cyan-400 : cyan-600
     drawSmoothLine(ctx, xCoords, lineData.cloudBase, cloudBaseColor, 2, [8, 4]);
 
-    // Draw top of lift line (dashed, green)
+    // Draw top of lift line (solid green - no dashes)
     const topOfLiftColor = isDarkTheme ? '#4ade80' : '#16a34a'; // green-400 : green-600
-    drawSmoothLine(ctx, xCoords, lineData.topOfLift, topOfLiftColor, 2, [8, 4]);
+    drawSmoothLine(ctx, xCoords, lineData.topOfLift, topOfLiftColor, 2, []);
 
-    // Draw boundary layer height line (dashed, orange)
+    // Draw boundary layer height line (dotted orange - small dots)
     const boundaryLayerColor = isDarkTheme ? '#fb923c' : '#ea580c'; // orange-400 : orange-600
-    drawSmoothLine(ctx, xCoords, lineData.boundaryLayer, boundaryLayerColor, 2, [4, 4]);
+    drawSmoothLine(ctx, xCoords, lineData.boundaryLayer, boundaryLayerColor, 2, [2, 3]);
 
     // Draw labels for the lines (at the right edge)
     const labelX = CHART_PADDING.left + chartWidth + 5;
