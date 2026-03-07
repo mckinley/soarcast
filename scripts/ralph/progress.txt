@@ -1,3 +1,24 @@
 # Ralph Progress Log
 Started: Sat Mar  7 07:58:40 +07 2026
 ---
+## 2026-03-07 08:01 - US-001
+- Fixed lapse rate background to have rich, vivid color fills
+- Changed colors from rgba(r,g,b,0.85) to rgb(r,g,b) for full opacity
+- Enhanced color vibrancy: deeper purples for inversions, warmer oranges for unstable air
+- Adjusted color thresholds to better align with RASP reference windgrams
+- Added visible LapseRateLegend component to WindgramInteractive
+- Updated all unit tests to reflect new rgb() format
+- Verified bilinear interpolation was already correctly implemented
+
+**Files changed:**
+- src/components/windgram/lapse-rate-utils.ts
+- src/components/windgram/lapse-rate-utils.test.ts
+- src/components/windgram/windgram-interactive.tsx
+
+**Learnings for future iterations:**
+- The alpha channel (0.85) was the main culprit for "washed out" colors - using fully opaque colors makes a huge difference
+- Bilinear interpolation was already working correctly, creating smooth gradients between cells
+- The lapse rate calculation formula was correct: (T_lower - T_upper) / (height_diff_feet) * 1000
+- LapseRateLegend component existed but wasn't being rendered - always check if UI components are actually imported and used
+- Changed color thresholds: stable now 0-1.5°C (was 0-1), neutral 1.5-2.5°C (was 1-2.5) to better match meteorological conventions
+---

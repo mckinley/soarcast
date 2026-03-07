@@ -33,7 +33,7 @@
         "npm run build succeeds"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "The lapse rate computation in lapse-rate-utils.ts may be returning wrong values or the color mapping thresholds may be off. Debug by logging actual lapse rate values for a real profile. The dry adiabatic lapse rate (~3°C/1000ft) should map to the transition from neutral to unstable. Check that bilinearInterpolate is actually being called and the fillRect calls use the interpolated colors, not just cell-center colors."
     },
     {
