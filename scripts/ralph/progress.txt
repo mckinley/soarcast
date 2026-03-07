@@ -156,3 +156,32 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - Use regex to parse rgb() strings: /rgb\((\d+),\s*(\d+),\s*(\d+)\)/ then map to numbers
 - The tests/ directory should not exist if we're only using e2e/ for Playwright tests
 ---
+## 2026-03-07 09:00 - US-008
+- Completely redesigned site detail page for better UX and pilot-focused information hierarchy
+- Created 3 new reusable components: OrientationBadges, WindDirectionBadges, ElevationDisplay
+- Replaced text-based orientations ('N✓✓, SE✓') with color-coded badges (green ●● = good, blue ● = ok)
+- Replaced degree numbers with arrow badges for ideal wind directions (arrows rotate to show direction)
+- Added elevation toggle (m/ft) with localStorage persistence - remembers user preference
+- Reorganized layout: back/favorite buttons horizontal → site name → key info card → description → map → forecast
+- Made map less prominent (moved lower, added "Location" heading)
+- Made source attribution subtle (xs text, "Data source:" label instead of prominent display)
+- Favorite button now in top bar, less dominant but still accessible
+
+**Files changed:**
+- src/app/sites/[slug]/page.tsx (major refactor)
+- src/components/orientation-badges.tsx (new)
+- src/components/wind-direction-badges.tsx (new)
+- src/components/elevation-display.tsx (new)
+- src/components/windgram/lapse-rate-utils.test.ts (fixed unused vars)
+
+**Learnings for future iterations:**
+- ESLint rule react-hooks/set-state-in-effect is very strict - avoid ANY setState in useEffect
+- For localStorage preferences, use lazy initialization: useState(getSavedUnit) with a function
+- Don't need useEffect for "mounted" flag - can check typeof window !== 'undefined' directly
+- Color-coded badges are much more intuitive than text symbols like '✓✓'
+- Arrow rotation with CSS transform: style={{ transform: `rotate(${degrees}deg)` }}
+- Information hierarchy for pilots: Site name → Key flying info → Details → Map → Forecast
+- The windgram should be the hero element - everything else should support it
+- Use Card components to group related information visually
+- Subtle attribution: small text size (xs), descriptive label ("Data source:"), positioned after content
+---

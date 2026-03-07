@@ -163,7 +163,7 @@
         "npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Currently the orientations show as 'N✓✓, SE✓, S✓✓' which is confusing. Consider a small compass rose SVG or simple colored badges like 'N ●● NE ● SE ● S ●●' where ●● = good, ● = ok. The map takes too much vertical space — make it shorter or collapsible. The windgram should be visible without scrolling on desktop."
     }
   ]
