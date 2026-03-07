@@ -116,3 +116,22 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - The slideUp animation should be short (200ms) to feel responsive but not jarring
 - isPinned state correctly prevents crosshair updates while pinned, preserving user's selected position
 ---
+## 2026-03-07 08:35 - US-006
+- Fixed day selector to default to today's date instead of always showing first day in array
+- Added defaultDayIndex calculation using useMemo to find today's date in days array
+- Added key={profile?.fetchedAt} to WindgramInteractive in windgram-section.tsx
+- This forces component re-mount when fresh data loads, ensuring state resets correctly
+- Handles edge case where today's date might not be in forecast (defaults to first day)
+
+**Files changed:**
+- src/components/windgram/windgram-interactive.tsx
+- src/components/windgram-section.tsx
+
+**Learnings for future iterations:**
+- React's useState() only uses initial value on FIRST render - subsequent prop/memo changes don't update state
+- The correct pattern for "resetting state when data changes" is using a key prop on the component
+- Using fetchedAt timestamp as key is perfect for this - unique per data fetch, forces remount on new data
+- ESLint rule react-hooks/set-state-in-effect catches the anti-pattern of calling setState in useEffect
+- Better to derive initial state from useMemo and use component key than useEffect with setState
+- The component key approach is cleaner and follows React best practices for state initialization
+---

@@ -122,7 +122,7 @@
         "npm run build succeeds"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "The issue is likely that the profile cache has stale data from yesterday. Check the TTL on atmospheric_profiles_cache and ensure the day index 0 actually corresponds to today's date, not yesterday's cached data. The WindgramInteractive component should find today's date in the days array and set that as the initial selectedDayIndex."
     },
     {
