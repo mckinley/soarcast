@@ -167,3 +167,29 @@ Files changed:
 - The simplified onboarding is a single modal with clear CTA: "Browse All Launch Sites"
 - Showing 3 example sites gives users a quick preview without requiring geolocation permissions
 ---
+## 2026-03-07 23:30 - US-008
+- Added launch elevation marker to windgram chart
+- Horizontal line drawn at site's launch elevation with labeled altitude (meters + feet)
+- Area below launch elevation dimmed (10-15% darker) to visually de-emphasize irrelevant data
+- Only shown for launch sites with known elevation (elevation > 0)
+- Used altitude interpolation to correctly position line between pressure levels
+- Label positioned on left side with semi-transparent background for readability
+
+Files changed:
+- src/components/windgram/windgram-chart.tsx: Core rendering logic for launch elevation line and dimming overlay
+- src/components/windgram/windgram-interactive.tsx: Added launchElevation prop
+- src/components/windgram-section.tsx: Added launchElevation prop
+- src/components/site-detail-client.tsx: Pass site.elevation to windgram (only if > 0)
+
+**Learnings for future iterations:**
+- The AtmosphericProfile.elevation is the surface elevation from Open-Meteo (could be valley floor)
+- Launch sites have launch_sites.elevation which is the takeoff altitude (what pilots care about)
+- For mountain sites, pilots only care about altitudes ABOVE their launch point
+- The windgram Y-axis uses altitude interpolation: minAltitude to maxAltitude range
+- To position launch elevation, calculate: normalizedPosition = (launchElevation - minAltitude) / altitudeRange
+- Then convert to canvas Y: CHART_PADDING.top + chartHeight * (1 - normalizedPosition) [inverted Y axis]
+- The dimming overlay is drawn BEFORE the launch line, so the line appears on top
+- Only draw marker if launch elevation is within visible chart area (between minAltitude and maxAltitude)
+- Check elevation > 0 before passing to avoid showing marker for sites at sea level or missing data
+- The launch elevation line should be solid (no dashes) to distinguish it from atmospheric layer lines
+---

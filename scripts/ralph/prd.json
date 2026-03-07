@@ -147,7 +147,7 @@
         "npm run build succeeds"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "The windgram component receives the site's elevation via props. Use the geopotential height data from pressure levels to find where the launch elevation falls on the Y-axis. Interpolate between the nearest pressure levels."
     },
     {
