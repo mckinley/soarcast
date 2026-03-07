@@ -6,6 +6,7 @@ import type { DayScore } from '@/types';
 import { WindgramChart } from './windgram-chart';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
+import { LapseRateLegend } from './lapse-rate-legend';
 import { useAttachTouchGestures } from '@/hooks/use-touch-gestures';
 
 interface WindgramInteractiveProps {
@@ -130,6 +131,11 @@ export function WindgramInteractive({
             👈 Swipe to change days 👉
           </p>
         )}
+      </div>
+
+      {/* Lapse rate color legend */}
+      <div className="mt-4 flex justify-center">
+        <LapseRateLegend />
       </div>
 
       <style jsx>{`

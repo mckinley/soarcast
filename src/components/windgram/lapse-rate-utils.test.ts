@@ -36,15 +36,14 @@ describe('calculateLapseRateBetweenLevels', () => {
 describe('lapseRateToColor', () => {
   it('should return warm colors for unstable conditions (high lapse rate)', () => {
     const color = lapseRateToColor(4.0, false); // Very unstable
-    expect(color).toMatch(/rgba\(\s*255/); // Should have high red component
-    expect(color).toContain('0.85'); // Alpha value
+    expect(color).toMatch(/rgb\(\s*255/); // Should have high red component (fully opaque)
   });
 
   it('should return cool colors for stable conditions (low lapse rate)', () => {
     const color = lapseRateToColor(0.5, false); // Stable
-    expect(color).toMatch(/rgba\(/);
-    // Should be bluish (higher blue component)
-    const matches = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),/);
+    expect(color).toMatch(/rgb\(/);
+    // Should be purplish/lavender (higher blue component)
+    const matches = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     expect(matches).not.toBeNull();
     const [, r, , b] = matches!.map(Number);
     expect(b).toBeGreaterThan(r); // Blue > Red for stable
@@ -52,20 +51,19 @@ describe('lapseRateToColor', () => {
 
   it('should return neutral colors for dry adiabatic lapse rate (~2°C/1000ft)', () => {
     const color = lapseRateToColor(2.0, false); // Neutral
-    expect(color).toMatch(/rgba\(/);
-    // Should be light/whitish
-    const matches = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),/);
+    expect(color).toMatch(/rgb\(/);
+    // Should be light/pale yellow/cream
+    const matches = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     expect(matches).not.toBeNull();
-    const [, r, g, b] = matches!.map(Number);
+    const [, r, g] = matches!.map(Number);
     expect(r).toBeGreaterThan(200); // Light colors
     expect(g).toBeGreaterThan(200);
-    expect(b).toBeGreaterThan(200);
   });
 
   it('should return deep purple/blue for inversion', () => {
     const color = lapseRateToColor(-1.0, false); // Inversion
-    expect(color).toMatch(/rgba\(/);
-    const matches = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),/);
+    expect(color).toMatch(/rgb\(/);
+    const matches = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     expect(matches).not.toBeNull();
     const [, r, , b] = matches!.map(Number);
     expect(b).toBeGreaterThan(r); // Blue dominant for inversion
@@ -76,14 +74,14 @@ describe('lapseRateToColor', () => {
     const colorDark = lapseRateToColor(null, true);
     expect(colorLight).toMatch(/rgba\(/);
     expect(colorDark).toMatch(/rgba\(/);
-    expect(colorLight).toContain('0.3'); // Lower alpha for null
+    expect(colorLight).toContain('0.5'); // Lower alpha for null values
   });
 
   it('should adapt colors for dark theme', () => {
     const lightTheme = lapseRateToColor(0.5, false);
     const darkTheme = lapseRateToColor(0.5, true);
-    expect(lightTheme).toMatch(/rgba\(/);
-    expect(darkTheme).toMatch(/rgba\(/);
+    expect(lightTheme).toMatch(/rgb\(/);
+    expect(darkTheme).toMatch(/rgb\(/);
     // Dark theme should use slightly different RGB values for better contrast
     expect(lightTheme).not.toEqual(darkTheme);
   });

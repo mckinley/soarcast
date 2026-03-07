@@ -55,74 +55,81 @@ export function computeLapseRatesForHour(hour: AtmosphericHour): (number | null)
 
 /**
  * Color scale for lapse rate visualization
- * Based on thermal soaring significance:
- * - >= 3°C/1000ft: Unstable (excellent thermals) - warm orange/yellow
- * - ~2°C/1000ft: Neutral (dry adiabatic) - light gray/white
- * - <= 1°C/1000ft: Stable (weak/no thermals) - cool blue
- * - < 0°C/1000ft: Inversion (no thermals) - deep purple/blue
+ * Based on thermal soaring significance, matching RASP windgram style:
+ * - >= 3°C/1000ft: Unstable (excellent thermals) - warm orange/red
+ * - ~2°C/1000ft: Neutral (dry adiabatic) - pale yellow/white
+ * - <= 1°C/1000ft: Stable (weak/no thermals) - lavender/light purple
+ * - < 0°C/1000ft: Inversion (no thermals) - deep purple
  */
 export function lapseRateToColor(lapseRate: number | null, isDarkTheme: boolean = false): string {
   if (lapseRate === null) {
-    return isDarkTheme ? 'rgba(64, 64, 64, 0.3)' : 'rgba(200, 200, 200, 0.3)';
+    return isDarkTheme ? 'rgba(64, 64, 64, 0.5)' : 'rgba(200, 200, 200, 0.5)';
   }
 
   // Clamp lapse rate for color mapping
   const clamped = Math.max(-2, Math.min(5, lapseRate));
 
   // Color stops based on lapse rate (°C/1000ft)
-  // Inversion: < 0 (deep blue/purple)
-  // Stable: 0-1 (light blue)
-  // Neutral: 1-2.5 (white/light gray)
-  // Unstable: 2.5-3.5 (light orange)
-  // Very unstable: > 3.5 (orange/yellow)
+  // Inversion: < 0 (deep purple)
+  // Stable: 0-1.5 (lavender to light purple)
+  // Neutral: 1.5-2.5 (pale yellow/cream to white)
+  // Unstable: 2.5-3.5 (light orange to orange)
+  // Very unstable: > 3.5 (orange to red)
 
   let r: number, g: number, b: number;
 
   if (clamped < 0) {
-    // Inversion: deep purple to blue
+    // Inversion: deep purple to medium purple
     const t = Math.max(0, (clamped + 2) / 2); // -2 to 0 → 0 to 1
-    r = Math.round(80 + t * 40); // 80 to 120
-    g = Math.round(50 + t * 70); // 50 to 120
-    b = Math.round(150 + t * 50); // 150 to 200
-  } else if (clamped < 1) {
-    // Stable: blue to light blue
-    const t = clamped; // 0 to 1
     if (isDarkTheme) {
-      r = Math.round(80 + t * 60); // 80 to 140
-      g = Math.round(120 + t * 60); // 120 to 180
-      b = Math.round(200 + t * 30); // 200 to 230
+      r = Math.round(60 + t * 40); // 60 to 100
+      g = Math.round(30 + t * 50); // 30 to 80
+      b = Math.round(120 + t * 60); // 120 to 180
     } else {
-      r = Math.round(150 + t * 80); // 150 to 230
-      g = Math.round(180 + t * 60); // 180 to 240
+      r = Math.round(80 + t * 60); // 80 to 140
+      g = Math.round(40 + t * 80); // 40 to 120
+      b = Math.round(140 + t * 80); // 140 to 220
+    }
+  } else if (clamped < 1.5) {
+    // Stable: lavender to light purple
+    const t = clamped / 1.5; // 0 to 1.5 → 0 to 1
+    if (isDarkTheme) {
+      r = Math.round(100 + t * 60); // 100 to 160
+      g = Math.round(80 + t * 80); // 80 to 160
+      b = Math.round(180 + t * 50); // 180 to 230
+    } else {
+      r = Math.round(140 + t * 60); // 140 to 200
+      g = Math.round(120 + t * 90); // 120 to 210
       b = Math.round(220 + t * 30); // 220 to 250
     }
   } else if (clamped < 2.5) {
-    // Neutral: light blue/gray to white
-    const t = (clamped - 1) / 1.5; // 1 to 2.5 → 0 to 1
+    // Neutral: pale yellow/cream (approaching dry adiabatic)
+    const t = (clamped - 1.5) / 1.0; // 1.5 to 2.5 → 0 to 1
     if (isDarkTheme) {
-      r = Math.round(140 + t * 40); // 140 to 180
-      g = Math.round(180 + t * 40); // 180 to 220
+      r = Math.round(160 + t * 60); // 160 to 220
+      g = Math.round(160 + t * 60); // 160 to 220
       b = Math.round(230 + t * 20); // 230 to 250
     } else {
-      r = Math.round(230 + t * 25); // 230 to 255
-      g = Math.round(240 + t * 15); // 240 to 255
-      b = Math.round(250 + t * 5); // 250 to 255
+      r = Math.round(250 + t * 5); // 250 to 255
+      g = Math.round(245 + t * 10); // 245 to 255
+      b = Math.round(230 - t * 20); // 230 to 210
     }
   } else if (clamped < 3.5) {
-    // Unstable: white/cream to light orange
+    // Unstable: pale orange to orange
     const t = (clamped - 2.5) / 1.0; // 2.5 to 3.5 → 0 to 1
     r = Math.round(255);
-    g = Math.round(250 - t * 40); // 250 to 210
-    b = Math.round(240 - t * 100); // 240 to 140
+    g = Math.round(210 - t * 40); // 210 to 170
+    b = Math.round(150 - t * 70); // 150 to 80
   } else {
-    // Very unstable: orange to yellow
+    // Very unstable: orange to red/orange
     const t = Math.min(1, (clamped - 3.5) / 1.5); // 3.5 to 5 → 0 to 1
     r = Math.round(255);
-    g = Math.round(210 - t * 20); // 210 to 190
-    b = Math.round(140 - t * 60); // 140 to 80
+    g = Math.round(170 - t * 50); // 170 to 120
+    b = Math.round(80 - t * 50); // 80 to 30
   }
 
-  return `rgba(${r}, ${g}, ${b}, 0.85)`;
+  // Use fully opaque colors for vivid, rich fills like RASP reference
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**
@@ -137,10 +144,10 @@ export interface LegendEntry {
 export function getLapseRateLegend(isDarkTheme: boolean = false): LegendEntry[] {
   return [
     { label: 'Inversion', color: lapseRateToColor(-1, isDarkTheme), lapseRate: -1 },
-    { label: 'Stable', color: lapseRateToColor(0.5, isDarkTheme), lapseRate: 0.5 },
+    { label: 'Stable', color: lapseRateToColor(0.75, isDarkTheme), lapseRate: 0.75 },
     { label: 'Neutral', color: lapseRateToColor(2, isDarkTheme), lapseRate: 2 },
     { label: 'Unstable', color: lapseRateToColor(3, isDarkTheme), lapseRate: 3 },
-    { label: 'Very Unstable', color: lapseRateToColor(4, isDarkTheme), lapseRate: 4 },
+    { label: 'Very Unstable', color: lapseRateToColor(4.5, isDarkTheme), lapseRate: 4.5 },
   ];
 }
 

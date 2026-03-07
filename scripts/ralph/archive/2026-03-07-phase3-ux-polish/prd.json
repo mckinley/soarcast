@@ -1,0 +1,170 @@
+{
+  "project": "SoarCast",
+  "branchName": "ralph/polish-windgrams",
+  "description": "Polish pass — fix windgram visual quality, interaction bugs, test infrastructure, and tech debt. Goal: a paragliding pilot visits the site, sees an intuitive and useful windgram that looks professional and works smoothly.",
+  "context": {
+    "stack": "Next.js 16 + Turso + shadcn/ui + Tailwind v4 + Canvas-based windgram",
+    "reference": "Compare our windgram against the RASP windgrams at http://wxtofly.net/v2/windgrams.html — those are the gold standard for readability. Rich purple/orange lapse rate fills, white wind barbs on colored background, clear grid, high information density without clutter.",
+    "currentIssues": [
+      "Windgram background is mostly white — lapse rate coloring is barely visible. Should have rich fills like the reference.",
+      "Numbers at top of windgram all show ~30 — these should be thermal velocity (W* in m/s), not wind speed.",
+      "Wind barbs are small and hard to read. Need better sizing and color contrast.",
+      "Y-axis labels are cramped (pressure/altitude text overlapping).",
+      "Hover/rollover on the chart feels glitchy — crosshair jumps, detail panel pops in/out erratically.",
+      "Day selector shows stale date (Mar 6 when it's Mar 7) — should default to today.",
+      "Test file mobile-responsive.spec.ts uses Playwright imports but lives in tests/ where Vitest picks it up — causes test failure.",
+      "No lapse rate color legend visible on the chart page."
+    ],
+    "designValues": "Beautiful, minimalistic, useful. A pilot should be able to glance at the windgram and immediately understand: will thermals form? How strong? What altitude? What winds? When is the best window?"
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix Lapse Rate Background — Rich Color Fills",
+      "description": "The windgram background should have vivid, meaningful color fills showing atmospheric stability at every altitude/time cell. Currently it's mostly white/transparent. Reference RASP windgrams have rich purple (stable/inversion) and orange/red (unstable) fills covering the ENTIRE chart area.",
+      "acceptanceCriteria": [
+        "Every cell in the windgram has a background color based on lapse rate — no white/empty areas",
+        "Color scale: deep purple/blue for inversions (lapse rate < 0°C/1000ft), lavender/light purple for stable (0-1.5°C), pale/white for neutral (~2°C), warm yellow for conditionally unstable (2-2.5°C), orange/red for unstable (>3°C/1000ft)",
+        "Colors are smooth between cells — use bilinear interpolation for gradient effect",
+        "The chart should look like a continuous colored field, not a grid of squares",
+        "A visible color legend on the chart or below it showing: Inversion → Stable → Neutral → Unstable with corresponding colors",
+        "Dark mode: colors should still be readable, adjust alpha/brightness if needed",
+        "Verify lapse rate computation is correct: (T_lower - T_upper) / (height_upper - height_lower) * 304.8 for °C/1000ft",
+        "npm run build succeeds"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "The lapse rate computation in lapse-rate-utils.ts may be returning wrong values or the color mapping thresholds may be off. Debug by logging actual lapse rate values for a real profile. The dry adiabatic lapse rate (~3°C/1000ft) should map to the transition from neutral to unstable. Check that bilinearInterpolate is actually being called and the fillRect calls use the interpolated colors, not just cell-center colors."
+    },
+    {
+      "id": "US-002",
+      "title": "Fix Thermal Velocity Display at Top",
+      "description": "The numbers at the top of the windgram currently show ~30 for every hour. These should show thermal updraft velocity (W*) in m/s, not wind speed. This is one of the most important pieces of info for a pilot.",
+      "acceptanceCriteria": [
+        "Top row shows thermal velocity (W*) in m/s for each hour, NOT wind speed",
+        "Values should vary through the day: 0 early morning, increasing to peak in afternoon, back to 0 by evening",
+        "Color-coded: 0 m/s = gray, <1 = light blue, 1-2 = green, 2-3 = orange, >3 = red",
+        "If thermal velocity data is not available in the atmospheric profile, compute it from CAPE and boundary layer height: W* = (g * BLH * surface_heat_flux / (air_density * Cp * surface_temp))^(1/3), or use simplified: W* ≈ 0.12 * sqrt(CAPE) as approximation",
+        "Label clearly: 'W*' or 'Thermal' above the values",
+        "npm run build succeeds",
+        "Unit test for thermal velocity calculation"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Check thermal-cloud-utils.ts drawThermalIndicator function. The current implementation may be displaying wind speed at some level instead of derived thermal velocity. The atmospheric profile has cape and boundary_layer_height in surface data which can be used to estimate W*."
+    },
+    {
+      "id": "US-003",
+      "title": "Improve Wind Barbs — Size, Density, Readability",
+      "description": "Wind barbs should be the signature visual element overlaid on the lapse rate background. Currently they're too small and hard to read.",
+      "acceptanceCriteria": [
+        "Wind barbs are larger — shaft length ~20-25px, clearly visible at chart scale",
+        "White barb color on colored backgrounds (like RASP reference) for contrast, OR color-coded by speed with enough contrast against the lapse rate background",
+        "Standard meteorological convention: half barb = 5 kt, full barb = 10 kt, pennant = 50 kt",
+        "On mobile (<640px): show barbs at every other pressure level and every other hour to avoid clutter",
+        "On desktop: show barbs at every level and hour",
+        "Barb rotation correctly shows wind direction (shaft points in direction wind comes FROM)",
+        "Hover tooltip shows: wind speed (kt and km/h), direction (degrees and cardinal), altitude",
+        "npm run build succeeds"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "wind-barb-utils.ts has the drawing logic. Check that the canvas scaling / DPI handling isn't shrinking the barbs. The barbs should be drawn AFTER the lapse rate background so they sit on top."
+    },
+    {
+      "id": "US-004",
+      "title": "Fix Chart Layout — Y-Axis Labels, Spacing, Polish",
+      "description": "Clean up the chart layout: Y-axis labels overlap, padding isn't right, and the overall feel needs to be more polished.",
+      "acceptanceCriteria": [
+        "Y-axis left side: pressure (hPa) and altitude (m) on separate lines, clearly readable",
+        "Y-axis right side: altitude in feet, aligned properly",
+        "X-axis: time labels (6 AM, 8 AM, etc.) evenly spaced, not crowded",
+        "Chart padding adjusted so labels never overlap the chart area or get cut off",
+        "Grid lines are subtle (thin, low opacity) — not competing with data",
+        "Canvas renders at correct DPI for retina displays (window.devicePixelRatio)",
+        "Chart aspect ratio works on mobile (taller relative to width) and desktop (wider)",
+        "The chart border/container looks clean — rounded corners, subtle shadow",
+        "npm run build succeeds"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The left axis currently shows '1000hPa/411m' crammed together. Split into two lines or use only the most useful label. Consider: pressure levels on the left, altitude (m and ft) on the right. Check that canvas width/height attributes match the CSS dimensions × devicePixelRatio."
+    },
+    {
+      "id": "US-005",
+      "title": "Fix Crosshair/Hover Interaction",
+      "description": "The hover behavior on the windgram is glitchy — crosshair jumps around, detail panel appears/disappears erratically. Make it smooth and useful.",
+      "acceptanceCriteria": [
+        "Crosshair follows pointer smoothly without jumping",
+        "Crosshair drawn as thin vertical + horizontal lines spanning the full chart area",
+        "Crosshair snaps to nearest hour column (vertical) and is free on altitude (horizontal)",
+        "Detail panel appears on hover after brief delay (100ms debounce) — no flickering",
+        "On desktop: detail panel in a fixed side panel (right), not following the cursor",
+        "On mobile: detail panel as a fixed bottom sheet, not covering the chart",
+        "Click to pin crosshair, click again or Escape to unpin",
+        "When pinned, moving mouse off chart doesn't close the detail panel",
+        "Pointer leave: crosshair disappears after 200ms delay (prevents flicker when moving between elements)",
+        "npm run build succeeds"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "The current implementation uses onPointerMove/onPointerLeave directly on the canvas. Add debouncing and smooth transitions. The detail panel should NOT use position:fixed following the cursor — it should be in a stable position. Check that pointer coordinates are correctly translated to chart coordinates accounting for canvas scaling."
+    },
+    {
+      "id": "US-006",
+      "title": "Fix Day Selector — Default to Today",
+      "description": "The day selector should default to today's date, not a stale cached date.",
+      "acceptanceCriteria": [
+        "Day selector defaults to today's date on page load",
+        "If today's data is not available (e.g., after midnight before new forecast), default to the first available day",
+        "Selected day tab is clearly highlighted (current styling is good, just fix the default)",
+        "Switching days is instant — no loading state if data is already fetched (it's all in one atmospheric profile)",
+        "npm run build succeeds"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The issue is likely that the profile cache has stale data from yesterday. Check the TTL on atmospheric_profiles_cache and ensure the day index 0 actually corresponds to today's date, not yesterday's cached data. The WindgramInteractive component should find today's date in the days array and set that as the initial selectedDayIndex."
+    },
+    {
+      "id": "US-007",
+      "title": "Fix Test Infrastructure",
+      "description": "The test suite has a failure because Playwright test files are in the wrong directory. Fix test organization so Vitest and Playwright don't collide.",
+      "acceptanceCriteria": [
+        "Vitest runs with zero failures: npm run test -- --run",
+        "Playwright E2E tests are in e2e/ directory ONLY (not in tests/)",
+        "Move tests/mobile-responsive.spec.ts to e2e/mobile-responsive.spec.ts",
+        "Vitest config excludes e2e/ and **/e2e/** from test matching",
+        "Playwright config points to e2e/ directory for test files",
+        "Delete any empty or orphaned test directories",
+        "Existing unit tests in src/lib/__tests__/ and src/components/windgram/*.test.ts still pass",
+        "Add a meaningful unit test: test the lapse rate color mapping with known input values",
+        "npm run test -- --run passes with zero failures",
+        "npm run build succeeds"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "The issue is clear: tests/mobile-responsive.spec.ts imports from @playwright/test but Vitest tries to run it. Either move it to e2e/ or add tests/ to vitest exclude. Prefer moving it since it's an E2E test."
+    },
+    {
+      "id": "US-008",
+      "title": "Site Detail Page UX Polish",
+      "description": "The site detail page should feel intuitive for a paragliding pilot. Clean up the information hierarchy, fix the orientations display, and make the page flow naturally.",
+      "acceptanceCriteria": [
+        "Orientations display uses wind compass rose or simple badges, not 'N✓✓, NE✓' text",
+        "Ideal wind directions shown as colored arrows or clear badges",
+        "Elevation shown with units toggle (m/ft) that remembers preference",
+        "Map is smaller (not taking half the page) — the windgram is the hero",
+        "Source attribution is subtle (small text, not prominent)",
+        "'Add to Favorites' button is visible but not dominant",
+        "Page loads fast: site info shows immediately, windgram loads progressively",
+        "The heading hierarchy is clean: Site name > Flyability summary > Windgram > Details",
+        "Mobile: everything stacks naturally, no horizontal scroll",
+        "npm run build succeeds",
+        "npm run lint passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Currently the orientations show as 'N✓✓, SE✓, S✓✓' which is confusing. Consider a small compass rose SVG or simple colored badges like 'N ●● NE ● SE ● S ●●' where ●● = good, ● = ok. The map takes too much vertical space — make it shorter or collapsible. The windgram should be visible without scrolling on desktop."
+    }
+  ]
+}

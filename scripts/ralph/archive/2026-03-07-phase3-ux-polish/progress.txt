@@ -1,0 +1,19 @@
+# Ralph Progress Log — Polish Pass
+Started: Sat Mar 7 2026
+---
+
+## Codebase Patterns
+- Canvas windgram in src/components/windgram/windgram-chart.tsx (835 lines)
+- Lapse rate coloring: lapse-rate-utils.ts (computeLapseRatesForHour, lapseRateToColor, bilinearInterpolate)
+- Wind barbs: wind-barb-utils.ts (windSpeedToBarb, drawWindBarb)
+- Thermal/cloud overlays: thermal-cloud-utils.ts (drawThermalIndicator, collectLineData, drawSmoothLine)
+- Interactive wrapper: windgram-interactive.tsx (day selection, swipe gestures, flyability summary)
+- Detail panel: windgram-detail-panel.tsx (shows on hover/pin)
+- Weather profile: src/lib/weather-profile.ts (fetchAtmosphericProfile, AtmosphericProfile type)
+- Atmospheric data has: hours[].surface (cape, blh, etc) and hours[].levels[] (pressure, temp, wind, humidity, height per level)
+- Canvas uses onPointerMove/onPointerLeave for crosshair tracking
+- DPI scaling: check window.devicePixelRatio handling
+- Vitest config: vitest.config.ts — currently picks up Playwright tests by accident
+- Playwright config: playwright.config.ts — E2E tests should be in e2e/ only
+- REFERENCE WINDGRAM: http://wxtofly.net/v2/windgrams.html — RASP windgrams are the gold standard. Key features: rich purple/orange lapse rate fills covering entire chart, white wind barbs for contrast, thermal velocity (W*) at top, clean dual-axis labels
+---
