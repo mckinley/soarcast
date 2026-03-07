@@ -85,6 +85,48 @@ describe('lapseRateToColor', () => {
     // Dark theme should use slightly different RGB values for better contrast
     expect(lightTheme).not.toEqual(darkTheme);
   });
+
+  it('should map lapse rate thresholds to correct colors', () => {
+    // Test specific threshold values mentioned in acceptance criteria
+    // Inversion (< 0°C/1000ft) → deep purple/blue
+    const inversionColor = lapseRateToColor(-0.5, false);
+    const inversionMatch = inversionColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    expect(inversionMatch).not.toBeNull();
+    const [, invR, invG, invB] = inversionMatch!.map(Number);
+    expect(invB).toBeGreaterThan(invR); // Blue dominant
+
+    // Stable (0-1.5°C/1000ft) → lavender/light purple
+    const stableColor = lapseRateToColor(0.8, false);
+    const stableMatch = stableColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    expect(stableMatch).not.toBeNull();
+    const [, stableR, stableG, stableB] = stableMatch!.map(Number);
+    expect(stableB).toBeGreaterThan(stableG); // Purple tint (blue > green)
+
+    // Neutral (1.5-2.5°C/1000ft) → pale/white
+    const neutralColor = lapseRateToColor(2.0, false);
+    const neutralMatch = neutralColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    expect(neutralMatch).not.toBeNull();
+    const [, neutR, neutG, neutB] = neutralMatch!.map(Number);
+    expect(neutR).toBeGreaterThan(200); // Light color
+    expect(neutG).toBeGreaterThan(200);
+    expect(neutB).toBeGreaterThan(200);
+
+    // Conditionally unstable (2.5-3°C/1000ft) → warm yellow
+    const condUnstableColor = lapseRateToColor(2.8, false);
+    const condMatch = condUnstableColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    expect(condMatch).not.toBeNull();
+    const [, condR, condG, condB] = condMatch!.map(Number);
+    expect(condR).toBeGreaterThan(condB); // Warm color (red > blue)
+    expect(condG).toBeGreaterThan(condB);
+
+    // Unstable (>3°C/1000ft) → orange/red
+    const unstableColor = lapseRateToColor(3.5, false);
+    const unstableMatch = unstableColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    expect(unstableMatch).not.toBeNull();
+    const [, unstR, unstG, unstB] = unstableMatch!.map(Number);
+    expect(unstR).toBeGreaterThan(unstG); // Red dominant
+    expect(unstR).toBeGreaterThan(unstB);
+  });
 });
 
 describe('bilinearInterpolate', () => {
