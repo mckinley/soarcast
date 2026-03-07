@@ -142,7 +142,7 @@
         "npm run build succeeds"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "The issue is clear: tests/mobile-responsive.spec.ts imports from @playwright/test but Vitest tries to run it. Either move it to e2e/ or add tests/ to vitest exclude. Prefer moving it since it's an E2E test."
     },
     {

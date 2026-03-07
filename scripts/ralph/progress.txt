@@ -135,3 +135,24 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - Better to derive initial state from useMemo and use component key than useEffect with setState
 - The component key approach is cleaner and follows React best practices for state initialization
 ---
+## 2026-03-07 08:40 - US-007
+- Fixed test infrastructure by moving Playwright tests to correct directory
+- Moved tests/mobile-responsive.spec.ts → e2e/mobile-responsive.spec.ts
+- Removed empty tests/ directory (rmdir tests)
+- Added comprehensive unit test for lapse rate color mapping with specific threshold values
+- Test verifies colors for inversion, stable, neutral, conditionally unstable, and unstable lapse rates
+- All 95 unit tests now pass (up from 94)
+
+**Files changed:**
+- tests/mobile-responsive.spec.ts → e2e/mobile-responsive.spec.ts (moved)
+- src/components/windgram/lapse-rate-utils.test.ts
+
+**Learnings for future iterations:**
+- Vitest and Playwright have different test conventions - keep them separated by directory
+- vitest.config.ts already had exclude: ['**/e2e/**'] to prevent this collision
+- playwright.config.ts already had testDir: './e2e' pointing to the right place
+- The issue was simply that the file was in the wrong directory (tests/ instead of e2e/)
+- When writing color mapping tests, extract RGB values and compare components (e.g., blue > red for cool colors)
+- Use regex to parse rgb() strings: /rgb\((\d+),\s*(\d+),\s*(\d+)\)/ then map to numbers
+- The tests/ directory should not exist if we're only using e2e/ for Playwright tests
+---
