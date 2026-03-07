@@ -107,7 +107,7 @@
         "npm run build succeeds"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The current implementation uses onPointerMove/onPointerLeave directly on the canvas. Add debouncing and smooth transitions. The detail panel should NOT use position:fixed following the cursor — it should be in a stable position. Check that pointer coordinates are correctly translated to chart coordinates accounting for canvas scaling."
     },
     {

@@ -92,3 +92,27 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - Tailwind utilities like `rounded-xl shadow-sm hover:shadow-md transition-shadow` add polish with minimal code
 - The acceptance criteria explicitly asked for "pressure (hPa) and altitude (m) on separate lines" - always read AC carefully
 ---
+## 2026-03-07 08:25 - US-005
+- Fixed crosshair/hover interaction with smooth debouncing
+- Added 100ms debounce on crosshair appearance to prevent flickering on rapid mouse movements
+- Added 200ms debounce on crosshair disappearance to prevent flicker when mouse briefly leaves chart area
+- Implemented separate mobile and desktop detail panel layouts:
+  - Desktop: sticky side panel on right (lg:sticky lg:top-4)
+  - Mobile: fixed bottom sheet with slide-up animation (fixed bottom-0 with slideUp keyframes)
+- Used useRef for debounce timers to avoid unnecessary re-renders
+- Added cleanup effect to clear timers on unmount
+- Detail panel no longer follows cursor - stable position for both mobile and desktop
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx
+
+**Learnings for future iterations:**
+- Debouncing requires careful cleanup - always clear timers in useEffect cleanup and component unmount
+- Using refs for timers (showDebounceTimer, hideDebounceTimer, pendingCrosshair) prevents re-render storms
+- Two-way debouncing (both appearance and disappearance) creates smooth UX without flicker
+- Mobile bottom sheet pattern: `fixed bottom-0 left-0 right-0 z-50` with slide-up animation from translateY(100%)
+- Desktop sticky side panel: `lg:sticky lg:top-4` keeps detail visible while scrolling
+- Conditional rendering based on screen size: `hidden lg:block` for desktop panel, `lg:hidden` for mobile
+- The slideUp animation should be short (200ms) to feel responsive but not jarring
+- isPinned state correctly prevents crosshair updates while pinned, preserving user's selected position
+---
