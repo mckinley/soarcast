@@ -68,3 +68,27 @@ Started: Sat Mar  7 07:58:40 +07 2026
 - Standard meteorological convention was already correctly implemented (half=5kt, full=10kt, pennant=50kt)
 - Tooltip formatting matters to pilots - knots AND km/h are both important for different regions
 ---
+## 2026-03-07 08:15 - US-004
+- Fixed chart layout with cleaner, more readable Y-axis labels
+- Increased left padding from 80px to 100px to accommodate dual-line labels
+- Split left Y-axis into two separate lines:
+  - Top line: pressure in hPa (10px font, dimmed to 65% opacity)
+  - Bottom line: altitude in meters (12px font, full opacity)
+- Added locale formatting for right-side feet labels (e.g., "5,500 ft" instead of "5500ft")
+- Made grid lines thinner and more subtle (1px → 0.5px, lower opacity)
+- Improved time label spacing: every 2 hours on desktop, every 3 hours on mobile
+- Enhanced canvas container styling: rounded-xl corners, subtle shadow with hover effect
+- Verified retina/HiDPI display support already correctly implemented
+
+**Files changed:**
+- src/components/windgram/windgram-chart.tsx
+
+**Learnings for future iterations:**
+- The key to readable dual-line labels is vertical spacing (±7px offset) and different font sizes/opacities
+- Locale formatting (`.toLocaleString()`) automatically adds thousands separators for better readability
+- Grid line weight matters - 0.5px looks much cleaner than 1px for background grid
+- Responsive time labels should adapt density: desktop can show more frequent labels than mobile
+- Canvas already handled retina displays via `window.devicePixelRatio` - no changes needed
+- Tailwind utilities like `rounded-xl shadow-sm hover:shadow-md transition-shadow` add polish with minimal code
+- The acceptance criteria explicitly asked for "pressure (hPa) and altitude (m) on separate lines" - always read AC carefully
+---

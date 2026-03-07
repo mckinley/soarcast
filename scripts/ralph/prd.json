@@ -87,7 +87,7 @@
         "npm run build succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The left axis currently shows '1000hPa/411m' crammed together. Split into two lines or use only the most useful label. Consider: pressure levels on the left, altitude (m and ft) on the right. Check that canvas width/height attributes match the CSS dimensions × devicePixelRatio."
     },
     {
