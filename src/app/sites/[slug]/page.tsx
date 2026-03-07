@@ -12,6 +12,9 @@ import { LaunchSiteFavoriteButton } from './favorite-button';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { SiteDetailForecast } from './site-detail-forecast';
 import { auth } from '@/auth';
+import { OrientationBadges } from '@/components/orientation-badges';
+import { WindDirectionBadges } from '@/components/wind-direction-badges';
+import { ElevationDisplay } from '@/components/elevation-display';
 
 export async function generateMetadata({
   params,
@@ -69,88 +72,117 @@ export default async function LaunchSiteDetailPage({
       {/* Track recently viewed sites */}
       <RecentSiteTracker site={{ id: site.id, name: site.name, slug: site.slug }} />
 
-      {/* Header with back navigation - renders immediately */}
-      <div>
+      {/* Header with back navigation and favorite button - renders immediately */}
+      <div className="flex items-center justify-between gap-4">
         <Link href="/sites/browse">
-          <Button variant="ghost" size="sm" className="mb-4">
+          <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Browse
           </Button>
         </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">{site.name}</h1>
-            <div className="mt-2 text-sm text-muted-foreground space-y-1">
-              {site.region && site.countryCode && (
-                <p>
-                  {site.region}, {site.countryCode}
-                </p>
-              )}
-              <p>
-                Location: {parseFloat(site.latitude).toFixed(4)}°,{' '}
-                {parseFloat(site.longitude).toFixed(4)}°
-              </p>
-              {site.elevation && <p>Takeoff Elevation: {site.elevation}m</p>}
-              {site.landingElevation && <p>Landing Elevation: {site.landingElevation}m</p>}
-              {site.flyingTypes && site.flyingTypes.length > 0 && (
-                <p>Flying Types: {site.flyingTypes.join(', ')}</p>
-              )}
-              {site.orientations && (
-                <p>
-                  Orientations:{' '}
-                  {Object.entries(site.orientations)
-                    .filter(([, rating]) => rating >= 1)
-                    .map(([dir, rating]) => `${dir}${rating === 2 ? '✓✓' : '✓'}`)
-                    .join(', ')}
-                </p>
-              )}
-              {site.idealWindDirections && site.idealWindDirections.length > 0 && (
-                <p>
-                  Ideal Wind Directions: {site.idealWindDirections.map((d) => `${d}°`).join(', ')}
-                </p>
-              )}
-              {site.maxWindSpeed && <p>Max Wind Speed: {site.maxWindSpeed} km/h</p>}
+
+        <LaunchSiteFavoriteButton
+          siteId={site.id}
+          initialIsFavorited={isFavorited}
+          isAuthenticated={!!session}
+        />
+      </div>
+
+      {/* Site name and location */}
+      <div>
+        <h1 className="text-3xl font-bold">{site.name}</h1>
+        {site.region && site.countryCode && (
+          <p className="text-lg text-muted-foreground mt-1">
+            {site.region}, {site.countryCode}
+          </p>
+        )}
+      </div>
+
+      {/* Key information card */}
+      <Card className="p-4">
+        <div className="space-y-3 text-sm">
+          {/* Elevation */}
+          {site.elevation && (
+            <div>
+              <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
             </div>
-          </div>
+          )}
+          {site.landingElevation && (
+            <div>
+              <ElevationDisplay elevationMeters={site.landingElevation} label="Landing" />
+            </div>
+          )}
 
-          <div className="shrink-0">
-            <LaunchSiteFavoriteButton
-              siteId={site.id}
-              initialIsFavorited={isFavorited}
-              isAuthenticated={!!session}
-            />
+          {/* Flying types */}
+          {site.flyingTypes && site.flyingTypes.length > 0 && (
+            <div>
+              <span className="font-medium">Flying Types:</span>{' '}
+              <span className="text-muted-foreground">{site.flyingTypes.join(', ')}</span>
+            </div>
+          )}
+
+          {/* Orientations - badge display */}
+          {site.orientations && Object.values(site.orientations).some((r) => r >= 1) && (
+            <div>
+              <div className="font-medium mb-2">Orientations:</div>
+              <OrientationBadges orientations={site.orientations} />
+            </div>
+          )}
+
+          {/* Ideal wind directions - badge display */}
+          {site.idealWindDirections && site.idealWindDirections.length > 0 && (
+            <div>
+              <div className="font-medium mb-2">Ideal Wind Directions:</div>
+              <WindDirectionBadges directions={site.idealWindDirections} />
+            </div>
+          )}
+
+          {/* Max wind speed */}
+          {site.maxWindSpeed && (
+            <div>
+              <span className="font-medium">Max Wind Speed:</span>{' '}
+              <span className="text-muted-foreground">{site.maxWindSpeed} km/h</span>
+            </div>
+          )}
+
+          {/* Coordinates - less prominent */}
+          <div className="text-xs text-muted-foreground">
+            Location: {parseFloat(site.latitude).toFixed(4)}°,{' '}
+            {parseFloat(site.longitude).toFixed(4)}°
           </div>
         </div>
+      </Card>
 
-        {site.description && (
-          <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-            <p className="text-sm">{site.description}</p>
-          </div>
-        )}
+      {/* Description */}
+      {site.description && (
+        <Card className="p-4">
+          <p className="text-sm">{site.description}</p>
+        </Card>
+      )}
 
-        {site.landingLat && site.landingLng && site.landingDescription && (
-          <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-            <h3 className="font-semibold mb-2">Landing Information</h3>
-            <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Landing: {parseFloat(site.landingLat).toFixed(4)}°,{' '}
-              {parseFloat(site.landingLng).toFixed(4)}°
-            </p>
-          </div>
-        )}
+      {/* Landing information */}
+      {site.landingLat && site.landingLng && site.landingDescription && (
+        <Card className="p-4">
+          <h3 className="font-semibold mb-2">Landing Information</h3>
+          <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Landing: {parseFloat(site.landingLat).toFixed(4)}°,{' '}
+            {parseFloat(site.landingLng).toFixed(4)}°
+          </p>
+        </Card>
+      )}
 
-        {/* Site location map */}
-        <div className="mt-4">
-          <MapDisplayWrapper
-            latitude={parseFloat(site.latitude)}
-            longitude={parseFloat(site.longitude)}
-          />
-        </div>
-
-        {/* Source attribution */}
-        <div className="mt-2 text-xs text-muted-foreground">
-          Source: {site.source === 'paraglidingearth' ? 'ParaglidingEarth.com' : site.source}
-        </div>
+      {/* Compact map - less prominent */}
+      <div>
+        <h3 className="text-sm font-medium mb-2">Location</h3>
+        <MapDisplayWrapper
+          latitude={parseFloat(site.latitude)}
+          longitude={parseFloat(site.longitude)}
+        />
+        {/* Source attribution - subtle */}
+        <p className="mt-1 text-xs text-muted-foreground">
+          Data source: {site.source === 'paraglidingearth' ? 'ParaglidingEarth.com' : site.source}
+        </p>
       </div>
 
       {/* Forecast section - streams in progressively */}

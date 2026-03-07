@@ -92,14 +92,14 @@ describe('lapseRateToColor', () => {
     const inversionColor = lapseRateToColor(-0.5, false);
     const inversionMatch = inversionColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     expect(inversionMatch).not.toBeNull();
-    const [, invR, invG, invB] = inversionMatch!.map(Number);
+    const [, invR, , invB] = inversionMatch!.map(Number);
     expect(invB).toBeGreaterThan(invR); // Blue dominant
 
     // Stable (0-1.5°C/1000ft) → lavender/light purple
     const stableColor = lapseRateToColor(0.8, false);
     const stableMatch = stableColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
     expect(stableMatch).not.toBeNull();
-    const [, stableR, stableG, stableB] = stableMatch!.map(Number);
+    const [, , stableG, stableB] = stableMatch!.map(Number);
     expect(stableB).toBeGreaterThan(stableG); // Purple tint (blue > green)
 
     // Neutral (1.5-2.5°C/1000ft) → pale/white
