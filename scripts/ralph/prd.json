@@ -164,7 +164,7 @@
         "npm run lint passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Leaflet marker popups: use L.popup() bound to each marker. For clustering, consider react-leaflet-cluster or a simple zoom-based filter. Don't over-engineer — basic improvements matter most."
     },
     {
@@ -180,7 +180,7 @@
         "All existing tests pass"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Keep this story small — just the quick wins. Don't expand Settings page scope here."
     }
   ]

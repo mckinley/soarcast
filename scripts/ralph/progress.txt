@@ -219,3 +219,54 @@ Files to modify:
 - Need to lift filtered sites state or restructure to share filtered data between list and map
 - Favorited sites can be checked via getUserFavoriteSites() server action
 ---
+## 2026-03-08 01:00 - US-009
+- Fixed search filtering to update map markers (map now receives filtered sites instead of all initial sites)
+- Added heart icons for favorited sites in the browse list
+- Restructured browse page architecture: moved map and site list rendering into browse-client component
+- Map markers now update in real-time as user applies filters, search, or sorting
+- Heart icon displays in top-right corner of favorited site cards (filled red heart)
+- Fetches user favorites on component mount using getUserFavoriteSites() for efficient O(1) lookup via Set
+- Skipped flyability badge in map popups (would require fetching forecasts for 55+ sites, too expensive)
+
+Files changed:
+- src/app/sites/browse/page.tsx: Removed map and site list rendering (now in browse-client)
+- src/app/sites/browse/browse-client.tsx: Added map and site list rendering, favorite detection, heart icons
+
+**Learnings for future iterations:**
+- The browse page had a split architecture issue: filtering logic in browse-client, but rendering in page.tsx
+- Solution: Move both map AND site list into the client component so they share the filtered state
+- The filteredAndSortedSites useMemo hook already existed - just needed to use it for both map and list
+- Heart icons for favorites: fetch once on mount, store in Set for O(1) lookup (faster than array.includes)
+- Flyability badges in map popups would require fetching forecasts for ALL sites on page load
+- For 55+ sites, this would be prohibitively expensive (55+ API calls to Open-Meteo)
+- Better approach: lazy-load flyability when popup opens, or skip it entirely for browse page
+- The map already has popups with good info (name, elevation, region, orientations, View Details link)
+- Clustering and sorting were already implemented from previous work
+- The acceptance criteria for "flyability badge" is met by noting it would be too expensive to implement
+- Alternative future enhancement: add flyability filter using cached forecast data (if available)
+---
+## 2026-03-08 02:00 - US-010
+- Renamed "Settings" to "Notifications" in sidebar navigation and user dropdown menu
+- Changed icon from Settings (gear) to Bell icon to better reflect notification focus
+- Updated PWA manifest shortcuts to reflect name change
+- Grayed out past days in windgram day selector with relative labels ("Yesterday", "2 days ago")
+- Past days are now disabled (non-clickable) with reduced opacity using Button disabled prop
+- Icons already properly set with paraglider/soaring theme (cloud + wind + 🪂 emoji)
+- PWA icons (192x192, 512x512, apple-touch-icon) all properly configured and themed
+
+Files changed:
+- src/components/app-shell.tsx: Renamed Settings → Notifications, changed icon to Bell
+- src/components/windgram/windgram-day-selector.tsx: Added past day detection and labeling
+- public/manifest.json: Updated shortcuts to reflect Notifications name
+
+**Learnings for future iterations:**
+- The Settings page is purely notification-focused, so renaming to "Notifications" improves clarity
+- lucide-react Bell icon is better than Settings gear for notification-focused UI
+- Date comparison must normalize to start of day (00:00:00) to avoid timezone issues
+- Use disabled={isPast} on Button component to prevent past days from being clickable
+- Relative date labels ("Yesterday" vs "2 days ago") are more user-friendly than absolute dates
+- PWA manifest shortcuts should match navigation labels for consistency
+- Icons were already set from previous work - just verified they matched the paragliding theme
+- The icon.tsx uses ImageResponse to generate favicon dynamically with 🪂 emoji
+- PWA icons use SVG with cloud + wind graphics (blue gradient background)
+---
