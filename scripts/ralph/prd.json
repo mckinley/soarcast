@@ -131,7 +131,7 @@
         "npm run build succeeds"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "The current onboarding may be in a client component that checks for sites. Simplify it. The goal is to get the user to Browse Sites and favorite one — that's it."
     },
     {

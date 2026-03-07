@@ -142,3 +142,28 @@ Files changed:
 - The color scheme follows the scoring thresholds: Epic (86+), Great (71-85), Good (51-70), Fair (31-50), Poor (0-30)
 - SevenDayBar changed from horizontal flex to flex-col to accommodate legend below dots
 ---
+## 2026-03-07 22:00 - US-007
+- Fixed onboarding flow to only show for users with zero sites
+- Simplified from 3-step wizard to single focused screen
+- Removed geolocation complexity (was overengineering for simple onboarding)
+- Updated getOnboardingStatus() to check THREE conditions: onboardingCompleted flag, has favorites, has custom sites
+- Onboarding automatically disappears when user favorites their first site
+- Shows 3 popular sites as quick examples with "Browse All Sites" as primary CTA
+- User can dismiss at any time with X button (sets onboardingCompleted flag)
+
+Files changed:
+- src/app/settings/actions.ts: Enhanced getOnboardingStatus() to check for existing sites
+- src/components/onboarding-flow.tsx: Simplified from 3-step to single-screen onboarding
+- src/app/dashboard/page.tsx: Renamed nearbySites → popularSites to match new component API
+
+**Learnings for future iterations:**
+- The original onboarding had 3 steps (welcome, find sites, tips) but only step 2 was valuable
+- Geolocation was attempted but silently failed — this added complexity without guaranteed value
+- The key insight: onboarding should disappear when user has sites, NOT just when they click "complete"
+- getOnboardingStatus() now checks both the explicit flag AND whether user has content (favorites/custom sites)
+- This prevents the onboarding from reappearing if a user adds sites but never clicked "complete"
+- The pattern: check flag for explicit dismissal, check site count for implicit completion
+- Onboarding completion is stored in the database (settings.onboardingCompleted), not localStorage
+- The simplified onboarding is a single modal with clear CTA: "Browse All Launch Sites"
+- Showing 3 example sites gives users a quick preview without requiring geolocation permissions
+---
