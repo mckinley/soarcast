@@ -217,6 +217,9 @@ export async function completeOnboarding(): Promise<void> {
 
 /**
  * Check if user has completed onboarding
+ * Returns true if:
+ * - User has explicitly completed onboarding (onboardingCompleted flag)
+ * - OR user already has sites (favorites or custom sites)
  */
 export async function getOnboardingStatus(): Promise<boolean> {
   const session = await auth();
@@ -230,6 +233,32 @@ export async function getOnboardingStatus(): Promise<boolean> {
     .where(eq(settings.userId, session.user.id))
     .limit(1);
 
-  // If no settings exist yet, user hasn't completed onboarding
-  return userSettings?.onboardingCompleted ?? false;
+  // If user has explicitly completed onboarding, respect that
+  if (userSettings?.onboardingCompleted) {
+    return true;
+  }
+
+  // Check if user has any sites (favorites or custom sites)
+  const { userFavoriteSites, customSites } = await import('@/db/schema');
+
+  const [favorites, custom] = await Promise.all([
+    db
+      .select({ id: userFavoriteSites.id })
+      .from(userFavoriteSites)
+      .where(eq(userFavoriteSites.userId, session.user.id))
+      .limit(1),
+    db
+      .select({ id: customSites.id })
+      .from(customSites)
+      .where(eq(customSites.userId, session.user.id))
+      .limit(1),
+  ]);
+
+  // If user has any sites, they don't need onboarding
+  if (favorites.length > 0 || custom.length > 0) {
+    return true;
+  }
+
+  // User has no sites and hasn't completed onboarding
+  return false;
 }

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   ]);
 
   // Get some popular sites for onboarding (first-time users)
-  let nearbySites: Array<{
+  let popularSites: Array<{
     id: string;
     name: string;
     slug: string;
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
 
   if (!onboardingCompleted && session?.user?.id) {
     // Get popular high-elevation sites for new users
-    nearbySites = await db
+    popularSites = await db
       .select({
         id: launchSites.id,
         name: launchSites.name,
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {!onboardingCompleted && session?.user?.id && <OnboardingFlow nearbySites={nearbySites} />}
+      {!onboardingCompleted && session?.user?.id && <OnboardingFlow popularSites={popularSites} />}
       <DashboardClient
         data={data}
         settings={settings}
