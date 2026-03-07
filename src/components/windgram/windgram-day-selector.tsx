@@ -20,27 +20,49 @@ export function WindgramDaySelector({
 }: WindgramDaySelectorProps) {
   if (days.length <= 1) return null;
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
+
   return (
     <div className={`flex flex-wrap gap-2 ${className}`} role="tablist" aria-label="Forecast days">
       {days.map((day, index) => {
+        const normalizedDay = new Date(day);
+        normalizedDay.setHours(0, 0, 0, 0);
+
         const isSelected = index === selectedDayIndex;
-        const isToday = new Date().toDateString() === day.toDateString();
+        const isToday = normalizedDay.getTime() === today.getTime();
+
+        // Check if day is in the past
+        const isPast = normalizedDay < today;
 
         // Format day label
         let dayLabel: string;
         if (isToday) {
           dayLabel = 'Today';
+        } else if (isPast) {
+          // Calculate how many days ago
+          const daysAgo = Math.floor(
+            (today.getTime() - normalizedDay.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          if (daysAgo === 1) {
+            dayLabel = 'Yesterday';
+          } else {
+            dayLabel = `${daysAgo} days ago`;
+          }
         } else {
-          const tomorrow = new Date();
+          const tomorrow = new Date(today);
           tomorrow.setDate(tomorrow.getDate() + 1);
-          if (tomorrow.toDateString() === day.toDateString()) {
+          if (tomorrow.getTime() === normalizedDay.getTime()) {
             dayLabel = 'Tomorrow';
           } else {
-            dayLabel = day.toLocaleDateString('en-US', { weekday: 'short' });
+            dayLabel = normalizedDay.toLocaleDateString('en-US', { weekday: 'short' });
           }
         }
 
-        const dateLabel = day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const dateLabel = normalizedDay.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
 
         return (
           <Button
@@ -48,10 +70,13 @@ export function WindgramDaySelector({
             variant={isSelected ? 'default' : 'outline'}
             size="sm"
             onClick={() => onDayChange(index)}
+            disabled={isPast}
             role="tab"
             aria-selected={isSelected}
             aria-controls="windgram-chart"
-            className="flex flex-col items-start h-auto py-2 px-3 min-w-[80px]"
+            className={`flex flex-col items-start h-auto py-2 px-3 min-w-[80px] ${
+              isPast ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             <span className="font-semibold text-sm">{dayLabel}</span>
             <span className="text-xs opacity-80">{dateLabel}</span>

@@ -3,17 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Cloud,
-  Settings,
-  LayoutDashboard,
-  Menu,
-  Sun,
-  Moon,
-  LogOut,
-  User,
-  Compass,
-} from 'lucide-react';
+import { Cloud, Bell, LayoutDashboard, Menu, Sun, Moon, LogOut, Compass } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSession, signIn, signOut } from 'next-auth/react';
 
@@ -53,9 +43,9 @@ const navItems = [
     icon: Compass,
   },
   {
-    title: 'Settings',
+    title: 'Notifications',
     href: '/settings',
-    icon: Settings,
+    icon: Bell,
   },
 ];
 
@@ -134,8 +124,8 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings" className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            Settings
+            <Bell className="mr-2 h-4 w-4" />
+            Notifications
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -39,9 +39,9 @@
       "description": "Explore launch sites"
     },
     {
-      "name": "Settings",
+      "name": "Notifications",
       "url": "/settings",
-      "description": "Configure notifications and preferences"
+      "description": "Configure notification preferences"
     }
   ]
 }
