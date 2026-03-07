@@ -87,6 +87,11 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
   const { resolvedTheme } = useTheme();
   const isDarkTheme = resolvedTheme === 'dark';
 
+  // Refs for debounce timers
+  const showDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const pendingCrosshair = useRef<CrosshairPosition | null>(null);
+
   // Handle responsive sizing
   useEffect(() => {
     if (!containerRef.current) return;
@@ -600,7 +605,24 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
       if (!data || !canvasRef.current || isPinned) return; // Don't update if pinned
 
       const newCrosshair = calculateCrosshair(e.clientX, e.clientY);
-      setCrosshair(newCrosshair);
+
+      // Clear any pending hide timer
+      if (hideDebounceTimer.current) {
+        clearTimeout(hideDebounceTimer.current);
+        hideDebounceTimer.current = null;
+      }
+
+      // Debounce the appearance of crosshair (100ms)
+      if (showDebounceTimer.current) {
+        clearTimeout(showDebounceTimer.current);
+      }
+
+      pendingCrosshair.current = newCrosshair;
+
+      showDebounceTimer.current = setTimeout(() => {
+        setCrosshair(pendingCrosshair.current);
+        showDebounceTimer.current = null;
+      }, 100);
 
       // Check if pointer is near any wind barb for tooltip
       const canvas = canvasRef.current;
@@ -685,11 +707,35 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
   );
 
   const handlePointerLeave = useCallback(() => {
-    if (!isPinned) {
-      setCrosshair(null);
+    // Clear any pending show timer
+    if (showDebounceTimer.current) {
+      clearTimeout(showDebounceTimer.current);
+      showDebounceTimer.current = null;
     }
+    pendingCrosshair.current = null;
+
+    // If not pinned, hide crosshair after 200ms delay to prevent flicker
+    if (!isPinned) {
+      hideDebounceTimer.current = setTimeout(() => {
+        setCrosshair(null);
+        hideDebounceTimer.current = null;
+      }, 200);
+    }
+
     setHoveredBarb(null);
   }, [isPinned]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (showDebounceTimer.current) {
+        clearTimeout(showDebounceTimer.current);
+      }
+      if (hideDebounceTimer.current) {
+        clearTimeout(hideDebounceTimer.current);
+      }
+    };
+  }, []);
 
   // Keyboard navigation for crosshair
   useEffect(() => {
@@ -832,8 +878,31 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
           </p>
         </div>
 
-        {/* Detail panel - side on desktop, bottom on mobile */}
+        {/* Detail panel - sticky side panel on desktop */}
         {crosshair && currentHour && (
+          <div className="hidden lg:block">
+            <WindgramDetailPanel
+              hour={currentHour}
+              altitude={crosshair.altitude}
+              isPinned={isPinned}
+              onClose={() => {
+                setCrosshair(null);
+                setIsPinned(false);
+              }}
+              className="w-80 sticky top-4"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Detail panel - fixed bottom sheet on mobile */}
+      {crosshair && currentHour && (
+        <div
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50"
+          style={{
+            animation: 'slideUp 0.2s ease-out',
+          }}
+        >
           <WindgramDetailPanel
             hour={currentHour}
             altitude={crosshair.altitude}
@@ -842,10 +911,10 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
               setCrosshair(null);
               setIsPinned(false);
             }}
-            className="lg:w-80 lg:sticky lg:top-4 lg:self-start"
+            className="rounded-t-2xl border-t border-x max-h-[50vh] overflow-y-auto"
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Tooltip for wind barbs (separate from detail panel) */}
       {hoveredBarb && !crosshair && (
@@ -860,6 +929,20 @@ export function WindgramChart({ data, loading = false, className = '' }: Windgra
           {formatWindTooltip(hoveredBarb.speedKmh, hoveredBarb.direction, hoveredBarb.altitude)}
         </div>
       )}
+
+      {/* CSS animations for mobile bottom sheet */}
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
