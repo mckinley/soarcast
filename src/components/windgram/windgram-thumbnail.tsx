@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { computeLapseRatesForHour, lapseRateToColor } from './lapse-rate-utils';
 
@@ -14,16 +14,40 @@ interface WindgramThumbnailProps {
 /**
  * Simplified windgram thumbnail showing only lapse rate background colors.
  * Designed for dashboard cards - no interactivity, labels, or wind barbs.
- * Optimized for small size and fast rendering.
+ * Optimized for small size and fast rendering with proper high-DPI support.
  */
-export function WindgramThumbnail({
-  data,
-  width = 120,
-  height = 60,
-  className = '',
-}: WindgramThumbnailProps) {
+export function WindgramThumbnail({ data, width, height, className = '' }: WindgramThumbnailProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: width || 300, height: height || 80 });
 
+  // Measure container size on mount and resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateSize = () => {
+      if (!containerRef.current) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      // Use provided dimensions or measure from container
+      const newWidth = width || Math.floor(rect.width);
+      const newHeight = height || 80; // Default height
+
+      setDimensions({ width: newWidth, height: newHeight });
+    };
+
+    updateSize();
+
+    // Re-measure on window resize
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [width, height]);
+
+  // Render canvas when data or dimensions change
   useEffect(() => {
     if (!canvasRef.current || !data) return;
 
@@ -31,16 +55,18 @@ export function WindgramThumbnail({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // High-DPI support
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    const { width: canvasWidth, height: canvasHeight } = dimensions;
+
+    // High-DPI support - render at 2x resolution for sharp display
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = canvasWidth * dpr;
+    canvas.height = canvasHeight * dpr;
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
     ctx.scale(dpr, dpr);
 
     // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     // Filter to daylight hours (6 AM - 8 PM)
     const daylightHours = data.hours.filter((hour) => {
@@ -52,7 +78,7 @@ export function WindgramThumbnail({
     if (daylightHours.length === 0) {
       // Draw gray background if no data
       ctx.fillStyle = '#888888';
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
       return;
     }
 
@@ -64,8 +90,8 @@ export function WindgramThumbnail({
     if (!firstHour) return;
 
     const numLayers = firstHour.pressureLevels.length - 1;
-    const cellWidth = width / numHours;
-    const cellHeight = height / numLayers;
+    const cellWidth = canvasWidth / numHours;
+    const cellHeight = canvasHeight / numLayers;
 
     // Get theme colors (determine light/dark mode)
     const computedStyle = getComputedStyle(document.documentElement);
@@ -99,24 +125,26 @@ export function WindgramThumbnail({
     // Add subtle border
     ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, width, height);
-  }, [data, width, height]);
-
-  if (!data) {
-    return (
-      <div
-        className={`bg-muted rounded ${className}`}
-        style={{ width: `${width}px`, height: `${height}px` }}
-      />
-    );
-  }
+    ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+  }, [data, dimensions]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={`rounded ${className}`}
-      role="img"
-      aria-label="Windgram thumbnail showing atmospheric stability"
-    />
+    <div ref={containerRef} className={`${className}`}>
+      {!data ? (
+        <div
+          className="bg-muted rounded flex items-center justify-center"
+          style={{ height: `${dimensions.height}px` }}
+        >
+          <span className="text-xs text-muted-foreground">No data</span>
+        </div>
+      ) : (
+        <canvas
+          ref={canvasRef}
+          className="rounded w-full"
+          role="img"
+          aria-label="Windgram thumbnail showing atmospheric stability"
+        />
+      )}
+    </div>
   );
 }

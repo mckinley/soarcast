@@ -130,11 +130,11 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
         {/* Windgram Thumbnail */}
         <div className="mb-3">
           {isLoading ? (
-            <Skeleton className="w-full h-[60px] rounded" />
+            <Skeleton className="w-full h-20 rounded" />
           ) : thumbnailData ? (
-            <WindgramThumbnail data={thumbnailData} width={240} height={60} className="w-full" />
+            <WindgramThumbnail data={thumbnailData} className="w-full" />
           ) : (
-            <div className="w-full h-[60px] bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+            <div className="w-full h-20 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
               Loading...
             </div>
           )}
