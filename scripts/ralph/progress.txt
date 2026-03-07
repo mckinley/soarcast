@@ -193,3 +193,29 @@ Files changed:
 - Check elevation > 0 before passing to avoid showing marker for sites at sea level or missing data
 - The launch elevation line should be solid (no dashes) to distinguish it from atmospheric layer lines
 ---
+## 2026-03-08 00:00 - Analysis of US-009
+- Reviewed Browse Sites page implementation
+- Most features are already implemented:
+  * Map marker popups with site info ✓
+  * Site list sorting (alphabetical, elevation, distance) ✓
+  * Map marker clustering (using react-leaflet-cluster) ✓  
+  * "View Details" link in popups ✓
+
+Remaining work for US-009:
+- Add flyability badge to map popups (requires fetching today's forecast/scores)
+- Fix search filtering to update the map (currently map shows all initialSites, not filteredAndSortedSites)
+- Add heart icon for favorited sites in the site list
+- The browse-client.tsx has sorting/filtering logic but the map wrapper doesn't receive filtered sites
+
+Files to modify:
+- src/app/sites/browse/page.tsx: Pass filteredSites to map instead of all sites
+- src/components/sites-browse-map.tsx: Add flyability badge to popup (optional: fetch scores)
+- src/app/sites/browse/page.tsx: Show heart icon for favorited sites in site cards
+
+**Learnings for future iterations:**
+- The Browse Sites page has good infrastructure: search, filters, sorting all work
+- The map uses react-leaflet-cluster which handles clustering automatically
+- Current architecture separates filtering (browse-client) from display (page.tsx)
+- Need to lift filtered sites state or restructure to share filtered data between list and map
+- Favorited sites can be checked via getUserFavoriteSites() server action
+---
