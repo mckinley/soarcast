@@ -1,3 +1,49 @@
 # Ralph Progress Log
 Started: Sat Mar  7 15:12:59 +07 2026
 ---
+
+## 2026-03-07 16:15 - US-001
+- Fixed privacy bug: Dashboard now requires authentication and redirects unauthenticated users to landing page
+- Removed demo sites logic from dashboard actions (dashboard is now auth-only)
+- Removed unauthenticated user banner from dashboard-client component
+- Landing page already existed and works correctly for anonymous users
+- Public API routes (/api/sites, /api/weather/profile) remain accessible
+
+Files changed:
+- src/app/dashboard/page.tsx: Added auth check and redirect for unauthenticated users
+- src/app/dashboard/actions.ts: Removed DEMO_SITES constant and demo logic from getDashboardData() and refreshAllForecasts()
+- src/components/dashboard-client.tsx: Removed unauthenticated user banner
+
+**Learnings for future iterations:**
+- The landing page at src/app/page.tsx already had proper auth flow (show landing to anonymous, redirect authenticated to /dashboard)
+- The issue was that /dashboard itself was accessible to unauthenticated users and showed demo sites
+- NextAuth's auth() function is the standard way to check authentication in Next.js server components
+- Use redirect('/') from 'next/navigation' to redirect unauthenticated users
+- Public API routes don't need auth changes - they're already configured correctly in middleware
+---
+## 2026-03-07 17:30 - US-002
+- Unified sites experience: Dashboard now shows BOTH favorited launch sites AND custom sites
+- Removed "My Sites" navigation item from sidebar (app-shell.tsx)
+- Updated getDashboardData() to query custom_sites table directly instead of legacy sites table
+- Added siteType ('launch' | 'custom') and slug tracking to SiteForecastData interface
+- Site cards now generate correct URLs: /sites/[slug] for launch sites, /sites/custom/[id] for custom sites
+- Changed dashboard heading from "7-Day XC Forecast" to "7-Day Flying Forecast"
+- Updated empty state: "No sites yet. Browse launch sites to find your home site." with Browse Sites link
+- Old /sites route now redirects to / (dashboard)
+
+Files changed:
+- src/components/app-shell.tsx: Removed "My Sites" from navItems array, removed MapPin import
+- src/app/dashboard/actions.ts: Updated to query custom_sites + user_favorite_sites, added siteType/slug tracking
+- src/components/dashboard-client.tsx: Changed heading, updated empty state, passed siteType/slug to SiteCard
+- src/components/dashboard/site-card.tsx: Added siteType/slug props, generate URLs based on siteType
+- src/app/sites/page.tsx: Replaced entire page with redirect to dashboard
+
+**Learnings for future iterations:**
+- The custom_sites table is the modern replacement for the legacy sites table
+- Launch sites (from launch_sites table) have rich metadata (orientations, descriptions) while custom sites are user-created points
+- User favorites (user_favorite_sites) link users to launch_sites and allow custom overrides (maxWind, idealDirections)
+- The dashboard query pattern: fetch custom_sites + user_favorite_sites in parallel, normalize to unified Site type
+- Use siteType discriminator to determine forecast cache type ('launch' vs 'custom')
+- SiteForecastData interface should carry metadata (siteType, slug) to enable proper URL generation in child components
+- The getDashboardData pattern: create a metadata Map to track siteType/slug during the site conversion process
+---

@@ -24,7 +24,7 @@
         "npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Check the dashboard-client.tsx component — it likely fetches user sites without checking auth state. The middleware may also need updating. The landing page should be a new component, not a modification of the dashboard."
     },
     {
@@ -45,7 +45,7 @@
         "npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "The dashboard query needs to UNION results from user_favorite_sites JOIN launch_sites AND custom_sites. Normalize the shape so the UI component can render both types uniformly. The launch_site favorite should use the launch_site's elevation, orientations, etc — not the custom_site's empty fields. Delete the old sites-client.tsx page or redirect it."
     },
     {
