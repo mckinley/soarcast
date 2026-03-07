@@ -6,6 +6,12 @@ import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { LaunchSiteFavoriteButton } from './favorite-button';
@@ -88,7 +94,7 @@ export default async function LaunchSiteDetailPage({
         />
       </div>
 
-      {/* Site name and location */}
+      {/* Site name, location, and flyability badge - moved to forecast section */}
       <div>
         <h1 className="text-3xl font-bold">{site.name}</h1>
         {site.region && site.countryCode && (
@@ -98,97 +104,110 @@ export default async function LaunchSiteDetailPage({
         )}
       </div>
 
-      {/* Key information card */}
-      <Card className="p-4">
-        <div className="space-y-3 text-sm">
-          {/* Elevation */}
-          {site.elevation && (
-            <div>
-              <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
-            </div>
-          )}
-          {site.landingElevation && (
-            <div>
-              <ElevationDisplay elevationMeters={site.landingElevation} label="Landing" />
-            </div>
-          )}
-
-          {/* Flying types */}
-          {site.flyingTypes && site.flyingTypes.length > 0 && (
-            <div>
-              <span className="font-medium">Flying Types:</span>{' '}
-              <span className="text-muted-foreground">{site.flyingTypes.join(', ')}</span>
-            </div>
-          )}
-
-          {/* Orientations - badge display */}
-          {site.orientations && Object.values(site.orientations).some((r) => r >= 1) && (
-            <div>
-              <div className="font-medium mb-2">Orientations:</div>
-              <OrientationBadges orientations={site.orientations} />
-            </div>
-          )}
-
-          {/* Ideal wind directions - badge display */}
-          {site.idealWindDirections && site.idealWindDirections.length > 0 && (
-            <div>
-              <div className="font-medium mb-2">Ideal Wind Directions:</div>
-              <WindDirectionBadges directions={site.idealWindDirections} />
-            </div>
-          )}
-
-          {/* Max wind speed */}
-          {site.maxWindSpeed && (
-            <div>
-              <span className="font-medium">Max Wind Speed:</span>{' '}
-              <span className="text-muted-foreground">{site.maxWindSpeed} km/h</span>
-            </div>
-          )}
-
-          {/* Coordinates - less prominent */}
-          <div className="text-xs text-muted-foreground">
-            Location: {parseFloat(site.latitude).toFixed(4)}°,{' '}
-            {parseFloat(site.longitude).toFixed(4)}°
-          </div>
-        </div>
-      </Card>
-
-      {/* Description */}
-      {site.description && (
-        <Card className="p-4">
-          <p className="text-sm">{site.description}</p>
-        </Card>
-      )}
-
-      {/* Landing information */}
-      {site.landingLat && site.landingLng && site.landingDescription && (
-        <Card className="p-4">
-          <h3 className="font-semibold mb-2">Landing Information</h3>
-          <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            Landing: {parseFloat(site.landingLat).toFixed(4)}°,{' '}
-            {parseFloat(site.landingLng).toFixed(4)}°
-          </p>
-        </Card>
-      )}
-
-      {/* Compact map - less prominent */}
-      <div>
-        <h3 className="text-sm font-medium mb-2">Location</h3>
-        <MapDisplayWrapper
-          latitude={parseFloat(site.latitude)}
-          longitude={parseFloat(site.longitude)}
-        />
-        {/* Source attribution - subtle */}
-        <p className="mt-1 text-xs text-muted-foreground">
-          Data source: {site.source === 'paraglidingearth' ? 'ParaglidingEarth.com' : site.source}
-        </p>
-      </div>
-
-      {/* Forecast section - streams in progressively */}
+      {/* Forecast section with flyability badge and summary - streams in progressively */}
       <Suspense fallback={<ForecastSkeleton />}>
         <SiteDetailForecast site={site} />
       </Suspense>
+
+      {/* Location & Details - collapsible accordion */}
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="details">
+          <AccordionTrigger className="text-lg font-semibold">
+            Location &amp; Details
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-6">
+              {/* Key information */}
+              <div className="space-y-3 text-sm">
+                {/* Elevation */}
+                {site.elevation && (
+                  <div>
+                    <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
+                  </div>
+                )}
+                {site.landingElevation && (
+                  <div>
+                    <ElevationDisplay elevationMeters={site.landingElevation} label="Landing" />
+                  </div>
+                )}
+
+                {/* Flying types */}
+                {site.flyingTypes && site.flyingTypes.length > 0 && (
+                  <div>
+                    <span className="font-medium">Flying Types:</span>{' '}
+                    <span className="text-muted-foreground">{site.flyingTypes.join(', ')}</span>
+                  </div>
+                )}
+
+                {/* Orientations - badge display */}
+                {site.orientations && Object.values(site.orientations).some((r) => r >= 1) && (
+                  <div>
+                    <div className="font-medium mb-2">Orientations:</div>
+                    <OrientationBadges orientations={site.orientations} />
+                  </div>
+                )}
+
+                {/* Ideal wind directions - badge display */}
+                {site.idealWindDirections && site.idealWindDirections.length > 0 && (
+                  <div>
+                    <div className="font-medium mb-2">Ideal Wind Directions:</div>
+                    <WindDirectionBadges directions={site.idealWindDirections} />
+                  </div>
+                )}
+
+                {/* Max wind speed */}
+                {site.maxWindSpeed && (
+                  <div>
+                    <span className="font-medium">Max Wind Speed:</span>{' '}
+                    <span className="text-muted-foreground">{site.maxWindSpeed} km/h</span>
+                  </div>
+                )}
+
+                {/* Coordinates - less prominent */}
+                <div className="text-xs text-muted-foreground">
+                  Location: {parseFloat(site.latitude).toFixed(4)}°,{' '}
+                  {parseFloat(site.longitude).toFixed(4)}°
+                </div>
+              </div>
+
+              {/* Description */}
+              {site.description && (
+                <div>
+                  <h3 className="font-semibold mb-2">Site Description</h3>
+                  <p className="text-sm text-muted-foreground">{site.description}</p>
+                </div>
+              )}
+
+              {/* Landing information */}
+              {site.landingLat && site.landingLng && site.landingDescription && (
+                <div>
+                  <h3 className="font-semibold mb-2">Landing Information</h3>
+                  <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Landing: {parseFloat(site.landingLat).toFixed(4)}°,{' '}
+                    {parseFloat(site.landingLng).toFixed(4)}°
+                  </p>
+                </div>
+              )}
+
+              {/* Map */}
+              <div>
+                <h3 className="text-sm font-medium mb-2">Location Map</h3>
+                <MapDisplayWrapper
+                  latitude={parseFloat(site.latitude)}
+                  longitude={parseFloat(site.longitude)}
+                />
+              </div>
+
+              {/* Source attribution - subtle */}
+              <p className="text-xs text-muted-foreground">
+                Data source:{' '}
+                {site.source === 'paraglidingearth' ? 'ParaglidingEarth.com' : site.source}
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
