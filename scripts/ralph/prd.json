@@ -97,7 +97,7 @@
         "npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Use shadcn/ui Accordion component for the collapsible section. Keep the existing Windgram/Table View tabs. The flyability badge should use clear colors: green=Great/Epic, yellow=Good/Fair, red=Poor."
     },
     {

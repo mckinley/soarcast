@@ -93,3 +93,28 @@ Files changed:
 - Don't mix fixed pixel widths with responsive CSS classes (w-full) - choose one approach
 - The site-card component now controls layout (h-20), while thumbnail component handles rendering at appropriate resolution
 ---
+## 2026-03-07 20:15 - US-005
+- Reordered site detail page to prioritize flyability information and windgram
+- Installed shadcn/ui Accordion component for collapsible sections
+- Moved flyability badge and summary text to top of page (before windgram)
+- Site details (orientations, elevation, map, description) now in collapsible "Location & Details" accordion
+- Accordion defaults to collapsed state, focusing user attention on forecast
+- Added tooltips to orientation badges: ●● = "Preferred", ● = "Possible"
+- Windgram now appears above the fold on desktop without scrolling
+- Maintained existing Windgram/Table View tabs within forecast section
+
+Files changed:
+- src/app/sites/[slug]/page.tsx: Reordered page layout, wrapped site details in Accordion
+- src/components/site-detail-client.tsx: Added flyability badge/summary card at top
+- src/components/orientation-badges.tsx: Added Tooltip wrapper for badge meanings
+- src/components/ui/accordion.tsx: Added shadcn/ui Accordion component
+
+**Learnings for future iterations:**
+- The flyability badge colors are defined in getScoreColorClass() in site-detail-client.tsx
+- Flyability labels from scoring.ts: Epic (86+), Great (71-85), Good (51-70), Fair (31-50), Poor (0-30)
+- The first score in scores[] array is always "today's" score (today = scores[0])
+- Accordion component from shadcn/ui defaults to collapsed unless you set defaultValue prop
+- TooltipProvider must wrap all Tooltip components - put it at the parent level, not per-tooltip
+- The cursor-help class gives the "?" cursor on hover to indicate tooltips are available
+- Badge color classes need explicit text-white to ensure readability on colored backgrounds
+---
