@@ -132,28 +132,36 @@ describe('windSpeedToBarb', () => {
   });
 
   describe('theme-based colors', () => {
-    it('should use different colors for light vs dark theme', () => {
+    it('should use white for all non-calm winds (US-003 RASP style)', () => {
       const lightBarb = windSpeedToBarb(20, 180, false);
       const darkBarb = windSpeedToBarb(20, 180, true);
 
-      expect(lightBarb.color).not.toBe(darkBarb.color);
+      // Both light and dark theme use white for non-calm winds
+      expect(lightBarb.color).toBe('rgb(255, 255, 255)');
+      expect(darkBarb.color).toBe('rgb(255, 255, 255)');
     });
 
-    it('should assign colors based on speed category', () => {
-      const calm = windSpeedToBarb(0, 180, false);
+    it('should use gray for calm winds', () => {
+      const calmLight = windSpeedToBarb(0, 180, false);
+      const calmDark = windSpeedToBarb(0, 180, true);
+
+      // Calm winds use gray (different for light/dark theme)
+      expect(calmLight.color).toBe('rgb(107, 114, 128)');
+      expect(calmDark.color).toBe('rgb(156, 163, 175)');
+      expect(calmLight.color).not.toBe(calmDark.color);
+    });
+
+    it('should assign white color for all wind speeds above calm', () => {
       const light = windSpeedToBarb(10, 180, false);
       const moderate = windSpeedToBarb(20, 180, false);
       const strong = windSpeedToBarb(30, 180, false);
       const dangerous = windSpeedToBarb(40, 180, false);
 
-      // Each category should have a distinct color (or at least most of them)
-      const colors = [calm.color, light.color, moderate.color, strong.color, dangerous.color];
-      const uniqueColors = new Set(colors);
-      expect(uniqueColors.size).toBeGreaterThanOrEqual(3); // At least 3 distinct colors
-
-      // Verify different categories have different colors
-      expect(calm.color).not.toBe(dangerous.color);
-      expect(light.color).not.toBe(strong.color);
+      // All non-calm winds should be white for contrast against lapse rate background
+      expect(light.color).toBe('rgb(255, 255, 255)');
+      expect(moderate.color).toBe('rgb(255, 255, 255)');
+      expect(strong.color).toBe('rgb(255, 255, 255)');
+      expect(dangerous.color).toBe('rgb(255, 255, 255)');
     });
   });
 
@@ -183,7 +191,7 @@ describe('formatWindTooltip', () => {
     const tooltip = formatWindTooltip(18.5, 180, { meters: 1500, feet: 4921 });
 
     expect(tooltip).toContain('10 kt'); // Speed in knots
-    expect(tooltip).toContain('11 mph'); // Speed in mph (18.5 km/h = 11.5 mph, rounds to 11)
+    expect(tooltip).toContain('19 km/h'); // Speed in km/h (rounds to 19)
     expect(tooltip).toContain('180°'); // Direction in degrees
     expect(tooltip).toContain('S'); // Cardinal direction
     expect(tooltip).toContain('1500m'); // Altitude in meters
@@ -214,7 +222,7 @@ describe('formatWindTooltip', () => {
     const tooltip = formatWindTooltip(0, 0, { meters: 500, feet: 1640 });
 
     expect(tooltip).toContain('0 kt');
-    expect(tooltip).toContain('0 mph');
+    expect(tooltip).toContain('0 km/h');
   });
 
   it('should round altitude values', () => {

@@ -62,24 +62,25 @@ export function windSpeedToBarb(
   const halfBarbs = Math.floor(remainingSpeed / 5);
 
   // Determine category and color
+  // US-003: Use white barbs for better contrast against lapse rate background (RASP style)
   let category: WindBarbConfig['category'];
   let color: string;
 
   if (speedKnots === 0) {
     category = 'calm';
-    color = isDarkTheme ? 'rgb(156, 163, 175)' : 'rgb(107, 114, 128)'; // gray
+    color = isDarkTheme ? 'rgb(156, 163, 175)' : 'rgb(107, 114, 128)'; // gray for calm
   } else if (speedKnots <= 10) {
     category = 'light';
-    color = isDarkTheme ? 'rgb(134, 239, 172)' : 'rgb(34, 197, 94)'; // green
+    color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white
   } else if (speedKnots <= 20) {
     category = 'moderate';
-    color = isDarkTheme ? 'rgb(253, 224, 71)' : 'rgb(234, 179, 8)'; // yellow
+    color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white
   } else if (speedKnots <= 30) {
     category = 'strong';
-    color = isDarkTheme ? 'rgb(251, 146, 60)' : 'rgb(249, 115, 22)'; // orange
+    color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white
   } else {
     category = 'dangerous';
-    color = isDarkTheme ? 'rgb(248, 113, 113)' : 'rgb(239, 68, 68)'; // red
+    color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white
   }
 
   return {
@@ -114,9 +115,9 @@ export function drawWindBarb(
   // Calm winds: draw circle
   if (speedKnots === 0) {
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5 * scale;
+    ctx.lineWidth = 2 * scale; // Increased from 1.5 for better visibility
     ctx.beginPath();
-    ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+    ctx.arc(x, y, 5 * scale, 0, Math.PI * 2); // Increased from 4 to 5
     ctx.stroke();
     return;
   }
@@ -126,16 +127,16 @@ export function drawWindBarb(
   // Rotate so barbs point into the wind
   const angleRad = ((direction + 180) * Math.PI) / 180;
 
-  // Shaft properties
-  const shaftLength = 20 * scale;
-  const barbLength = 8 * scale;
-  const halfBarbLength = 4 * scale;
-  const barbSpacing = 3.5 * scale;
+  // Shaft properties - increased for better visibility per US-003
+  const shaftLength = 24 * scale; // Increased from 20 to 24 for better readability
+  const barbLength = 10 * scale; // Increased from 8 to 10 for proportion
+  const halfBarbLength = 5 * scale; // Increased from 4 to 5 for proportion
+  const barbSpacing = 4 * scale; // Increased from 3.5 to 4 for proportion
   const barbAngle = Math.PI / 4; // 45 degrees
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 1.5 * scale;
+  ctx.lineWidth = 2 * scale; // Increased from 1.5 to 2 for better visibility
   ctx.lineCap = 'round';
   ctx.lineJoin = 'miter';
 
@@ -216,7 +217,6 @@ export function formatWindTooltip(
   altitude: { meters: number; feet: number },
 ): string {
   const speedKnots = Math.round(kmhToKnots(speedKmh));
-  const speedMph = Math.round(speedKmh * 0.621371);
 
   // Cardinal direction
   const cardinalDirs = [
@@ -240,5 +240,5 @@ export function formatWindTooltip(
   const cardinalIndex = Math.round(direction / 22.5) % 16;
   const cardinal = cardinalDirs[cardinalIndex];
 
-  return `${speedKnots} kt (${speedMph} mph) from ${direction}° (${cardinal})\n${Math.round(altitude.meters)}m / ${Math.round(altitude.feet)}ft`;
+  return `${speedKnots} kt (${Math.round(speedKmh)} km/h) from ${direction}° (${cardinal})\n${Math.round(altitude.meters)}m / ${Math.round(altitude.feet)}ft`;
 }
