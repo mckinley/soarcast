@@ -99,7 +99,7 @@ export function WindgramSection({ latitude, longitude, scores, days = 7 }: Windg
         </p>
       </div>
 
-      <WindgramInteractive data={profile} dayScores={scores} />
+      <WindgramInteractive key={profile?.fetchedAt} data={profile} dayScores={scores} />
     </div>
   );
 }

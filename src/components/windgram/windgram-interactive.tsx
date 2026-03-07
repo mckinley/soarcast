@@ -30,7 +30,6 @@ export function WindgramInteractive({
   loading = false,
   className = '',
 }: WindgramInteractiveProps) {
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Split hours into days
@@ -55,6 +54,21 @@ export function WindgramInteractive({
       hours,
     }));
   }, [data]);
+
+  // Calculate the default day index (today if available, otherwise first day)
+  const defaultDayIndex = useMemo(() => {
+    if (!days.length) return 0;
+
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    const todayIndex = days.findIndex((day) => day.dateString === todayString);
+
+    // If today is found, use it; otherwise use first available day
+    return todayIndex >= 0 ? todayIndex : 0;
+  }, [days]);
+
+  const [selectedDayIndex, setSelectedDayIndex] = useState(defaultDayIndex);
 
   // Get data for selected day
   const selectedDayData: AtmosphericProfile | null = useMemo(() => {
