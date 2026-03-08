@@ -15,7 +15,7 @@ interface WindgramD3Props {
   launchElevation?: number;
 }
 
-const PADDING = { top: 40, right: 60, bottom: 50, left: 60 };
+const PADDING = { top: 72, right: 60, bottom: 50, left: 60 };
 const MIN_ALT_M = 0;
 const MAX_ALT_M = 5500;
 
@@ -266,6 +266,89 @@ export function WindgramD3({
       .filter(({ i }) => i % step === 0 || i === daylightHours.length - 1);
   }, [daylightHours, xScale, width]);
 
+  // W* strip data
+  const wStarStrip = useMemo(() => {
+    if (!xScale || daylightHours.length === 0) return [];
+    const isMobile = width < 640;
+    return daylightHours.map((hour, i) => {
+      const ws = hour.derived.wStar;
+      let color: string;
+      if (ws === null || ws < 0.5) color = '#9ca3af';
+      else if (ws < 1) color = '#60a5fa';
+      else if (ws < 2) color = '#34d399';
+      else if (ws < 3) color = '#fb923c';
+      else color = '#ef4444';
+
+      const x0 = i === 0 ? 0 : xScale(i - 0.5);
+      const x1 = i === daylightHours.length - 1 ? chartW : xScale(i + 0.5);
+
+      return {
+        x: x0,
+        w: x1 - x0,
+        color,
+        label: ws !== null ? ws.toFixed(1) : '—',
+        show: !isMobile || i % 2 === 0,
+      };
+    });
+  }, [daylightHours, xScale, chartW, width]);
+
+  // Freezing level polyline
+  const freezingLevelLine = useMemo(() => {
+    if (!xScale || daylightHours.length === 0) return null;
+    const points = daylightHours
+      .map((hour, i) => {
+        const fl = hour.derived.freezingLevel;
+        if (fl === null || fl < MIN_ALT_M || fl > MAX_ALT_M) return null;
+        return [xScale(i), yScale(fl)] as [number, number];
+      })
+      .filter((p): p is [number, number] => p !== null);
+    if (points.length < 2) return null;
+    return points.map(([x, y]) => `${x},${y}`).join(' ');
+  }, [daylightHours, xScale, yScale]);
+
+  // Wind shear zone bands
+  const shearBands = useMemo(() => {
+    if (!xScale || daylightHours.length === 0) return [];
+    const bands: Array<{ x: number; y: number; w: number; h: number }> = [];
+
+    for (let t = 0; t < daylightHours.length; t++) {
+      const hour = daylightHours[t];
+      const levels = hour.pressureLevels;
+      const x0 = t === 0 ? 0 : xScale(t - 0.5);
+      const x1 = t === daylightHours.length - 1 ? chartW : xScale(t + 0.5);
+
+      for (let l = 0; l < levels.length - 1; l++) {
+        const delta = Math.abs(levels[l].windSpeed - levels[l + 1].windSpeed);
+        if (delta > 20) {
+          const lowerAlt = Math.max(MIN_ALT_M, levels[l].geopotentialHeight);
+          const upperAlt = Math.min(MAX_ALT_M, levels[l + 1].geopotentialHeight);
+          if (lowerAlt >= upperAlt) continue;
+          bands.push({
+            x: x0,
+            y: yScale(upperAlt),
+            w: x1 - x0,
+            h: yScale(lowerAlt) - yScale(upperAlt),
+          });
+        }
+      }
+    }
+    return bands;
+  }, [daylightHours, xScale, yScale, chartW]);
+
+  // Soaring ceiling (top of lift) polyline
+  const ceilingLine = useMemo(() => {
+    if (!xScale || daylightHours.length === 0) return null;
+    const points = daylightHours
+      .map((hour, i) => {
+        const tol = hour.derived.estimatedTopOfLift;
+        if (tol === null || tol < MIN_ALT_M || tol > MAX_ALT_M) return null;
+        return [xScale(i), yScale(tol)] as [number, number];
+      })
+      .filter((p): p is [number, number] => p !== null);
+    if (points.length < 2) return null;
+    return points.map(([x, y]) => `${x},${y}`).join(' ');
+  }, [daylightHours, xScale, yScale]);
+
   if (loading || !data) {
     return (
       <div className={`w-full ${className}`} ref={containerRef}>
@@ -313,6 +396,48 @@ export function WindgramD3({
           />
         </defs>
 
+        {/* ── W* strip above chart ── */}
+        <g transform={`translate(${PADDING.left},${PADDING.top - 32})`}>
+          {wStarStrip.map((cell, i) => (
+            <g key={i}>
+              <rect
+                x={cell.x}
+                y={0}
+                width={cell.w}
+                height={20}
+                fill={cell.color}
+                rx={2}
+              />
+              {cell.show && (
+                <text
+                  x={cell.x + cell.w / 2}
+                  y={10}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={isDark ? '#000' : '#fff'}
+                  fontSize={9}
+                  fontWeight="bold"
+                  fontFamily="inherit"
+                >
+                  {cell.label}
+                </text>
+              )}
+            </g>
+          ))}
+          {/* W* label on left margin */}
+          <text
+            x={-6}
+            y={10}
+            textAnchor="end"
+            dominantBaseline="central"
+            fill={textColor}
+            fontSize={10}
+            fontFamily="inherit"
+          >
+            W* m/s
+          </text>
+        </g>
+
         <g transform={`translate(${PADDING.left},${PADDING.top})`}>
           {/* ── Lapse rate background ── */}
           <g clipPath="url(#chart-clip)">
@@ -324,6 +449,20 @@ export function WindgramD3({
                 width={cell.w}
                 height={cell.h}
                 fill={cell.color}
+              />
+            ))}
+          </g>
+
+          {/* ── Wind shear zone bands ── */}
+          <g clipPath="url(#chart-clip)">
+            {shearBands.map((band, i) => (
+              <rect
+                key={i}
+                x={band.x}
+                y={band.y}
+                width={band.w}
+                height={band.h}
+                fill="rgba(251,146,60,0.25)"
               />
             ))}
           </g>
@@ -422,6 +561,69 @@ export function WindgramD3({
                 fontFamily="inherit"
               >
                 Cloud Base
+              </text>
+            );
+          })()}
+
+          {/* ── Freezing level line (dashed icy-blue) ── */}
+          {freezingLevelLine && (
+            <polyline
+              points={freezingLevelLine}
+              fill="none"
+              stroke="#93c5fd"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              clipPath="url(#chart-clip)"
+            />
+          )}
+          {/* Freezing level label at right edge */}
+          {freezingLevelLine && daylightHours.length > 0 && (() => {
+            const lastHour = daylightHours[daylightHours.length - 1];
+            const fl = lastHour.derived.freezingLevel;
+            if (fl === null || fl < MIN_ALT_M || fl > MAX_ALT_M) return null;
+            const y = yScale(fl);
+            return (
+              <text
+                x={chartW + 4}
+                y={y}
+                fill="#93c5fd"
+                fontSize={10}
+                dominantBaseline="middle"
+                fontFamily="inherit"
+              >
+                0°C
+              </text>
+            );
+          })()}
+
+          {/* ── Soaring ceiling line (gold, thick) ── */}
+          {ceilingLine && (
+            <polyline
+              points={ceilingLine}
+              fill="none"
+              stroke="#fbbf24"
+              strokeWidth={3}
+              strokeDasharray="10 5"
+              clipPath="url(#chart-clip)"
+            />
+          )}
+          {/* Ceiling label at right edge */}
+          {ceilingLine && daylightHours.length > 0 && (() => {
+            const lastHour = daylightHours[daylightHours.length - 1];
+            const tol = lastHour.derived.estimatedTopOfLift;
+            if (tol === null || tol < MIN_ALT_M || tol > MAX_ALT_M) return null;
+            const y = yScale(tol);
+            return (
+              <text
+                x={chartW + 4}
+                y={y}
+                fill="#fbbf24"
+                fontSize={10}
+                dominantBaseline="middle"
+                fontWeight="bold"
+                fontFamily="inherit"
+              >
+                Ceiling
               </text>
             );
           })()}
