@@ -9,6 +9,11 @@ import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '@
 import type { DayAnalysis } from '@/lib/notifications';
 import type { Site } from '@/types';
 import webpush from 'web-push';
+import { Resend } from 'resend';
+import { render } from '@react-email/components';
+import { MorningDigestEmail } from '@/emails/morning-digest';
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Configure web-push with VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -177,6 +182,39 @@ export async function POST(request: NextRequest) {
                       .delete(pushSubscriptions)
                       .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
                   }
+                  totalErrors++;
+                }
+              }
+
+              // Send email digest if user has email + resend configured
+              if (resend && user.email) {
+                try {
+                  const dateLabel = new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  });
+
+                  const emailSites = siteAnalyses.map(({ site, analysis }) => ({
+                    name: site.name,
+                    score: Math.round(analysis.score),
+                    label: analysis.rating as 'Epic' | 'Great' | 'Good' | 'Fair' | 'Poor',
+                  }));
+
+                  const html = await render(
+                    MorningDigestEmail({ date: dateLabel, sites: emailSites }),
+                  );
+
+                  await resend.emails.send({
+                    from: 'SoarCast <digest@soarcast.app>',
+                    to: user.email,
+                    subject: `Your SoarCast Morning Digest - ${dateLabel}`,
+                    html,
+                  });
+                  totalNotificationsSent++;
+                } catch (emailError) {
+                  console.error(`Failed to send email digest to ${user.email}:`, emailError);
                   totalErrors++;
                 }
               }

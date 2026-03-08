@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { updateSettings, toggleSiteNotifications } from '@/app/settings/actions';
+import { updateSettings, toggleSiteNotifications, toggleEmailDigest } from '@/app/settings/actions';
 import type { Settings, Site } from '@/types';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -313,6 +313,37 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
             <p className="text-sm text-muted-foreground">
               How far in advance to check for qualifying days (e.g., 2 = today and tomorrow).
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Morning Digest */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Email Morning Digest</CardTitle>
+          <CardDescription>
+            Receive a daily email at ~7 AM showing today&apos;s flyability for your sites.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="email-digest">Enable Email Digest</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Sent each morning with today&apos;s flyability scores for all your sites.
+              </p>
+            </div>
+            <Switch
+              id="email-digest"
+              checked={settings.emailDigest.enabled}
+              onCheckedChange={(checked) => {
+                setSettings({ ...settings, emailDigest: { enabled: checked } });
+                startTransition(async () => {
+                  await toggleEmailDigest(checked);
+                });
+              }}
+              disabled={isPending}
+            />
           </div>
         </CardContent>
       </Card>

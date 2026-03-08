@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
     daysAhead: 2,
     sitePreferences: {},
   },
+  emailDigest: { enabled: false },
   updatedAt: new Date().toISOString(),
 };
 
@@ -48,6 +49,7 @@ async function dbSettingsToApp(
       daysAhead: dbSettings.daysAhead,
       sitePreferences: legacySitePreferences,
     },
+    emailDigest: { enabled: dbSettings.morningDigestEnabled },
     updatedAt: dbSettings.updatedAt.toISOString(),
   };
 }
@@ -193,6 +195,30 @@ export async function toggleSiteNotifications(siteId: string, enabled: boolean):
 
   revalidatePath('/settings');
   revalidatePath('/'); // Revalidate dashboard
+}
+
+/**
+ * Toggle email morning digest for the current user
+ */
+export async function toggleEmailDigest(enabled: boolean): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      morningDigestEnabled: enabled,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: { morningDigestEnabled: enabled, updatedAt: new Date() },
+    });
+
+  revalidatePath('/settings');
 }
 
 /**

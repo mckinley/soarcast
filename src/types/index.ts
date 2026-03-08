@@ -60,6 +60,9 @@ export interface Settings {
     daysAhead: number; // default 2
     sitePreferences: Record<string, boolean>; // siteId -> enabled
   };
+  emailDigest: {
+    enabled: boolean; // morning email digest toggle
+  };
   updatedAt: string;
 }
 
