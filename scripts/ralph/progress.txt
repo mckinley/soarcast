@@ -270,3 +270,106 @@ Files changed:
 - The icon.tsx uses ImageResponse to generate favicon dynamically with 🪂 emoji
 - PWA icons use SVG with cloud + wind graphics (blue gradient background)
 ---
+## 2026-03-08 10:00 - soarcast-1fq - Build D3 SVG windgram chart (full view)
+- Created new WindgramD3 component at src/components/windgram/windgram-d3.tsx
+- Pure SVG chart using D3 scaleLinear for X (time) and Y (altitude) axes
+- Lapse rate colored SVG rects with proportional altitude from geopotentialHeight values
+- Wind barbs as SVG paths with rotate(direction) transform on <g> elements
+- Cloud base dashed cyan line from hour.derived.estimatedCloudBase + data.elevation (AGL→MSL)
+- Launch elevation solid line with dimming overlay below it
+- Y axis labels in feet with secondary meters; X axis hourly time labels
+- ResizeObserver for responsive width; height auto-calculated from width
+- Installed d3 and @types/d3
+- Replaced WindgramChart with WindgramD3 in windgram-interactive.tsx
+
+Files changed:
+- src/components/windgram/windgram-d3.tsx: new file (entire component)
+- src/components/windgram/windgram-interactive.tsx: import/usage swap
+- package.json, package-lock.json: d3 dependency added
+
+**Learnings for future iterations:**
+- SVG wind barbs: use <g transform="translate(cx,cy) rotate(direction)"> then draw shaft upward (negative Y), barbs at end
+- D3 scaleLinear().domain([0, n-1]).range([0, chartW]) for evenly-spaced time slots
+- Cloud base is stored as AGL (above ground level) in derived.estimatedCloudBase — add data.elevation for MSL
+- Use polyline points="x1,y1 x2,y2 ..." for connected lines in SVG (simpler than <path d="M...L...">)
+- SVG clipPath with url(#chart-clip) prevents chart elements from overflowing axes area
+---
+## 2026-03-08 10:30 - soarcast-j0m - Fix windgram thumbnail: SVG lapse rate heatmap
+- Replaced canvas implementation with pure SVG thumbnail
+- viewBox="0 0 100 100" + preserveAspectRatio="none" scales to any size perfectly
+- Y positions computed from actual geopotentialHeight values (proportional altitude)
+- Filters to first day's daylight hours (6 AM-8 PM)
+- No DPI hacks, ResizeObserver, or canvas needed - SVG handles scaling natively
+- useTheme() hook for dark/light mode awareness
+
+Files changed:
+- src/components/windgram/windgram-thumbnail.tsx: complete rewrite
+
+**Learnings for future iterations:**
+- SVG thumbnails: use percentage-based coordinates (0-100 viewBox) with math to map altitude → Y
+- For SVG-only thumbnails with no labels, you can drop all imports and just compute rect arrays via useMemo
+- The previous canvas thumbnail had uniform cell heights ignoring real altitude differences
+---
+## 2026-03-08 11:00 - soarcast-kn1 - Fix dashboard heading and Tiger Mountain elevation
+- Both issues already fixed by previous iterations
+- Dashboard heading "7-Day Flying Forecast" was set in US-002
+- Tiger Mountain elevation = 543m in Turso DB (correctly set when US-003 migrated it from custom_site to launch_site)
+- Queried DB with tsx script to confirm: all 3 user_favorite_sites have correct elevations
+
+Files changed: none (pre-existing fixes from US-002 and US-003)
+---
+## 2026-03-08 11:15 - soarcast-9pt - Remove inline legend from dashboard site cards
+- Removed the per-card Epic/Great/Good/Fair/Poor legend from SevenDayBar component
+- Changed component from flex-col (dots + legend) to flex (dots only)
+- Tooltips on each dot still show full label and score
+
+Files changed:
+- src/components/dashboard/seven-day-bar.tsx: removed 22-line legend div, simplified wrapper
+
+**Learnings for future iterations:**
+- SevenDayBar component is in src/components/dashboard/seven-day-bar.tsx
+- Color mapping for flyability: Epic=purple-500, Great=green-500, Good=blue-500, Fair=yellow-500, Poor=gray-400
+---
+## 2026-03-08 11:30 - soarcast-e43 - Forecast API caching (Next.js unstable_cache)
+- Added unstable_cache wrapper in the API route handler (not in the lib function)
+- API route already had Cache-Control header; getAtmosphericProfile already had Turso DB caching
+- Added module-level Map cache (5-min TTL) in windgram-section.tsx for browser-side caching
+- Could NOT add revalidateTag for Refresh All — Next.js 16 changed revalidateTag() to require 2 args
+- unstable_cache expires naturally after 1 hour; fetchAllForecasts writes fresh data to DB
+
+Files changed:
+- src/app/api/weather/profile/route.ts: unstable_cache wrapper
+- src/components/windgram-section.tsx: module-level Map cache
+- src/app/dashboard/actions.ts: no change needed (revalidatePath was already there)
+
+**Learnings for future iterations:**
+- Next.js 16: revalidateTag() requires 2 arguments (tag, profile) — breaking change from v13/14
+- unstable_cache should go in route handlers/server components, not in lib functions that already cache
+- Browser module-level Map cache (module-level, not useState) persists across component unmounts/remounts
+- Cache key pattern: toFixed(3) for lat/lng rounds to ~100m precision (good for weather data)
+---
+## 2026-03-08 12:00 - soarcast-pz5 - Email notifications via Resend (morning digest)
+- Installed resend + @react-email/components
+- Created src/emails/morning-digest.tsx: React Email template with site flyability scores and colored badges
+- Extended Settings type with emailDigest.enabled field
+- Extended settings/actions.ts: dbSettingsToApp now includes emailDigest, added toggleEmailDigest() action
+- Added Email Morning Digest toggle card to settings-client.tsx UI
+- Added email sending in notification check route (alongside existing push notifications)
+- Email gracefully no-ops if RESEND_API_KEY not configured (resend = null check)
+- Documented RESEND_API_KEY in .env.example
+
+Files changed:
+- src/emails/morning-digest.tsx: new React Email template
+- src/types/index.ts: Settings interface emailDigest field
+- src/app/settings/actions.ts: dbSettingsToApp + toggleEmailDigest
+- src/components/settings-client.tsx: email digest toggle card + import
+- src/app/api/notifications/check/route.ts: Resend email sending in morning digest section
+- .env.example: RESEND_API_KEY documentation
+
+**Learnings for future iterations:**
+- React Email render(): `import { render } from '@react-email/components'` then `await render(<Component />)`
+- Settings data flow: DB schema (morningDigestEnabled) → dbSettingsToApp transform → Settings type (emailDigest.enabled) → client state
+- The notification check route uses legacy `sites` table, not new launch_sites/custom_sites architecture
+- Resend.emails.send() takes { from, to, subject, html } — html is the rendered React Email string
+- RESEND_API_KEY guard: `const resend = process.env.RESEND_API_KEY ? new Resend(key) : null`
+---
