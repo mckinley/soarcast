@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WindIndicator } from '@/components/wind-indicator';
 import { WindgramSection } from '@/components/windgram-section';
+import { CloudLightning, TriangleAlert, Snowflake, Wind as WindIcon } from 'lucide-react';
 import type { Site, Forecast, DayScore } from '@/types';
 
 interface SiteDetailClientProps {
@@ -216,6 +217,49 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                           {score.overallScore} - {score.label}
                         </Badge>
                       </div>
+
+                      {/* Hazard badges */}
+                      {(score.odRisk === 'moderate' ||
+                        score.odRisk === 'high' ||
+                        score.windShear === 'moderate' ||
+                        score.windShear === 'high' ||
+                        score.freezingConcern ||
+                        avgWind850 > 40) && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(score.odRisk === 'moderate' || score.odRisk === 'high') && (
+                            <span
+                              title="Overdevelopment risk: strong thermals may produce afternoon storms"
+                              className="text-orange-500"
+                            >
+                              <CloudLightning size={14} />
+                            </span>
+                          )}
+                          {(score.windShear === 'moderate' || score.windShear === 'high') && (
+                            <span
+                              title="Significant wind shear in the soaring layer — turbulence likely"
+                              className="text-yellow-500"
+                            >
+                              <TriangleAlert size={14} />
+                            </span>
+                          )}
+                          {score.freezingConcern && (
+                            <span
+                              title="Freezing level is low — icing risk near cloud base"
+                              className="text-blue-400"
+                            >
+                              <Snowflake size={14} />
+                            </span>
+                          )}
+                          {avgWind850 > 40 && (
+                            <span
+                              title="Strong upper winds at 850hPa — challenging XC conditions"
+                              className="text-slate-400"
+                            >
+                              <WindIcon size={14} />
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Wind */}
                       <div className="flex items-center justify-between text-sm">
