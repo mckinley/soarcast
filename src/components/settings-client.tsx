@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { updateSettings, toggleSiteNotifications, toggleEmailDigest } from '@/app/settings/actions';
+import { updateSettings, toggleSiteNotifications, toggleEmailDigest, updateDigestTime, updateSiteMinRating } from '@/app/settings/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Settings, Site } from '@/types';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -337,7 +338,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               id="email-digest"
               checked={settings.emailDigest.enabled}
               onCheckedChange={(checked) => {
-                setSettings({ ...settings, emailDigest: { enabled: checked } });
+                setSettings({ ...settings, emailDigest: { ...settings.emailDigest, enabled: checked } });
                 startTransition(async () => {
                   await toggleEmailDigest(checked);
                 });
@@ -345,6 +346,28 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               disabled={isPending}
             />
           </div>
+          {settings.emailDigest.enabled && (
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="digest-time">Delivery Time</Label>
+              <Input
+                id="digest-time"
+                type="time"
+                value={settings.emailDigest.digestTime}
+                onChange={(e) => {
+                  const time = e.target.value;
+                  setSettings({ ...settings, emailDigest: { ...settings.emailDigest, digestTime: time } });
+                  startTransition(async () => {
+                    await updateDigestTime(time);
+                  });
+                }}
+                disabled={isPending}
+                className="max-w-[140px]"
+              />
+              <p className="text-sm text-muted-foreground">
+                When to receive your morning digest (your local time).
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -366,27 +389,64 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                 return (
                   <div
                     key={site.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
+                    className="rounded-lg border p-4 space-y-3"
                   >
-                    <div className="flex items-center gap-3">
-                      {isEnabled ? (
-                        <Bell className="h-5 w-5 text-primary" />
-                      ) : (
-                        <BellOff className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <div>
-                        <div className="font-medium">{site.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}
-                          m
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {isEnabled ? (
+                          <Bell className="h-5 w-5 text-primary" />
+                        ) : (
+                          <BellOff className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <div className="font-medium">{site.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}
+                            m
+                          </div>
                         </div>
                       </div>
+                      <Switch
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
+                        disabled={isPending}
+                      />
                     </div>
-                    <Switch
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
-                      disabled={isPending}
-                    />
+                    {isEnabled && (
+                      <div className="flex items-center gap-2 pl-8">
+                        <Label className="text-sm text-muted-foreground whitespace-nowrap">Min rating:</Label>
+                        <Select
+                          value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
+                          onValueChange={(value) => {
+                            const rating = value === 'any' ? undefined : value as 'Good' | 'Great' | 'Epic';
+                            setSettings({
+                              ...settings,
+                              notifications: {
+                                ...settings.notifications,
+                                siteMinRatings: {
+                                  ...settings.notifications.siteMinRatings,
+                                  [site.id]: rating,
+                                },
+                              },
+                            });
+                            startTransition(async () => {
+                              await updateSiteMinRating(site.id, rating);
+                            });
+                          }}
+                          disabled={isPending}
+                        >
+                          <SelectTrigger className="w-[120px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any</SelectItem>
+                            <SelectItem value="Good">Good+</SelectItem>
+                            <SelectItem value="Great">Great+</SelectItem>
+                            <SelectItem value="Epic">Epic</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 );
               })}

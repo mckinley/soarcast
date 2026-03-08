@@ -13,8 +13,9 @@ const DEFAULT_SETTINGS: Settings = {
     minScoreThreshold: 70,
     daysAhead: 2,
     sitePreferences: {},
+    siteMinRatings: {},
   },
-  emailDigest: { enabled: false },
+  emailDigest: { enabled: false, digestTime: '08:00' },
   updatedAt: new Date().toISOString(),
 };
 
@@ -38,8 +39,10 @@ async function dbSettingsToApp(
 
   // Convert new SiteNotificationPreferences format to old boolean format for backward compat
   const legacySitePreferences: Record<string, boolean> = {};
+  const siteMinRatings: Record<string, 'Good' | 'Great' | 'Epic' | undefined> = {};
   for (const [siteId, prefs] of Object.entries(dbSettings.siteNotifications)) {
     legacySitePreferences[siteId] = prefs.enabled ?? true;
+    siteMinRatings[siteId] = prefs.minRating;
   }
 
   return {
@@ -48,8 +51,12 @@ async function dbSettingsToApp(
       minScoreThreshold: dbSettings.minScoreThreshold,
       daysAhead: dbSettings.daysAhead,
       sitePreferences: legacySitePreferences,
+      siteMinRatings,
     },
-    emailDigest: { enabled: dbSettings.morningDigestEnabled },
+    emailDigest: {
+      enabled: dbSettings.morningDigestEnabled,
+      digestTime: dbSettings.morningDigestTime ?? '08:00',
+    },
     updatedAt: dbSettings.updatedAt.toISOString(),
   };
 }
@@ -216,6 +223,79 @@ export async function toggleEmailDigest(enabled: boolean): Promise<void> {
     .onConflictDoUpdate({
       target: settings.userId,
       set: { morningDigestEnabled: enabled, updatedAt: new Date() },
+    });
+
+  revalidatePath('/settings');
+}
+
+/**
+ * Update the morning digest delivery time
+ */
+export async function updateDigestTime(time: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Validate HH:MM format
+  if (!/^\d{2}:\d{2}$/.test(time)) {
+    throw new Error('Invalid time format. Use HH:MM.');
+  }
+
+  await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      morningDigestTime: time,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: { morningDigestTime: time, updatedAt: new Date() },
+    });
+
+  revalidatePath('/settings');
+}
+
+/**
+ * Update the minimum rating threshold for a specific site's notifications
+ */
+export async function updateSiteMinRating(
+  siteId: string,
+  minRating: 'Good' | 'Great' | 'Epic' | undefined,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const [currentDbSettings] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.userId, session.user.id))
+    .limit(1);
+
+  const currentPrefs = currentDbSettings?.siteNotifications?.[siteId] ?? {};
+  const updatedSitePreferences: Record<string, SiteNotificationPreferences> = {
+    ...currentDbSettings?.siteNotifications,
+    [siteId]: { ...currentPrefs, minRating },
+  };
+
+  await db
+    .insert(settings)
+    .values({
+      userId: session.user.id,
+      minScoreThreshold: currentDbSettings?.minScoreThreshold ?? 70,
+      daysAhead: currentDbSettings?.daysAhead ?? 2,
+      siteNotifications: updatedSitePreferences,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: {
+        siteNotifications: updatedSitePreferences,
+        updatedAt: new Date(),
+      },
     });
 
   revalidatePath('/settings');

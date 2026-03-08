@@ -66,9 +66,11 @@ export interface Settings {
     minScoreThreshold: number; // default 70
     daysAhead: number; // default 2
     sitePreferences: Record<string, boolean>; // siteId -> enabled
+    siteMinRatings: Record<string, 'Good' | 'Great' | 'Epic' | undefined>; // siteId -> minRating
   };
   emailDigest: {
     enabled: boolean; // morning email digest toggle
+    digestTime: string; // HH:MM format, default '08:00'
   };
   updatedAt: string;
 }
