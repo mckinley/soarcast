@@ -2,6 +2,7 @@
 // Analyzes hourly weather data to score XC flying potential for each day
 
 import { Forecast, Site, DayScore } from '@/types';
+import type { AtmosphericProfile, AtmosphericHour } from '@/lib/weather-profile';
 
 // Scoring weights (must sum to 100%)
 const WEIGHTS = {
@@ -344,6 +345,277 @@ function createPoorScore(date: string): DayScore {
       upperWind: 0,
     },
   };
+}
+
+// ─────────────────────────────────────────────────
+// Scoring v2: Profile-based scoring with W*, OD penalties, wind shear
+// ─────────────────────────────────────────────────
+
+// v2 weights (same total, W* replaces CAPE)
+const WEIGHTS_V2 = {
+  W_STAR: 0.25, // Thermal strength (replaces CAPE)
+  WIND_SPEED: 0.2,
+  WIND_DIRECTION: 0.15,
+  CLOUD_COVER: 0.1,
+  PRECIPITATION: 0.05,
+  BLH: 0.15,
+  UPPER_WIND: 0.1,
+};
+
+/**
+ * Scores W* (thermal updraft velocity) on 0-100 scale
+ * null/0 → 0, 1 m/s → 40, 2 m/s → 75, 3+ m/s → 100
+ */
+function scoreWStar(wStar: number | null): number {
+  if (wStar === null || wStar <= 0) return 0;
+  if (wStar >= 3) return 100;
+  // Piecewise linear: 0→0, 1→40, 2→75, 3→100
+  if (wStar <= 1) return wStar * 40;
+  if (wStar <= 2) return 40 + (wStar - 1) * 35;
+  return 75 + (wStar - 2) * 25;
+}
+
+/**
+ * Determines the dynamic flyable window from sunrise/sunset
+ * start = max(10:00, sunrise + 2h), end = min(19:00, sunset - 1.5h)
+ */
+function getFlyableWindow(
+  sunrise: string,
+  sunset: string,
+): { startHour: number; endHour: number } {
+  const sunriseHour = parseTimeToHour(sunrise);
+  const sunsetHour = parseTimeToHour(sunset);
+
+  const startHour = Math.max(10, sunriseHour + 2);
+  const endHour = Math.min(19, sunsetHour - 1.5);
+
+  return { startHour, endHour };
+}
+
+/**
+ * Parses an ISO time string or "HH:MM" to decimal hours
+ */
+function parseTimeToHour(timeStr: string): number {
+  // Handle ISO format "2024-01-01T06:30" or just "06:30"
+  const match = timeStr.match(/(\d{2}):(\d{2})/);
+  if (!match) return 12;
+  return parseInt(match[1]) + parseInt(match[2]) / 60;
+}
+
+/**
+ * Calculates XC soaring scores using AtmosphericProfile data (v2)
+ * Uses W* instead of CAPE, dynamic flyable window, OD & shear penalties
+ * @param profile - AtmosphericProfile with derived parameters
+ * @param forecast - Forecast with sunrise/sunset data
+ * @param site - Site configuration
+ * @returns Array of DayScore objects with v2 fields populated
+ */
+export function calculateDailyScoresFromProfile(
+  profile: AtmosphericProfile,
+  forecast: Forecast,
+  site: Site,
+): DayScore[] {
+  // Get sunrise/sunset for dynamic window
+  const { startHour, endHour } = getFlyableWindow(forecast.sunrise, forecast.sunset);
+
+  // Group profile hours by day
+  const dayMap = new Map<string, AtmosphericHour[]>();
+  for (const hour of profile.hours) {
+    const date = hour.time.split('T')[0];
+    const hourNum = parseInt(hour.time.slice(11, 13));
+    if (hourNum >= startHour && hourNum <= endHour) {
+      if (!dayMap.has(date)) dayMap.set(date, []);
+      dayMap.get(date)!.push(hour);
+    }
+  }
+
+  // Also group forecast hourly data by day for wind/cloud/precip scoring
+  const forecastDayMap = new Map<string, HourlyDataPoint[]>();
+  forecast.hourly.time.forEach((timeStr, index) => {
+    const date = timeStr.split('T')[0];
+    const hour = parseInt(timeStr.split('T')[1].split(':')[0], 10);
+    if (hour >= startHour && hour <= endHour) {
+      if (!forecastDayMap.has(date)) forecastDayMap.set(date, []);
+      forecastDayMap.get(date)!.push({
+        hour,
+        temperature: forecast.hourly.temperature_2m[index],
+        windSpeed: forecast.hourly.wind_speed_10m[index],
+        windDirection: forecast.hourly.wind_direction_10m[index],
+        windGusts: forecast.hourly.wind_gusts_10m[index],
+        cloudCover: forecast.hourly.cloud_cover[index],
+        cape: forecast.hourly.cape[index],
+        precipProbability: forecast.hourly.precipitation_probability[index],
+        pressure: forecast.hourly.pressure_msl[index],
+        boundaryLayerHeight: forecast.hourly.boundary_layer_height[index],
+        windSpeed850hPa: forecast.hourly.wind_speed_850hPa[index],
+        windDirection850hPa: forecast.hourly.wind_direction_850hPa[index],
+        convectiveInhibition: forecast.hourly.convective_inhibition[index],
+      });
+    }
+  });
+
+  const scores: DayScore[] = [];
+
+  for (const [date, profileHours] of dayMap) {
+    const forecastHours = forecastDayMap.get(date) || [];
+
+    if (profileHours.length === 0) {
+      scores.push(createPoorScore(date));
+      continue;
+    }
+
+    // W* scoring (replaces CAPE)
+    const wStarValues = profileHours.map((h) => h.derived.wStar);
+    const peakWStar = Math.max(...wStarValues.filter((v): v is number => v !== null), 0);
+    const avgWStar =
+      wStarValues.filter((v): v is number => v !== null).reduce((a, b) => a + b, 0) /
+      Math.max(1, wStarValues.filter((v) => v !== null).length);
+    const wStarScore = scoreWStar(avgWStar);
+
+    // Use forecast hours for remaining factors (same as v1)
+    const avgWindSpeed = calculateAverage(forecastHours.map((h) => h.windSpeed));
+    const avgWindDirection = calculateCircularMean(forecastHours.map((h) => h.windDirection));
+    const avgCloudCover = calculateAverage(forecastHours.map((h) => h.cloudCover));
+    const avgPrecipProb = calculateAverage(forecastHours.map((h) => h.precipProbability));
+    const avgBLH = calculateAverage(
+      forecastHours
+        .map((h) => h.boundaryLayerHeight ?? null)
+        .filter((v): v is number => v !== null),
+    );
+    const avgUpperWind = calculateAverage(
+      forecastHours.map((h) => h.windSpeed850hPa ?? null).filter((v): v is number => v !== null),
+    );
+
+    const windSpeedScore = scoreWindSpeed(avgWindSpeed, site.maxWindSpeed);
+    const windDirectionScore = scoreWindDirection(avgWindDirection, site.idealWindDirections);
+    const cloudCoverScore = scoreCloudCover(avgCloudCover);
+    const precipScore = scorePrecipitation(avgPrecipProb);
+    const blhScore = scoreBoundaryLayerHeight(avgBLH);
+    const upperWindScore = scoreUpperWind(avgUpperWind);
+
+    // Weighted score
+    let overallScore =
+      wStarScore * WEIGHTS_V2.W_STAR +
+      windSpeedScore * WEIGHTS_V2.WIND_SPEED +
+      windDirectionScore * WEIGHTS_V2.WIND_DIRECTION +
+      cloudCoverScore * WEIGHTS_V2.CLOUD_COVER +
+      precipScore * WEIGHTS_V2.PRECIPITATION +
+      blhScore * WEIGHTS_V2.BLH +
+      upperWindScore * WEIGHTS_V2.UPPER_WIND;
+
+    // OD penalty
+    const avgOd =
+      profileHours.reduce((sum, h) => sum + h.derived.odPotential, 0) / profileHours.length;
+    let odRisk: DayScore['odRisk'] = 'none';
+    if (avgOd >= 2.5) {
+      overallScore -= 20;
+      odRisk = 'high';
+    } else if (avgOd >= 2) {
+      overallScore -= 10;
+      odRisk = 'moderate';
+    } else if (avgOd >= 1) {
+      odRisk = 'low';
+    }
+
+    // Wind shear penalty
+    const maxShear = Math.max(
+      ...profileHours.map((h) => h.derived.windShearMax ?? 0),
+    );
+    let windShear: DayScore['windShear'] = 'none';
+    if (maxShear > 40) {
+      overallScore -= 15;
+      windShear = 'high';
+    } else if (maxShear > 25) {
+      overallScore -= 8;
+      windShear = 'moderate';
+    } else if (maxShear > 15) {
+      windShear = 'low';
+    }
+
+    // Clamp to 0 minimum
+    overallScore = Math.max(0, Math.round(overallScore));
+
+    // Best window: find contiguous hours with best W*
+    const bestWindowStr = findBestWindow(profileHours);
+
+    // Freezing concern: freezing level below 3000m MSL
+    const minFreezing = Math.min(
+      ...profileHours
+        .map((h) => h.derived.freezingLevel)
+        .filter((v): v is number => v !== null),
+      Infinity,
+    );
+    const freezingConcern = minFreezing < 3000;
+
+    // Peak ceiling (top of lift)
+    const peakCeiling = Math.max(
+      ...profileHours
+        .map((h) => h.derived.estimatedTopOfLift)
+        .filter((v): v is number => v !== null),
+      0,
+    );
+
+    scores.push({
+      date,
+      overallScore,
+      label: scoreToLabel(overallScore),
+      factors: {
+        cape: Math.round(wStarScore), // W* replaces CAPE in factors
+        windSpeed: Math.round(windSpeedScore),
+        windDirection: Math.round(windDirectionScore),
+        cloudCover: Math.round(cloudCoverScore),
+        precipitation: Math.round(precipScore),
+        blh: Math.round(blhScore),
+        upperWind: Math.round(upperWindScore),
+      },
+      wStar: peakWStar > 0 ? Math.round(peakWStar * 10) / 10 : null,
+      bestWindow: bestWindowStr,
+      odRisk,
+      windShear,
+      freezingConcern,
+      peakCeilingMsl: peakCeiling > 0 ? Math.round(peakCeiling) : null,
+    });
+  }
+
+  return scores;
+}
+
+/**
+ * Finds the best 2+ hour window with highest average W*
+ * Returns formatted string like "12:00-16:00"
+ */
+function findBestWindow(hours: AtmosphericHour[]): string {
+  if (hours.length === 0) return '';
+
+  let bestStart = 0;
+  let bestEnd = 0;
+  let bestAvg = 0;
+
+  // Sliding window: find best contiguous stretch
+  for (let i = 0; i < hours.length; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let j = i; j < hours.length; j++) {
+      const ws = hours[j].derived.wStar ?? 0;
+      sum += ws;
+      count++;
+      const avg = sum / count;
+      if (count >= 2 && avg > bestAvg) {
+        bestAvg = avg;
+        bestStart = i;
+        bestEnd = j;
+      }
+    }
+  }
+
+  if (bestAvg === 0) return '';
+
+  const startTime = hours[bestStart].time.slice(11, 16);
+  // End time is the end of the last hour (add 1 hour)
+  const endHourNum = parseInt(hours[bestEnd].time.slice(11, 13)) + 1;
+  const endTime = `${endHourNum.toString().padStart(2, '0')}:00`;
+
+  return `${startTime}-${endTime}`;
 }
 
 // Type definitions for internal use

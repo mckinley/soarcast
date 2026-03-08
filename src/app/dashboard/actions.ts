@@ -2,7 +2,8 @@
 
 import { getUserFavoriteSites } from '@/app/sites/browse/actions';
 import { getForecast, fetchAllForecasts } from '@/lib/weather';
-import { calculateDailyScores } from '@/lib/scoring';
+import { calculateDailyScores, calculateDailyScoresFromProfile } from '@/lib/scoring';
+import { getAtmosphericProfile } from '@/lib/weather-profile';
 import type { Site, Forecast, DayScore } from '@/types';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
@@ -93,7 +94,19 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
           site.longitude,
           metadata.siteType,
         );
-        const scores = calculateDailyScores(forecastResult.forecast, site);
+
+        // Use v2 scoring with atmospheric profile when available
+        let scores: DayScore[];
+        try {
+          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude);
+          scores = calculateDailyScoresFromProfile(
+            profileResult.profile,
+            forecastResult.forecast,
+            site,
+          );
+        } catch {
+          scores = calculateDailyScores(forecastResult.forecast, site);
+        }
 
         return {
           site,

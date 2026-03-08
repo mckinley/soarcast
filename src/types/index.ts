@@ -51,6 +51,13 @@ export interface DayScore {
     blh: number; // 0-100 (boundary layer height)
     upperWind: number; // 0-100 (850hPa wind)
   };
+  // v2 fields (optional for backward compat)
+  wStar?: number | null; // Peak W* in m/s during flyable window
+  bestWindow?: string; // e.g. "12:00-16:00"
+  odRisk?: 'none' | 'low' | 'moderate' | 'high';
+  windShear?: 'none' | 'low' | 'moderate' | 'high';
+  freezingConcern?: boolean;
+  peakCeilingMsl?: number | null; // meters MSL
 }
 
 export interface Settings {

@@ -1,5 +1,6 @@
 import { getForecast } from '@/lib/weather';
-import { calculateDailyScores } from '@/lib/scoring';
+import { calculateDailyScores, calculateDailyScoresFromProfile } from '@/lib/scoring';
+import { getAtmosphericProfile } from '@/lib/weather-profile';
 import { SiteDetailClient } from '@/components/site-detail-client';
 
 interface SiteDetailForecastProps {
@@ -45,7 +46,15 @@ export async function SiteDetailForecast({ site }: SiteDetailForecastProps) {
         createdAt: new Date(site.createdAt).toISOString(),
         updatedAt: new Date(site.updatedAt).toISOString(),
       };
-      scores = calculateDailyScores(forecast, siteForScoring);
+
+      // Use v2 scoring with atmospheric profile when available
+      try {
+        const profileResult = await getAtmosphericProfile(lat, lng);
+        scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
+      } catch {
+        // Fall back to v1 scoring if profile fetch fails
+        scores = calculateDailyScores(forecast, siteForScoring);
+      }
     }
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to fetch forecast';
