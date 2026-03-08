@@ -6,6 +6,7 @@ import type { DayScore } from '@/types';
 import { WindgramD3 } from './windgram-d3';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
+import { XcSnapshotPanel } from '@/components/xc-snapshot-panel';
 import { LapseRateLegend } from './lapse-rate-legend';
 import { useAttachTouchGestures } from '@/hooks/use-touch-gestures';
 
@@ -142,6 +143,17 @@ export function WindgramInteractive({
             dayScore={selectedDayScore}
             atmosphericData={selectedDayData}
             date={days[selectedDayIndex].dateString}
+          />
+        </div>
+      )}
+
+      {/* XC Snapshot Panel above the chart */}
+      {selectedDayScore && selectedDayData && data && (
+        <div className="mb-4">
+          <XcSnapshotPanel
+            dayScore={selectedDayScore}
+            profile={selectedDayData}
+            dateString={days[selectedDayIndex].dateString}
           />
         </div>
       )}
