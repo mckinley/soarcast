@@ -4,7 +4,7 @@ import { users, sites, pushSubscriptions, settings as settingsTable } from '@/db
 import { eq } from 'drizzle-orm';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores, scoreToLabel } from '@/lib/scoring';
-import { getAtmosphericProfile } from '@/lib/weather-profile';
+import { getAtmosphericProfile, type AtmosphericProfile } from '@/lib/weather-profile';
 import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '@/lib/notifications';
 import type { DayAnalysis } from '@/lib/notifications';
 import type { Site } from '@/types';
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
             const todayStr = today.toISOString().split('T')[0];
 
             // Collect analyses for all favorited sites
-            const siteAnalyses: Array<{ site: Site; analysis: DayAnalysis }> = [];
+            const siteAnalyses: Array<{ site: Site; analysis: DayAnalysis; profile: AtmosphericProfile }> = [];
 
             for (const site of userSites) {
               const sitePrefs = (
@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
                       updatedAt: site.updatedAt.toISOString(),
                     },
                     analysis,
+                    profile: atmosphericResult.profile,
                   });
                 }
               } catch (error) {
@@ -196,11 +197,44 @@ export async function POST(request: NextRequest) {
                     day: 'numeric',
                   });
 
-                  const emailSites = siteAnalyses.map(({ site, analysis }) => ({
-                    name: site.name,
-                    score: Math.round(analysis.score),
-                    label: analysis.rating as 'Epic' | 'Great' | 'Good' | 'Fair' | 'Poor',
-                  }));
+                  const emailSites = siteAnalyses.map(({ site, analysis, profile: siteProfile }) => {
+                    // Compute peak wStar from profile hours for today
+                    const todayHours = siteProfile.hours.filter((h) => h.time.startsWith(todayStr));
+                    const peakWStar = todayHours.reduce((max, h) => {
+                      const ws = h.derived.wStar;
+                      return ws !== null && ws > max ? ws : max;
+                    }, 0) || null;
+                    // Determine top concern from analysis
+                    let topConcern: string | null = null;
+                    if (analysis.concerns.length > 0) {
+                      const concern = analysis.concerns[0];
+                      if (concern.toLowerCase().includes('overdevelopment') || concern.toLowerCase().includes('storm')) {
+                        topConcern = 'OD Risk';
+                      } else if (concern.toLowerCase().includes('shear')) {
+                        topConcern = 'High wind shear';
+                      } else if (concern.toLowerCase().includes('upper') || concern.toLowerCase().includes('850')) {
+                        topConcern = 'Strong upper winds';
+                      } else {
+                        topConcern = concern;
+                      }
+                    }
+
+                    // Parse ceiling from topOfLift string (e.g., "~8000ft MSL")
+                    const ceilingMatch = analysis.topOfLift?.match(/(\d[\d,]*)\s*ft/);
+                    const peakCeilingFt = ceilingMatch
+                      ? parseInt(ceilingMatch[1].replace(',', ''))
+                      : null;
+
+                    return {
+                      name: site.name,
+                      score: Math.round(analysis.score),
+                      label: analysis.rating as 'Epic' | 'Great' | 'Good' | 'Fair' | 'Poor',
+                      wStar: peakWStar,
+                      bestWindow: analysis.bestWindow,
+                      topConcern,
+                      peakCeilingFt,
+                    };
+                  });
 
                   const html = await render(
                     MorningDigestEmail({ date: dateLabel, sites: emailSites }),

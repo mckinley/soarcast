@@ -12,11 +12,15 @@ import {
   Column,
 } from '@react-email/components';
 
-interface SiteDigestItem {
+export interface SiteDigestItem {
   name: string;
   slug?: string;
   score: number;
   label: 'Epic' | 'Great' | 'Good' | 'Fair' | 'Poor';
+  wStar?: number | null;
+  peakCeilingFt?: number | null;
+  bestWindow?: string | null;
+  topConcern?: string | null;
 }
 
 interface MorningDigestEmailProps {
@@ -64,31 +68,50 @@ export function MorningDigestEmail({
                 <Text style={{ color: '#374151', fontSize: '15px', fontWeight: '600', margin: '0 0 16px' }}>
                   Today&apos;s Conditions
                 </Text>
-                {sites.map((site, i) => (
-                  <Row key={i} style={{ marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-                    <Column style={{ width: '70%' }}>
-                      <Text style={{ margin: 0, fontWeight: '600', color: '#111827', fontSize: '15px' }}>
-                        {site.name}
-                      </Text>
-                      <Text style={{ margin: '2px 0 0', color: '#6b7280', fontSize: '13px' }}>
-                        Score: {site.score}/100
-                      </Text>
-                    </Column>
-                    <Column style={{ width: '30%', textAlign: 'right' }}>
-                      <span style={{
-                        backgroundColor: labelColors[site.label] || '#9ca3af',
-                        color: '#ffffff',
-                        borderRadius: '20px',
-                        padding: '3px 12px',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        display: 'inline-block',
-                      }}>
-                        {site.label}
-                      </span>
-                    </Column>
-                  </Row>
-                ))}
+                {sites.map((site, i) => {
+                  const hasV2Data = site.wStar != null || site.peakCeilingFt != null || site.bestWindow;
+                  const dataSegments: string[] = [];
+                  if (site.wStar != null && site.wStar > 0) dataSegments.push(`W* ${site.wStar.toFixed(1)} m/s`);
+                  if (site.peakCeilingFt != null) dataSegments.push(`Ceiling ~${site.peakCeilingFt.toLocaleString()}ft`);
+                  if (site.bestWindow) dataSegments.push(`Best: ${site.bestWindow}`);
+
+                  return (
+                    <Row key={i} style={{ marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+                      <Column style={{ width: '70%' }}>
+                        <Text style={{ margin: 0, fontWeight: '600', color: '#111827', fontSize: '15px' }}>
+                          {site.name}
+                        </Text>
+                        {hasV2Data && dataSegments.length > 0 ? (
+                          <Text style={{ margin: '2px 0 0', color: '#6b7280', fontSize: '12px' }}>
+                            {dataSegments.join('  ·  ')}
+                          </Text>
+                        ) : (
+                          <Text style={{ margin: '2px 0 0', color: '#6b7280', fontSize: '13px' }}>
+                            Score: {site.score}/100
+                          </Text>
+                        )}
+                        {site.topConcern && (
+                          <Text style={{ margin: '2px 0 0', color: '#ea580c', fontSize: '12px', fontWeight: '500' }}>
+                            ⚠ {site.topConcern}
+                          </Text>
+                        )}
+                      </Column>
+                      <Column style={{ width: '30%', textAlign: 'right' }}>
+                        <span style={{
+                          backgroundColor: labelColors[site.label] || '#9ca3af',
+                          color: '#ffffff',
+                          borderRadius: '20px',
+                          padding: '3px 12px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          display: 'inline-block',
+                        }}>
+                          {site.label}
+                        </span>
+                      </Column>
+                    </Row>
+                  );
+                })}
               </>
             )}
           </Section>
