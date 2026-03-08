@@ -46,6 +46,10 @@ export interface DerivedParameters {
   thermalIndex: number | null; // Composite soaring metric 0-100
   estimatedCloudBase: number | null; // meters AGL
   estimatedTopOfLift: number | null; // meters MSL
+  wStar: number | null; // Thermal updraft velocity (m/s)
+  freezingLevel: number | null; // 0°C isotherm altitude (meters MSL)
+  windShearMax: number | null; // Max wind speed delta between adjacent levels (km/h) in 1000-700hPa
+  odPotential: number; // Overdevelopment potential index 0-3
 }
 
 /**
@@ -224,6 +228,17 @@ export function calculateThermalIndex(
 }
 
 /**
+ * Calculates thermal updraft velocity (W*) from CAPE
+ * Uses simplified approximation: W* ≈ 0.12 * sqrt(CAPE)
+ * @param cape - Convective Available Potential Energy (J/kg)
+ * @returns Thermal velocity in m/s, or null if CAPE is invalid
+ */
+export function calculateThermalVelocity(cape: number | null): number | null {
+  if (cape === null || cape <= 0) return null;
+  return 0.12 * Math.sqrt(cape);
+}
+
+/**
  * Estimates top of lift from boundary layer height and CAPE
  * @param blh - Boundary layer height (meters)
  * @param cape - CAPE value (J/kg)
@@ -235,6 +250,112 @@ export function estimateTopOfLift(blh: number | null, cape: number): number | nu
   // Use BLH as base, add CAPE-based boost (every 100 J/kg adds ~100m)
   const capeBoost = Math.min(2000, (cape / 100) * 100);
   return Math.round(blh + capeBoost);
+}
+
+/**
+ * Interpolates the freezing level (0°C isotherm) from pressure-level data
+ * @param pressureLevels - Array of pressure levels with temperature and geopotential height
+ * @returns Freezing level in meters MSL, or null if not found
+ */
+export function calculateFreezingLevel(pressureLevels: PressureLevel[]): number | null {
+  // Walk from lowest (highest pressure) to highest (lowest pressure) level
+  for (let i = 0; i < pressureLevels.length - 1; i++) {
+    const lower = pressureLevels[i];
+    const upper = pressureLevels[i + 1];
+
+    // Look for where temperature crosses 0°C
+    if (
+      (lower.temperature >= 0 && upper.temperature <= 0) ||
+      (lower.temperature <= 0 && upper.temperature >= 0)
+    ) {
+      // Linear interpolation
+      const tempDiff = lower.temperature - upper.temperature;
+      if (tempDiff === 0) return lower.geopotentialHeight;
+      const fraction = lower.temperature / tempDiff;
+      return Math.round(
+        lower.geopotentialHeight + fraction * (upper.geopotentialHeight - lower.geopotentialHeight),
+      );
+    }
+  }
+
+  // If all temperatures are above 0°C, freezing level is above our top level
+  // If all below 0°C, freezing level is below our bottom level
+  return null;
+}
+
+/**
+ * Calculates max wind shear between adjacent pressure levels in the soaring layer (1000-700 hPa)
+ * @param pressureLevels - Array of pressure levels with wind speed data
+ * @returns Maximum wind speed delta (km/h) between adjacent levels, or null
+ */
+export function calculateWindShearMax(pressureLevels: PressureLevel[]): number | null {
+  // Filter to soaring layer: 1000-700 hPa
+  const soaringLevels = pressureLevels.filter((l) => l.pressure >= 700 && l.pressure <= 1000);
+  if (soaringLevels.length < 2) return null;
+
+  let maxShear = 0;
+  for (let i = 0; i < soaringLevels.length - 1; i++) {
+    const delta = Math.abs(soaringLevels[i].windSpeed - soaringLevels[i + 1].windSpeed);
+    if (delta > maxShear) maxShear = delta;
+  }
+
+  return Math.round(maxShear * 10) / 10;
+}
+
+/**
+ * Calculates overdevelopment (OD) potential index (0-3)
+ * +1 if CAPE > 1500 J/kg
+ * +1 if estimated cloud base AGL < 1500m
+ * +1 if local hour is 13-17 (peak convective hours)
+ * @param cape - CAPE value (J/kg)
+ * @param cloudBaseAgl - Estimated cloud base in meters AGL (or null)
+ * @param utcHour - Hour in UTC (0-23)
+ * @param timezone - IANA timezone string
+ * @returns OD potential index 0-3
+ */
+export function calculateOdPotential(
+  cape: number,
+  cloudBaseAgl: number | null,
+  utcHour: number,
+  timezone: string,
+): number {
+  let score = 0;
+
+  if (cape > 1500) score++;
+  if (cloudBaseAgl !== null && cloudBaseAgl < 1500) score++;
+
+  // Convert UTC hour to local hour
+  try {
+    const date = new Date(Date.UTC(2024, 0, 1, utcHour, 0, 0));
+    const localHour = parseInt(
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour: 'numeric',
+        hour12: false,
+      }).format(date),
+    );
+    if (localHour >= 13 && localHour <= 17) score++;
+  } catch {
+    // If timezone conversion fails, skip the hour check
+  }
+
+  return score;
+}
+
+/**
+ * Calculates OD potential when local hour is already known
+ * (e.g., from Open-Meteo time strings which are in local timezone)
+ */
+export function calculateOdPotentialFromLocalHour(
+  cape: number,
+  cloudBaseAgl: number | null,
+  localHour: number,
+): number {
+  let score = 0;
+  if (cape > 1500) score++;
+  if (cloudBaseAgl !== null && cloudBaseAgl < 1500) score++;
+  if (localHour >= 13 && localHour <= 17) score++;
+  return score;
 }
 
 /**
@@ -365,11 +486,28 @@ export async function fetchAtmosphericProfile(
       // Estimate top of lift
       const topOfLift = estimateTopOfLift(surface.boundaryLayerHeight, surface.cape);
 
+      // W* (thermal updraft velocity)
+      const wStar = calculateThermalVelocity(surface.cape);
+
+      // Freezing level (0°C isotherm)
+      const freezingLevel = calculateFreezingLevel(pressureLevels);
+
+      // Wind shear max in soaring layer
+      const windShearMax = calculateWindShearMax(pressureLevels);
+
+      // OD potential — Open-Meteo returns local times with timezone=auto
+      const localHour = parseInt(time.slice(11, 13));
+      const odPotential = calculateOdPotentialFromLocalHour(surface.cape, cloudBase, localHour);
+
       const derived: DerivedParameters = {
         lapseRate,
         thermalIndex,
         estimatedCloudBase: cloudBase,
         estimatedTopOfLift: topOfLift,
+        wStar,
+        freezingLevel,
+        windShearMax,
+        odPotential,
       };
 
       return {

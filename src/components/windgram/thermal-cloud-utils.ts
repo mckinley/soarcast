@@ -1,31 +1,14 @@
 // Utilities for rendering thermal and cloud indicators on windgrams
 
 import type { AtmosphericHour } from '@/lib/weather-profile';
+import { calculateThermalVelocity } from '@/lib/weather-profile';
+// Re-export calculateThermalVelocity from its canonical location
+export { calculateThermalVelocity };
 
 /**
  * Thermal strength categories based on thermal velocity (W*)
  */
 export type ThermalStrength = 'none' | 'weak' | 'moderate' | 'strong' | 'very_strong';
-
-/**
- * Calculates thermal updraft velocity (W*) from CAPE
- * Uses simplified approximation: W* ≈ 0.12 * sqrt(CAPE)
- * @param cape - Convective Available Potential Energy (J/kg)
- * @returns Thermal velocity in m/s, or null if CAPE is invalid
- */
-export function calculateThermalVelocity(cape: number | null): number | null {
-  if (cape === null || cape <= 0) return null;
-
-  // Simplified formula: W* ≈ 0.12 * sqrt(CAPE)
-  // This gives reasonable estimates for thermal updraft velocity
-  const wStar = 0.12 * Math.sqrt(cape);
-
-  // Note: For more accuracy, could use: W* = (g * BLH * heat_flux / (density * Cp * T))^(1/3)
-  // but that requires heat flux data we don't have from Open-Meteo
-  // The simplified formula is widely used and gives good results for soaring forecasts
-
-  return wStar;
-}
 
 /**
  * Gets thermal strength category from thermal velocity (W*) in m/s
