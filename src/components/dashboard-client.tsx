@@ -107,8 +107,73 @@ export function DashboardClient({
     return score.overallScore >= settings.notifications.minScoreThreshold;
   };
 
+  // Find today's best site (highest score)
+  const todayDate = dates[0];
+  const bestSiteToday = data.length >= 2
+    ? data.reduce<{ siteData: SiteForecastData; score: DayScore; siteType: string; slug?: string } | null>(
+        (best, item) => {
+          const todayScore = item.scores.find((s) => s.date === todayDate);
+          if (!todayScore) return best;
+          if (!best || todayScore.overallScore > best.score.overallScore) {
+            return { siteData: item, score: todayScore, siteType: item.siteType, slug: item.slug };
+          }
+          return best;
+        },
+        null,
+      )
+    : null;
+
   return (
     <div className="space-y-4">
+      {/* Today's Best banner */}
+      {bestSiteToday && bestSiteToday.score.overallScore >= 31 && (
+        <div className="rounded-lg bg-gradient-to-r from-sky-100 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/20 p-4 border border-sky-200 dark:border-sky-800">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+              Today&apos;s Best
+            </span>
+            <Link
+              href={
+                bestSiteToday.siteType === 'launch' && bestSiteToday.slug
+                  ? `/sites/${bestSiteToday.slug}`
+                  : `/sites/custom/${bestSiteToday.siteData.site.id}`
+              }
+              className="font-semibold text-foreground hover:underline"
+            >
+              {bestSiteToday.siteData.site.name}
+            </Link>
+            <span
+              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                bestSiteToday.score.overallScore >= 86
+                  ? 'bg-green-500/20 text-green-700 dark:text-green-400'
+                  : bestSiteToday.score.overallScore >= 71
+                    ? 'bg-lime-500/20 text-lime-700 dark:text-lime-400'
+                    : bestSiteToday.score.overallScore >= 51
+                      ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
+                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-400'
+              }`}
+            >
+              {bestSiteToday.score.overallScore} {bestSiteToday.score.label}
+            </span>
+            {bestSiteToday.score.wStar != null && bestSiteToday.score.wStar > 0 && (
+              <span className="text-xs text-muted-foreground">
+                W* {bestSiteToday.score.wStar.toFixed(1)} m/s
+              </span>
+            )}
+            {bestSiteToday.score.bestWindow && (
+              <span className="text-xs text-muted-foreground">
+                {bestSiteToday.score.bestWindow}
+              </span>
+            )}
+            {bestSiteToday.score.odRisk && bestSiteToday.score.odRisk !== 'none' && (
+              <span className="text-xs text-orange-600 dark:text-orange-400">
+                OD: {bestSiteToday.score.odRisk}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -183,6 +248,7 @@ export function DashboardClient({
                           <ScoreCell
                             score={score}
                             showNotification={showNotification}
+                            wStar={score?.wStar}
                             onClick={
                               score && forecast
                                 ? () => handleCellClick(score, site, forecast)

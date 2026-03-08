@@ -6,6 +6,7 @@ import { Bell } from 'lucide-react';
 interface ScoreCellProps {
   score: DayScore | null;
   showNotification?: boolean;
+  wStar?: number | null;
   onClick?: () => void;
 }
 
@@ -22,7 +23,7 @@ function getScoreColorClass(score: number): string {
   return 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30';
 }
 
-export function ScoreCell({ score, showNotification = false, onClick }: ScoreCellProps) {
+export function ScoreCell({ score, showNotification = false, wStar, onClick }: ScoreCellProps) {
   if (!score) {
     return (
       <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
@@ -34,7 +35,7 @@ export function ScoreCell({ score, showNotification = false, onClick }: ScoreCel
   return (
     <button
       onClick={onClick}
-      className={`relative flex h-16 w-full flex-col items-center justify-center gap-1 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
+      className={`relative flex h-[72px] w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
     >
       {showNotification && (
         <div className="absolute top-1 right-1">
@@ -45,6 +46,9 @@ export function ScoreCell({ score, showNotification = false, onClick }: ScoreCel
       <div className="text-[10px] font-medium uppercase tracking-wide opacity-80">
         {score.label}
       </div>
+      {wStar != null && wStar > 0 && score.overallScore >= 51 && (
+        <div className="text-[9px] text-muted-foreground">W* {wStar.toFixed(1)}</div>
+      )}
     </button>
   );
 }
