@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import type { DayScore } from '@/types';
-import { WindgramChart } from './windgram-chart';
+import { WindgramD3 } from './windgram-d3';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
 import { LapseRateLegend } from './lapse-rate-legend';
@@ -114,7 +114,7 @@ export function WindgramInteractive({
 
   if (loading || !data) {
     return (
-      <WindgramChart
+      <WindgramD3
         data={null}
         loading={true}
         className={className}
@@ -152,7 +152,7 @@ export function WindgramInteractive({
         className="transition-opacity duration-300 relative"
         style={{ animation: 'fadeIn 0.3s ease-in-out' }}
       >
-        <WindgramChart data={selectedDayData} loading={false} launchElevation={launchElevation} />
+        <WindgramD3 data={selectedDayData} loading={false} launchElevation={launchElevation} />
         {days.length > 1 && (
           <p className="text-xs text-muted-foreground text-center mt-2 md:hidden">
             👈 Swipe to change days 👉
