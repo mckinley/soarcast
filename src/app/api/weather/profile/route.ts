@@ -1,6 +1,14 @@
 // GET /api/weather/profile - Atmospheric profile data for windgram visualizations
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { getAtmosphericProfile } from '@/lib/weather-profile';
+
+// In-memory cache layer above DB cache (revalidated on refresh)
+const getCachedProfile = unstable_cache(
+  (lat: number, lng: number, days: number) => getAtmosphericProfile(lat, lng, days),
+  ['atmospheric-profile'],
+  { tags: ['weather', 'atmospheric-profile'], revalidate: 3600 },
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,8 +52,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch atmospheric profile (cached or fresh)
-    const result = await getAtmosphericProfile(latitude, longitude, days);
+    // Fetch atmospheric profile (memory cache → DB cache → API)
+    const result = await getCachedProfile(latitude, longitude, days);
 
     // Add cache metadata to response headers for debugging
     const headers: HeadersInit = {

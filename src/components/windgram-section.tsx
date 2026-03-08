@@ -7,6 +7,11 @@ import { Skeleton } from './ui/skeleton';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import type { DayScore } from '@/types';
 
+// Browser-side in-memory cache (keyed by "lat,lng,days")
+// Prevents redundant API calls when switching between pages within 5 minutes
+const BROWSER_CACHE_TTL_MS = 5 * 60 * 1000;
+const profileCache = new Map<string, { data: AtmosphericProfile; cachedAt: number }>();
+
 interface WindgramSectionProps {
   latitude: number;
   longitude: number;
@@ -42,6 +47,13 @@ export function WindgramSection({
         setLoading(true);
         setError(null);
 
+        const cacheKey = `${latitude.toFixed(3)},${longitude.toFixed(3)},${days}`;
+        const cached = profileCache.get(cacheKey);
+        if (cached && Date.now() - cached.cachedAt < BROWSER_CACHE_TTL_MS) {
+          if (mounted) setProfile(cached.data);
+          return;
+        }
+
         const response = await fetch(
           `/api/weather/profile?lat=${latitude}&lng=${longitude}&days=${days}`,
         );
@@ -51,6 +63,7 @@ export function WindgramSection({
         }
 
         const data: AtmosphericProfile = await response.json();
+        profileCache.set(cacheKey, { data, cachedAt: Date.now() });
 
         if (mounted) {
           setProfile(data);
