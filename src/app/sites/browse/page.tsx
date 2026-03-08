@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getLaunchSites, getFilterOptions } from './actions';
+import { getLaunchSites, getFilterOptions, getSiteScoresForBrowse } from './actions';
 import { SitesBrowseClient } from './browse-client';
 
 export const metadata: Metadata = {
@@ -36,7 +36,10 @@ export default async function BrowseSitesPage({
     orientations,
   });
 
-  const filterOptions = await getFilterOptions();
+  const [filterOptions, siteScores] = await Promise.all([
+    getFilterOptions(),
+    getSiteScoresForBrowse(sites),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -47,7 +50,7 @@ export default async function BrowseSitesPage({
         </p>
       </div>
 
-      <SitesBrowseClient initialSites={sites} filterOptions={filterOptions} searchParams={params} />
+      <SitesBrowseClient initialSites={sites} filterOptions={filterOptions} searchParams={params} siteScores={siteScores} />
     </div>
   );
 }

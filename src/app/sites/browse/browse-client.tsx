@@ -49,6 +49,7 @@ interface SitesBrowseClientProps {
     sort?: string;
     minScore?: string;
   };
+  siteScores: Record<string, number | null>;
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -65,10 +66,17 @@ const MIN_SCORE_OPTIONS = [
   { value: 'epic', label: 'Epic (86+)' },
 ];
 
+const SCORE_THRESHOLDS: Record<string, number> = {
+  good: 51,
+  great: 71,
+  epic: 86,
+};
+
 export function SitesBrowseClient({
   initialSites,
   filterOptions,
   searchParams,
+  siteScores,
 }: SitesBrowseClientProps) {
   const router = useRouter();
   const urlSearchParams = useSearchParams();
@@ -130,9 +138,14 @@ export function SitesBrowseClient({
       });
     }
 
-    // Filter by minimum flyability score (would need today's forecast data)
-    // For now, skip this filter as it requires fetching forecast data
-    // This is a placeholder for future enhancement
+    // Filter by minimum flyability score
+    if (minScore !== 'all') {
+      const threshold = SCORE_THRESHOLDS[minScore] ?? 0;
+      sites = sites.filter((site) => {
+        const score = siteScores[site.id];
+        return score != null && score >= threshold;
+      });
+    }
 
     // Sort
     switch (sortBy) {
@@ -172,7 +185,7 @@ export function SitesBrowseClient({
     }
 
     return sites;
-  }, [initialSites, selectedOrientations, sortBy, userLocation]);
+  }, [initialSites, selectedOrientations, sortBy, userLocation, minScore, siteScores]);
 
   const updateURL = () => {
     const params = new URLSearchParams(urlSearchParams);
@@ -387,11 +400,14 @@ export function SitesBrowseClient({
                     ))}
                   </SelectContent>
                 </Select>
-                {minScore !== 'all' && (
-                  <p className="text-xs text-muted-foreground">
-                    Note: Flyability filtering requires forecasts (coming soon)
-                  </p>
-                )}
+                {minScore !== 'all' && (() => {
+                  const unavailableCount = initialSites.filter((s) => siteScores[s.id] == null).length;
+                  return unavailableCount > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Score unavailable for {unavailableCount} site{unavailableCount !== 1 ? 's' : ''} — visit a site page to load its forecast.
+                    </p>
+                  ) : null;
+                })()}
               </div>
 
               {/* Region */}

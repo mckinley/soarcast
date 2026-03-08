@@ -1,10 +1,12 @@
 'use server';
 
-import { eq, and, like, or } from 'drizzle-orm';
+import { eq, and, like, or, inArray } from 'drizzle-orm';
 import { auth } from '@/auth';
-import { db, launchSites, userFavoriteSites } from '@/db';
+import { db, launchSites, userFavoriteSites, forecastsCache } from '@/db';
 import type { LaunchSite, UserFavoriteSite } from '@/db/schema';
 import { revalidatePath } from 'next/cache';
+import { calculateDailyScores } from '@/lib/scoring';
+import type { Forecast } from '@/types';
 
 /**
  * Get all launch sites with optional filtering
@@ -177,4 +179,74 @@ export async function unfavoriteSite(siteId: string): Promise<void> {
 
   revalidatePath('/sites/browse');
   revalidatePath('/');
+}
+
+/**
+ * Get today's flyability scores for a batch of sites from cached forecasts.
+ * Returns a map of siteId → score (0-100) for sites with cached data, null for cache misses.
+ */
+export async function getSiteScoresForBrowse(
+  sites: LaunchSite[],
+): Promise<Record<string, number | null>> {
+  if (sites.length === 0) return {};
+
+  const today = new Date().toISOString().split('T')[0];
+  const siteIds = sites.map((s) => s.id);
+
+  // Single batch query for all site forecasts
+  const cached = await db
+    .select({
+      siteId: forecastsCache.siteId,
+      data: forecastsCache.data,
+    })
+    .from(forecastsCache)
+    .where(
+      and(
+        inArray(forecastsCache.siteId, siteIds),
+        eq(forecastsCache.siteType, 'launch'),
+        eq(forecastsCache.fetchDate, today),
+      ),
+    );
+
+  // Build a lookup of siteId → forecast data
+  const forecastMap = new Map<string, Forecast>();
+  for (const row of cached) {
+    forecastMap.set(row.siteId, row.data as Forecast);
+  }
+
+  // Build a lookup of siteId → LaunchSite for score computation
+  const siteMap = new Map<string, LaunchSite>();
+  for (const site of sites) {
+    siteMap.set(site.id, site);
+  }
+
+  // Compute today's score for each site with cached data
+  const scores: Record<string, number | null> = {};
+  for (const siteId of siteIds) {
+    const forecast = forecastMap.get(siteId);
+    const site = siteMap.get(siteId)!;
+
+    if (!forecast) {
+      scores[siteId] = null;
+      continue;
+    }
+
+    const siteForScoring = {
+      id: site.id,
+      name: site.name,
+      latitude: parseFloat(site.latitude),
+      longitude: parseFloat(site.longitude),
+      elevation: site.elevation || 0,
+      idealWindDirections: site.idealWindDirections || [],
+      maxWindSpeed: site.maxWindSpeed || 40,
+      createdAt: site.createdAt?.toISOString() || '',
+      updatedAt: site.updatedAt?.toISOString() || '',
+    };
+
+    const dayScores = calculateDailyScores(forecast, siteForScoring);
+    // Today is the first day in the forecast
+    scores[siteId] = dayScores.length > 0 ? dayScores[0].overallScore : null;
+  }
+
+  return scores;
 }
