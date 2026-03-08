@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { computeLapseRatesForHour, lapseRateToColor } from './lapse-rate-utils';
 
@@ -11,140 +12,101 @@ interface WindgramThumbnailProps {
   className?: string;
 }
 
+// Altitude range for display (meters)
+const MIN_ALT_M = 0;
+const MAX_ALT_M = 5500;
+
 /**
- * Simplified windgram thumbnail showing only lapse rate background colors.
- * Designed for dashboard cards - no interactivity, labels, or wind barbs.
- * Optimized for small size and fast rendering with proper high-DPI support.
+ * SVG windgram thumbnail: lapse-rate heatmap with proportional altitude scaling.
+ * No labels, no wind barbs — pure color background for dashboard cards.
+ * SVG scales perfectly at any resolution with no canvas DPI tricks needed.
  */
-export function WindgramThumbnail({ data, width, height, className = '' }: WindgramThumbnailProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: width || 300, height: height || 80 });
+export function WindgramThumbnail({ data, className = '' }: WindgramThumbnailProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
-  // Measure container size on mount and resize
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Filter to daylight hours (6 AM – 8 PM) of the first available day
+  const daylightHours = useMemo(() => {
+    if (!data) return [];
 
-    const updateSize = () => {
-      if (!containerRef.current) return;
+    // Get the first day's date string
+    const firstDayDate = data.hours[0]?.time.split('T')[0];
+    if (!firstDayDate) return [];
 
-      const rect = containerRef.current.getBoundingClientRect();
-      // Use provided dimensions or measure from container
-      const newWidth = width || Math.floor(rect.width);
-      const newHeight = height || 80; // Default height
-
-      setDimensions({ width: newWidth, height: newHeight });
-    };
-
-    updateSize();
-
-    // Re-measure on window resize
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [width, height]);
-
-  // Render canvas when data or dimensions change
-  useEffect(() => {
-    if (!canvasRef.current || !data) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { width: canvasWidth, height: canvasHeight } = dimensions;
-
-    // High-DPI support - render at 2x resolution for sharp display
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = canvasWidth * dpr;
-    canvas.height = canvasHeight * dpr;
-    canvas.style.width = `${canvasWidth}px`;
-    canvas.style.height = `${canvasHeight}px`;
-    ctx.scale(dpr, dpr);
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-    // Filter to daylight hours (6 AM - 8 PM)
-    const daylightHours = data.hours.filter((hour) => {
-      const localTime = new Date(hour.time);
-      const hourOfDay = localTime.getHours();
-      return hourOfDay >= 6 && hourOfDay <= 20;
+    return data.hours.filter((h) => {
+      const d = new Date(h.time);
+      const sameDay = h.time.startsWith(firstDayDate);
+      const hour = d.getHours();
+      return sameDay && hour >= 6 && hour <= 20;
     });
+  }, [data]);
 
-    if (daylightHours.length === 0) {
-      // Draw gray background if no data
-      ctx.fillStyle = '#888888';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      return;
-    }
+  // Build SVG rect descriptors
+  const cells = useMemo(() => {
+    if (daylightHours.length === 0) return [];
 
-    // Calculate grid dimensions
     const numHours = daylightHours.length;
-    // Number of layers is one less than number of pressure levels
-    // (layers exist BETWEEN pressure levels)
-    const firstHour = daylightHours[0];
-    if (!firstHour) return;
+    const altRange = MAX_ALT_M - MIN_ALT_M;
+    const rects: Array<{ x: number; y: number; w: number; h: number; color: string }> = [];
 
-    const numLayers = firstHour.pressureLevels.length - 1;
-    const cellWidth = canvasWidth / numHours;
-    const cellHeight = canvasHeight / numLayers;
-
-    // Get theme colors (determine light/dark mode)
-    const computedStyle = getComputedStyle(document.documentElement);
-    const bgValue = computedStyle.getPropertyValue('--background').trim();
-    const isDark = bgValue ? parseInt(bgValue.split(' ')[2] || '100') < 50 : false;
-
-    // Render lapse rate background
-    for (let hourIdx = 0; hourIdx < numHours; hourIdx++) {
-      const hour = daylightHours[hourIdx];
-      if (!hour) continue;
-
-      // Compute lapse rates for this hour (returns array of lapse rates between levels)
+    for (let t = 0; t < numHours; t++) {
+      const hour = daylightHours[t];
       const lapseRates = computeLapseRatesForHour(hour);
+      const levels = hour.pressureLevels;
 
-      for (let layerIdx = 0; layerIdx < numLayers; layerIdx++) {
-        const lapseRate = lapseRates[layerIdx];
-        if (lapseRate === null || lapseRate === undefined) continue;
+      // X: uniform columns
+      const x = (t / numHours) * 100; // percent of viewBox width
+      const w = 100 / numHours + 0.3; // slight overlap to avoid gaps
 
-        // Map lapse rate to color
-        const color = lapseRateToColor(lapseRate, isDark);
+      for (let l = 0; l < levels.length - 1; l++) {
+        const lowerAlt = levels[l].geopotentialHeight;
+        const upperAlt = levels[l + 1].geopotentialHeight;
 
-        // Fill cell
-        const x = hourIdx * cellWidth;
-        const y = layerIdx * cellHeight;
+        const clampedLower = Math.max(MIN_ALT_M, Math.min(MAX_ALT_M, lowerAlt));
+        const clampedUpper = Math.max(MIN_ALT_M, Math.min(MAX_ALT_M, upperAlt));
+        if (clampedLower >= clampedUpper) continue;
 
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, cellWidth + 0.5, cellHeight + 0.5); // +0.5 to avoid gaps
+        // Y: proportional — top of SVG = MAX_ALT, bottom = MIN_ALT (Y inverted)
+        const yTop = ((MAX_ALT_M - clampedUpper) / altRange) * 100;
+        const yBottom = ((MAX_ALT_M - clampedLower) / altRange) * 100;
+        const h = yBottom - yTop + 0.3; // slight overlap
+
+        const color = lapseRateToColor(lapseRates[l] ?? null, isDark);
+        rects.push({ x, y: yTop, w, h, color });
       }
     }
 
-    // Add subtle border
-    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
-  }, [data, dimensions]);
+    return rects;
+  }, [daylightHours, isDark]);
+
+  if (!data || daylightHours.length === 0) {
+    return (
+      <div
+        className={`bg-muted rounded flex items-center justify-center h-20 ${className}`}
+      >
+        <span className="text-xs text-muted-foreground">No data</span>
+      </div>
+    );
+  }
 
   return (
-    <div ref={containerRef} className={`${className}`}>
-      {!data ? (
-        <div
-          className="bg-muted rounded flex items-center justify-center"
-          style={{ height: `${dimensions.height}px` }}
-        >
-          <span className="text-xs text-muted-foreground">No data</span>
-        </div>
-      ) : (
-        <canvas
-          ref={canvasRef}
-          className="rounded w-full"
-          role="img"
-          aria-label="Windgram thumbnail showing atmospheric stability"
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className={`w-full h-20 rounded ${className}`}
+      role="img"
+      aria-label="Windgram thumbnail showing atmospheric stability"
+    >
+      {cells.map((cell, i) => (
+        <rect
+          key={i}
+          x={cell.x}
+          y={cell.y}
+          width={cell.w}
+          height={cell.h}
+          fill={cell.color}
         />
-      )}
-    </div>
+      ))}
+    </svg>
   );
 }
