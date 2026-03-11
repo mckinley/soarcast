@@ -415,49 +415,52 @@ export function calculateDailyScoresFromProfile(
   forecast: Forecast,
   site: Site,
 ): DayScore[] {
-  // Get sunrise/sunset for dynamic window
-  const { startHour, endHour } = getFlyableWindow(forecast.sunrise, forecast.sunset);
-
-  // Group profile hours by day
-  const dayMap = new Map<string, AtmosphericHour[]>();
+  // Group ALL profile hours by day (no hour filter yet — window is per-day)
+  const allProfileByDay = new Map<string, AtmosphericHour[]>();
   for (const hour of profile.hours) {
     const date = hour.time.split('T')[0];
-    const hourNum = parseInt(hour.time.slice(11, 13));
-    if (hourNum >= startHour && hourNum <= endHour) {
-      if (!dayMap.has(date)) dayMap.set(date, []);
-      dayMap.get(date)!.push(hour);
-    }
+    if (!allProfileByDay.has(date)) allProfileByDay.set(date, []);
+    allProfileByDay.get(date)!.push(hour);
   }
 
-  // Also group forecast hourly data by day for wind/cloud/precip scoring
-  const forecastDayMap = new Map<string, HourlyDataPoint[]>();
+  // Group ALL forecast hours by day (no hour filter yet)
+  const allForecastByDay = new Map<string, HourlyDataPoint[]>();
   forecast.hourly.time.forEach((timeStr, index) => {
     const date = timeStr.split('T')[0];
     const hour = parseInt(timeStr.split('T')[1].split(':')[0], 10);
-    if (hour >= startHour && hour <= endHour) {
-      if (!forecastDayMap.has(date)) forecastDayMap.set(date, []);
-      forecastDayMap.get(date)!.push({
-        hour,
-        temperature: forecast.hourly.temperature_2m[index],
-        windSpeed: forecast.hourly.wind_speed_10m[index],
-        windDirection: forecast.hourly.wind_direction_10m[index],
-        windGusts: forecast.hourly.wind_gusts_10m[index],
-        cloudCover: forecast.hourly.cloud_cover[index],
-        cape: forecast.hourly.cape[index],
-        precipProbability: forecast.hourly.precipitation_probability[index],
-        pressure: forecast.hourly.pressure_msl[index],
-        boundaryLayerHeight: forecast.hourly.boundary_layer_height[index],
-        windSpeed850hPa: forecast.hourly.wind_speed_850hPa[index],
-        windDirection850hPa: forecast.hourly.wind_direction_850hPa[index],
-        convectiveInhibition: forecast.hourly.convective_inhibition[index],
-      });
-    }
+    if (!allForecastByDay.has(date)) allForecastByDay.set(date, []);
+    allForecastByDay.get(date)!.push({
+      hour,
+      temperature: forecast.hourly.temperature_2m[index],
+      windSpeed: forecast.hourly.wind_speed_10m[index],
+      windDirection: forecast.hourly.wind_direction_10m[index],
+      windGusts: forecast.hourly.wind_gusts_10m[index],
+      cloudCover: forecast.hourly.cloud_cover[index],
+      cape: forecast.hourly.cape[index],
+      precipProbability: forecast.hourly.precipitation_probability[index],
+      pressure: forecast.hourly.pressure_msl[index],
+      boundaryLayerHeight: forecast.hourly.boundary_layer_height[index],
+      windSpeed850hPa: forecast.hourly.wind_speed_850hPa[index],
+      windDirection850hPa: forecast.hourly.wind_direction_850hPa[index],
+      convectiveInhibition: forecast.hourly.convective_inhibition[index],
+    });
   });
 
   const scores: DayScore[] = [];
 
-  for (const [date, profileHours] of dayMap) {
-    const forecastHours = forecastDayMap.get(date) || [];
+  for (const [date, allProfileHours] of allProfileByDay) {
+    // Dynamic flyable window per day using that day's actual sunrise/sunset
+    const daySunrise = forecast.sunriseByDay?.[date] ?? forecast.sunrise;
+    const daySunset = forecast.sunsetByDay?.[date] ?? forecast.sunset;
+    const { startHour, endHour } = getFlyableWindow(daySunrise, daySunset);
+
+    const profileHours = allProfileHours.filter((h) => {
+      const hourNum = parseInt(h.time.slice(11, 13));
+      return hourNum >= startHour && hourNum <= endHour;
+    });
+    const forecastHours = (allForecastByDay.get(date) || []).filter(
+      (h) => h.hour >= startHour && h.hour <= endHour,
+    );
 
     if (profileHours.length === 0) {
       scores.push(createPoorScore(date));
@@ -538,14 +541,25 @@ export function calculateDailyScoresFromProfile(
     // Best window: find contiguous hours with best W*
     const bestWindowStr = findBestWindow(profileHours);
 
-    // Freezing concern: freezing level below 3000m MSL
+    // Freezing concern: freezing level within 500m of cloud base MSL
+    // Cloud base AGL + site elevation ≈ cloud base MSL
     const minFreezing = Math.min(
       ...profileHours
         .map((h) => h.derived.freezingLevel)
         .filter((v): v is number => v !== null),
       Infinity,
     );
-    const freezingConcern = minFreezing < 3000;
+    const cloudBaseAgls = profileHours
+      .map((h) => h.derived.estimatedCloudBase)
+      .filter((v): v is number => v !== null);
+    const avgCloudBaseAgl =
+      cloudBaseAgls.length > 0
+        ? cloudBaseAgls.reduce((a, b) => a + b, 0) / cloudBaseAgls.length
+        : null;
+    const cloudBaseMsl = avgCloudBaseAgl !== null ? avgCloudBaseAgl + site.elevation : null;
+    // Flag concern if freezing level is within 500m above cloud base MSL (icing risk for thermals reaching cloud base)
+    const freezingConcern =
+      cloudBaseMsl !== null ? minFreezing < cloudBaseMsl + 500 : minFreezing < 3000;
 
     // Peak ceiling (top of lift)
     const peakCeiling = Math.max(

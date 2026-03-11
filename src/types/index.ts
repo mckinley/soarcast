@@ -20,6 +20,8 @@ export interface Forecast {
   modelElevation: number;
   sunrise: string;
   sunset: string;
+  sunriseByDay: Record<string, string>; // date (YYYY-MM-DD) -> ISO time string
+  sunsetByDay: Record<string, string>; // date (YYYY-MM-DD) -> ISO time string
   hourly: {
     time: string[];
     temperature_2m: number[];

@@ -94,8 +94,14 @@ export async function fetchWeatherForecast(
       fetchedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       modelElevation: data.elevation,
-      sunrise: data.daily.sunrise[0] || '', // First day's sunrise
-      sunset: data.daily.sunset[0] || '', // First day's sunset
+      sunrise: data.daily.sunrise[0] || '', // First day's sunrise (legacy)
+      sunset: data.daily.sunset[0] || '', // First day's sunset (legacy)
+      sunriseByDay: Object.fromEntries(
+        data.daily.time.map((date, i) => [date, data.daily.sunrise[i] || '']),
+      ),
+      sunsetByDay: Object.fromEntries(
+        data.daily.time.map((date, i) => [date, data.daily.sunset[i] || '']),
+      ),
       hourly: {
         time: data.hourly.time,
         temperature_2m: data.hourly.temperature_2m,
