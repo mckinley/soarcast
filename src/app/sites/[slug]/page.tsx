@@ -156,12 +156,12 @@ export default async function LaunchSiteDetailPage({
                 )}
 
                 {/* Max wind speed */}
-                {site.maxWindSpeed && (
-                  <div>
-                    <span className="font-medium">Max Wind Speed:</span>{' '}
-                    <span className="text-muted-foreground">{site.maxWindSpeed} km/h</span>
-                  </div>
-                )}
+                <div>
+                  <span className="font-medium">Max Wind Speed:</span>{' '}
+                  <span className="text-muted-foreground">
+                    {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
+                  </span>
+                </div>
 
                 {/* Coordinates - less prominent */}
                 <div className="text-xs text-muted-foreground">
