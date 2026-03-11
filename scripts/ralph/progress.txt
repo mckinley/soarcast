@@ -1,375 +1,116 @@
 # Ralph Progress Log
-Started: Sat Mar  7 15:12:59 +07 2026
+Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
 ---
 
-## 2026-03-07 16:15 - US-001
-- Fixed privacy bug: Dashboard now requires authentication and redirects unauthenticated users to landing page
-- Removed demo sites logic from dashboard actions (dashboard is now auth-only)
-- Removed unauthenticated user banner from dashboard-client component
-- Landing page already existed and works correctly for anonymous users
-- Public API routes (/api/sites, /api/weather/profile) remain accessible
+## Codebase Patterns
+- `calculateThermalVelocity` canonical location is `src/lib/weather-profile.ts`; re-exported from `thermal-cloud-utils.ts` for windgram consumers
+- Open-Meteo returns times in local timezone when `timezone=auto` — extract local hour directly from time string with `time.slice(11, 13)`
+- DerivedParameters in `weather-profile.ts` holds all computed atmospheric fields; add new ones there and wire up in the `data.hourly.time.map()` loop inside `fetchAtmosphericProfile`
+- Pressure levels array is ordered by PRESSURE_LEVELS constant (1000→500 hPa, i.e., lowest altitude first)
+- Scoring v2 uses `calculateDailyScoresFromProfile(profile, forecast, site)` — callers should try v2 with fallback to v1 `calculateDailyScores`
+- DayScore has optional v2 fields (wStar, bestWindow, odRisk, windShear, freezingConcern, peakCeilingMsl) — always check for undefined
 
-Files changed:
-- src/app/dashboard/page.tsx: Added auth check and redirect for unauthenticated users
-- src/app/dashboard/actions.ts: Removed DEMO_SITES constant and demo logic from getDashboardData() and refreshAllForecasts()
-- src/components/dashboard-client.tsx: Removed unauthenticated user banner
-
-**Learnings for future iterations:**
-- The landing page at src/app/page.tsx already had proper auth flow (show landing to anonymous, redirect authenticated to /dashboard)
-- The issue was that /dashboard itself was accessible to unauthenticated users and showed demo sites
-- NextAuth's auth() function is the standard way to check authentication in Next.js server components
-- Use redirect('/') from 'next/navigation' to redirect unauthenticated users
-- Public API routes don't need auth changes - they're already configured correctly in middleware
 ---
-## 2026-03-07 17:30 - US-002
-- Unified sites experience: Dashboard now shows BOTH favorited launch sites AND custom sites
-- Removed "My Sites" navigation item from sidebar (app-shell.tsx)
-- Updated getDashboardData() to query custom_sites table directly instead of legacy sites table
-- Added siteType ('launch' | 'custom') and slug tracking to SiteForecastData interface
-- Site cards now generate correct URLs: /sites/[slug] for launch sites, /sites/custom/[id] for custom sites
-- Changed dashboard heading from "7-Day XC Forecast" to "7-Day Flying Forecast"
-- Updated empty state: "No sites yet. Browse launch sites to find your home site." with Browse Sites link
-- Old /sites route now redirects to / (dashboard)
 
-Files changed:
-- src/components/app-shell.tsx: Removed "My Sites" from navItems array, removed MapPin import
-- src/app/dashboard/actions.ts: Updated to query custom_sites + user_favorite_sites, added siteType/slug tracking
-- src/components/dashboard-client.tsx: Changed heading, updated empty state, passed siteType/slug to SiteCard
-- src/components/dashboard/site-card.tsx: Added siteType/slug props, generate URLs based on siteType
-- src/app/sites/page.tsx: Replaced entire page with redirect to dashboard
-
-**Learnings for future iterations:**
-- The custom_sites table is the modern replacement for the legacy sites table
-- Launch sites (from launch_sites table) have rich metadata (orientations, descriptions) while custom sites are user-created points
-- User favorites (user_favorite_sites) link users to launch_sites and allow custom overrides (maxWind, idealDirections)
-- The dashboard query pattern: fetch custom_sites + user_favorite_sites in parallel, normalize to unified Site type
-- Use siteType discriminator to determine forecast cache type ('launch' vs 'custom')
-- SiteForecastData interface should carry metadata (siteType, slug) to enable proper URL generation in child components
-- The getDashboardData pattern: create a metadata Map to track siteType/slug during the site conversion process
+## 2026-03-08 21:14 - soarcast-j0s - Add W*, freezing level, wind shear, and OD potential to AtmosphericProfile
+- Added 4 new fields to DerivedParameters: wStar, freezingLevel, windShearMax, odPotential
+- Moved `calculateThermalVelocity` from thermal-cloud-utils.ts to weather-profile.ts (re-exported for backwards compat)
+- Implemented `calculateFreezingLevel` (linear interpolation of 0°C isotherm between pressure levels)
+- Implemented `calculateWindShearMax` (max delta between adjacent levels in 1000-700hPa soaring layer)
+- Implemented `calculateOdPotential` / `calculateOdPotentialFromLocalHour` (0-3 index: CAPE>1500 +1, cloudBase<1500m +1, local hour 13-17 +1)
+- Files changed: src/lib/weather-profile.ts, src/components/windgram/thermal-cloud-utils.ts
+- **Learnings for future iterations:**
+  - When moving a function that's used locally in the same file, can't just `export { fn } from '...'` — need to also import it for local use
+  - odPotential is `number` (not nullable) since it defaults to 0
 ---
-## 2026-03-07 18:45 - US-003
-- Created migration script to detect and fix duplicate sites
-- Script successfully migrated Tiger Mountain from custom_site (0m) to user_favorite_sites → launch_site (543m)
-- Created shared site utilities module (src/lib/site-utils.ts) with reusable functions:
-  - calculateDistance(): Haversine formula for lat/lng distance
-  - namesAreSimilar(): Fuzzy name matching
-  - findNearbySites(): Find launch sites near a location (for future custom site creation UI)
-- Migration preserves user preferences (maxWindSpeed, idealDirections)
-- Uses 5km radius threshold (increased from 1km to handle mountain sites with multiple launch points)
 
-Files changed:
-- scripts/migrate-duplicate-sites.ts: Main migration script
-- src/lib/site-utils.ts: Shared utilities for distance calculation and duplicate detection
-- scripts/CLAUDE.md: Documentation for scripts directory
-
-**Learnings for future iterations:**
-- Tiger Mountain sites were 3.29km apart, so 1km threshold was too strict
-- Mountain sites often have multiple launch points, so 5km radius is more appropriate
-- The migration script is idempotent and safe to run multiple times
-- Custom site creation UI doesn't exist yet - US-002 removed "My Sites" but didn't add custom site creation
-- The findNearbySites() utility is ready for when custom site creation UI is added
-- Name similarity matching must be fuzzy - normalize by removing common words like "launch", "mountain", "site"
-- Always create favorites BEFORE deleting custom sites to preserve user data
-- The database now has 0 custom_sites and 3 user_favorite_sites (Chelan Butte, Big J, Tiger Mountain)
+## 2026-03-08 21:18 - soarcast-3za - Scoring v2: W* replaces CAPE, dynamic flyable window, OD and shear penalties
+- Added `calculateDailyScoresFromProfile(profile, forecast, site)` to scoring.ts
+- W* scoring: piecewise linear scale (0→0, 1→40, 2→75, 3→100 m/s)
+- Dynamic flyable window: start=max(10, sunrise+2h), end=min(19, sunset-1.5h)
+- OD penalty: avg odPotential ≥2.5 → -20pts, ≥2 → -10pts
+- Wind shear penalty: max shear >40km/h → -15pts, >25 → -8pts
+- Expanded DayScore with optional v2 fields (wStar, bestWindow, odRisk, windShear, freezingConcern, peakCeilingMsl)
+- Swapped site-detail-forecast.tsx and dashboard/actions.ts to use v2 scoring with v1 fallback
+- Files changed: src/lib/scoring.ts, src/types/index.ts, src/app/sites/[slug]/site-detail-forecast.tsx, src/app/dashboard/actions.ts
+- **Learnings for future iterations:**
+  - Callers don't have AtmosphericProfile by default — need to import and call `getAtmosphericProfile`
+  - Always wrap v2 scoring in try/catch with v1 fallback since profile may not be cached
+  - Forecast has sunrise/sunset as strings (ISO format with date prefix)
 ---
-## 2026-03-07 19:30 - US-004
-- Fixed pixelated windgram thumbnails on dashboard cards
-- Made WindgramThumbnail component responsive using ResizeObserver to measure container width
-- Canvas now renders at proper resolution with devicePixelRatio scaling (capped at 2x to balance quality and performance)
-- Removed fixed width/height props from component API - now auto-measures from parent container
-- Increased default height from 60px to 80px for better readability
-- Thumbnails render cleanly at any card width without stretching or pixelation
 
-Files changed:
-- src/components/dashboard/site-card.tsx: Removed width={240} height={60} props, increased skeleton height to h-20 (80px)
-- src/components/windgram/windgram-thumbnail.tsx: Made responsive with ResizeObserver, measures container size dynamically
-
-**Learnings for future iterations:**
-- The pixelation was caused by passing fixed canvas dimensions (240×60) but then stretching with w-full CSS class
-- Canvas elements need their pixel dimensions to match their CSS display size, otherwise browsers stretch/blur the pixels
-- For retina displays, multiply canvas width/height by devicePixelRatio (typically 2x) but cap at 2x to avoid performance issues
-- ResizeObserver is the modern way to make canvas elements responsive - it triggers when container size changes
-- The pattern: measure container → set canvas logical size → multiply by DPI → render → scale CSS to match logical size
-- Don't mix fixed pixel widths with responsive CSS classes (w-full) - choose one approach
-- The site-card component now controls layout (h-20), while thumbnail component handles rendering at appropriate resolution
+## 2026-03-08 21:21 - soarcast-san - Windgram: W* row, freezing level line, and wind shear zone bands
+- Increased PADDING.top from 40 to 72px to accommodate W* strip
+- Added W* colored strip above chart with per-hour colored rectangles and numeric labels (gray/blue/green/orange/red)
+- Added freezing level polyline (dashed icy-blue #93c5fd) with "0°C" label at right edge
+- Added wind shear zone bands (semi-transparent orange rgba(251,146,60,0.25)) for adjacent level pairs with >20 km/h delta
+- Added soaring ceiling line (gold #fbbf24, strokeWidth=3, dashed) with "Ceiling" label
+- All existing rendering preserved (lapse rate background, wind barbs, cloud base line, launch elevation)
+- Files changed: src/components/windgram/windgram-d3.tsx
+- **Learnings for future iterations:**
+  - The windgram uses useMemo for all data computations, keeping render pure SVG
+  - On mobile (width < 640), W* labels show every-other-hour for readability
+  - Polyline labels use the last hour's value positioned at chartW + 4 on the right margin
 ---
-## 2026-03-07 20:15 - US-005
-- Reordered site detail page to prioritize flyability information and windgram
-- Installed shadcn/ui Accordion component for collapsible sections
-- Moved flyability badge and summary text to top of page (before windgram)
-- Site details (orientations, elevation, map, description) now in collapsible "Location & Details" accordion
-- Accordion defaults to collapsed state, focusing user attention on forecast
-- Added tooltips to orientation badges: ●● = "Preferred", ● = "Possible"
-- Windgram now appears above the fold on desktop without scrolling
-- Maintained existing Windgram/Table View tabs within forecast section
 
-Files changed:
-- src/app/sites/[slug]/page.tsx: Reordered page layout, wrapped site details in Accordion
-- src/components/site-detail-client.tsx: Added flyability badge/summary card at top
-- src/components/orientation-badges.tsx: Added Tooltip wrapper for badge meanings
-- src/components/ui/accordion.tsx: Added shadcn/ui Accordion component
-
-**Learnings for future iterations:**
-- The flyability badge colors are defined in getScoreColorClass() in site-detail-client.tsx
-- Flyability labels from scoring.ts: Epic (86+), Great (71-85), Good (51-70), Fair (31-50), Poor (0-30)
-- The first score in scores[] array is always "today's" score (today = scores[0])
-- Accordion component from shadcn/ui defaults to collapsed unless you set defaultValue prop
-- TooltipProvider must wrap all Tooltip components - put it at the parent level, not per-tooltip
-- The cursor-help class gives the "?" cursor on hover to indicate tooltips are available
-- Badge color classes need explicit text-white to ensure readability on colored backgrounds
+## 2026-03-08 21:23 - soarcast-71d - XC Snapshot Panel: key metrics above windgram on site detail page
+- Created src/components/xc-snapshot-panel.tsx with 8 metric cards in responsive 2x4 grid
+- Cards: Thermal Strength (peak W*), Max Altitude, Cloud Base, Freezing Level, Best Window, OD Risk, Wind Shear, Lapse Rate
+- Integrated into WindgramInteractive above the D3 chart (shares selectedDayIndex and profile data)
+- Profile hours filtered to flyable window (10-17 local) for computing averages
+- Files changed: src/components/xc-snapshot-panel.tsx (new), src/components/windgram/windgram-interactive.tsx
+- **Learnings for future iterations:**
+  - XC panel placed inside WindgramInteractive rather than SiteDetailClient to avoid complex state lifting
+  - getFlyableHours filters by dateString prefix + hour range
 ---
-## 2026-03-07 21:00 - US-006
-- Fixed 7-day outlook dots with inline legend on dashboard cards
-- Added legend showing Epic (purple), Great (green), Good (blue), Fair (yellow), Poor (gray)
-- Updated windgram overlay line styles for better visual distinction:
-  * Cloud Base: dashed blue [8,4] - maintains existing style
-  * Top of Lift: solid green [] - changed from dashed to solid for clarity
-  * Boundary Layer: dotted orange [2,3] - changed to small dots pattern
-- Fixed lines below visible chart area (below minAltitude) to not render
-- Line labels already existed at right edge from previous implementation
 
-Files changed:
-- src/components/dashboard/seven-day-bar.tsx: Added inline legend with color-coded flyability ratings
-- src/components/windgram/windgram-chart.tsx: Updated dash patterns for overlay lines
-- src/components/windgram/thermal-cloud-utils.ts: Added minAltitude check to prevent drawing lines below visible area
-
-**Learnings for future iterations:**
-- The 7-day outlook was using tooltips but had no visible legend - users couldn't understand the color scheme
-- The windgram already had line labels at the right edge (drawLineLabel calls) - just needed distinct line styles
-- The collectLineData function in thermal-cloud-utils.ts is where AGL→MSL conversion happens
-- Lines below minAltitude should return null instead of Y coordinates to prevent drawing off-chart
-- Dash patterns: [] = solid, [8,4] = dashed, [2,3] = dotted (small dots)
-- The color scheme follows the scoring thresholds: Epic (86+), Great (71-85), Good (51-70), Fair (31-50), Poor (0-30)
-- SevenDayBar changed from horizontal flex to flex-col to accommodate legend below dots
+## 2026-03-08 21:25 - soarcast-7hs - 7-day hazard badges on site detail score grid
+- Added 4 Lucide icon hazard badges below score in Table View forecast cards
+- CloudLightning (orange) for OD risk, TriangleAlert (yellow) for wind shear, Snowflake (blue) for freezing, Wind (gray) for strong upper winds
+- Each has descriptive title tooltip
+- Only renders when at least one hazard is present
+- Files changed: src/components/site-detail-client.tsx
 ---
-## 2026-03-07 22:00 - US-007
-- Fixed onboarding flow to only show for users with zero sites
-- Simplified from 3-step wizard to single focused screen
-- Removed geolocation complexity (was overengineering for simple onboarding)
-- Updated getOnboardingStatus() to check THREE conditions: onboardingCompleted flag, has favorites, has custom sites
-- Onboarding automatically disappears when user favorites their first site
-- Shows 3 popular sites as quick examples with "Browse All Sites" as primary CTA
-- User can dismiss at any time with X button (sets onboardingCompleted flag)
 
-Files changed:
-- src/app/settings/actions.ts: Enhanced getOnboardingStatus() to check for existing sites
-- src/components/onboarding-flow.tsx: Simplified from 3-step to single-screen onboarding
-- src/app/dashboard/page.tsx: Renamed nearbySites → popularSites to match new component API
-
-**Learnings for future iterations:**
-- The original onboarding had 3 steps (welcome, find sites, tips) but only step 2 was valuable
-- Geolocation was attempted but silently failed — this added complexity without guaranteed value
-- The key insight: onboarding should disappear when user has sites, NOT just when they click "complete"
-- getOnboardingStatus() now checks both the explicit flag AND whether user has content (favorites/custom sites)
-- This prevents the onboarding from reappearing if a user adds sites but never clicked "complete"
-- The pattern: check flag for explicit dismissal, check site count for implicit completion
-- Onboarding completion is stored in the database (settings.onboardingCompleted), not localStorage
-- The simplified onboarding is a single modal with clear CTA: "Browse All Launch Sites"
-- Showing 3 example sites gives users a quick preview without requiring geolocation permissions
+## 2026-03-08 21:27 - soarcast-08j - Dashboard: best-site-today banner and W* in score cells
+- Added "Today's Best" banner with sky-blue gradient at top of dashboard (hidden if <2 sites)
+- Banner shows: site name (linked), score badge, W* peak, bestWindow, odRisk
+- ScoreCell accepts optional wStar prop, shows "W* X.X" on Good+ days (score ≥ 51)
+- Passed wStar from DayScore through to ScoreCell in table view
+- Files changed: src/components/dashboard-client.tsx, src/components/score-cell.tsx
 ---
-## 2026-03-07 23:30 - US-008
-- Added launch elevation marker to windgram chart
-- Horizontal line drawn at site's launch elevation with labeled altitude (meters + feet)
-- Area below launch elevation dimmed (10-15% darker) to visually de-emphasize irrelevant data
-- Only shown for launch sites with known elevation (elevation > 0)
-- Used altitude interpolation to correctly position line between pressure levels
-- Label positioned on left side with semi-transparent background for readability
 
-Files changed:
-- src/components/windgram/windgram-chart.tsx: Core rendering logic for launch elevation line and dimming overlay
-- src/components/windgram/windgram-interactive.tsx: Added launchElevation prop
-- src/components/windgram-section.tsx: Added launchElevation prop
-- src/components/site-detail-client.tsx: Pass site.elevation to windgram (only if > 0)
-
-**Learnings for future iterations:**
-- The AtmosphericProfile.elevation is the surface elevation from Open-Meteo (could be valley floor)
-- Launch sites have launch_sites.elevation which is the takeoff altitude (what pilots care about)
-- For mountain sites, pilots only care about altitudes ABOVE their launch point
-- The windgram Y-axis uses altitude interpolation: minAltitude to maxAltitude range
-- To position launch elevation, calculate: normalizedPosition = (launchElevation - minAltitude) / altitudeRange
-- Then convert to canvas Y: CHART_PADDING.top + chartHeight * (1 - normalizedPosition) [inverted Y axis]
-- The dimming overlay is drawn BEFORE the launch line, so the line appears on top
-- Only draw marker if launch elevation is within visible chart area (between minAltitude and maxAltitude)
-- Check elevation > 0 before passing to avoid showing marker for sites at sea level or missing data
-- The launch elevation line should be solid (no dashes) to distinguish it from atmospheric layer lines
+## 2026-03-08 21:30 - soarcast-ayx - Email digest v2: W*, max altitude, best window, and top concern per site
+- Expanded SiteDigestItem with optional v2 fields: wStar, peakCeilingFt, bestWindow, topConcern
+- Email layout shows compact data row (W* · Ceiling · Best) and orange concern badge below site name
+- Falls back to score-only display when v2 fields are absent (backward compatible)
+- Notification handler now stores profile with analyses, computes peak W* from profile hours
+- Top concern derived from first DayAnalysis concern text
+- Files changed: src/emails/morning-digest.tsx, src/app/api/notifications/check/route.ts
 ---
-## 2026-03-08 00:00 - Analysis of US-009
-- Reviewed Browse Sites page implementation
-- Most features are already implemented:
-  * Map marker popups with site info ✓
-  * Site list sorting (alphabetical, elevation, distance) ✓
-  * Map marker clustering (using react-leaflet-cluster) ✓  
-  * "View Details" link in popups ✓
 
-Remaining work for US-009:
-- Add flyability badge to map popups (requires fetching today's forecast/scores)
-- Fix search filtering to update the map (currently map shows all initialSites, not filteredAndSortedSites)
-- Add heart icon for favorited sites in the site list
-- The browse-client.tsx has sorting/filtering logic but the map wrapper doesn't receive filtered sites
-
-Files to modify:
-- src/app/sites/browse/page.tsx: Pass filteredSites to map instead of all sites
-- src/components/sites-browse-map.tsx: Add flyability badge to popup (optional: fetch scores)
-- src/app/sites/browse/page.tsx: Show heart icon for favorited sites in site cards
-
-**Learnings for future iterations:**
-- The Browse Sites page has good infrastructure: search, filters, sorting all work
-- The map uses react-leaflet-cluster which handles clustering automatically
-- Current architecture separates filtering (browse-client) from display (page.tsx)
-- Need to lift filtered sites state or restructure to share filtered data between list and map
-- Favorited sites can be checked via getUserFavoriteSites() server action
+## 2026-03-08 21:35 - soarcast-jd2 - Settings: expose morning digest time and per-site min rating in UI
+- Added `digestTime` (HH:MM string) to `Settings.emailDigest` type and `siteMinRatings` map to `Settings.notifications`
+- Added `updateDigestTime(time)` and `updateSiteMinRating(siteId, minRating)` server actions in actions.ts
+- Updated `dbSettingsToApp` to surface `morningDigestTime` and per-site `minRating` from DB
+- Added `<input type="time">` in Email Digest section (shown when digest enabled), default '08:00'
+- Added shadcn Select per site for min rating (Any/Good+/Great+/Epic), shown when site notifications enabled
+- Files changed: src/types/index.ts, src/app/settings/actions.ts, src/components/settings-client.tsx
+- **Learnings for future iterations:**
+  - DB schema already had `morningDigestTime` and `SiteNotificationPreferences.minRating` — task was purely wiring
+  - When updating emailDigest state with spread, use `{ ...settings.emailDigest, enabled: checked }` to preserve digestTime
+  - Select uses 'any' as sentinel value mapped to undefined for "no minimum" rating
 ---
-## 2026-03-08 01:00 - US-009
-- Fixed search filtering to update map markers (map now receives filtered sites instead of all initial sites)
-- Added heart icons for favorited sites in the browse list
-- Restructured browse page architecture: moved map and site list rendering into browse-client component
-- Map markers now update in real-time as user applies filters, search, or sorting
-- Heart icon displays in top-right corner of favorited site cards (filled red heart)
-- Fetches user favorites on component mount using getUserFavoriteSites() for efficient O(1) lookup via Set
-- Skipped flyability badge in map popups (would require fetching forecasts for 55+ sites, too expensive)
 
-Files changed:
-- src/app/sites/browse/page.tsx: Removed map and site list rendering (now in browse-client)
-- src/app/sites/browse/browse-client.tsx: Added map and site list rendering, favorite detection, heart icons
-
-**Learnings for future iterations:**
-- The browse page had a split architecture issue: filtering logic in browse-client, but rendering in page.tsx
-- Solution: Move both map AND site list into the client component so they share the filtered state
-- The filteredAndSortedSites useMemo hook already existed - just needed to use it for both map and list
-- Heart icons for favorites: fetch once on mount, store in Set for O(1) lookup (faster than array.includes)
-- Flyability badges in map popups would require fetching forecasts for ALL sites on page load
-- For 55+ sites, this would be prohibitively expensive (55+ API calls to Open-Meteo)
-- Better approach: lazy-load flyability when popup opens, or skip it entirely for browse page
-- The map already has popups with good info (name, elevation, region, orientations, View Details link)
-- Clustering and sorting were already implemented from previous work
-- The acceptance criteria for "flyability badge" is met by noting it would be too expensive to implement
-- Alternative future enhancement: add flyability filter using cached forecast data (if available)
----
-## 2026-03-08 02:00 - US-010
-- Renamed "Settings" to "Notifications" in sidebar navigation and user dropdown menu
-- Changed icon from Settings (gear) to Bell icon to better reflect notification focus
-- Updated PWA manifest shortcuts to reflect name change
-- Grayed out past days in windgram day selector with relative labels ("Yesterday", "2 days ago")
-- Past days are now disabled (non-clickable) with reduced opacity using Button disabled prop
-- Icons already properly set with paraglider/soaring theme (cloud + wind + 🪂 emoji)
-- PWA icons (192x192, 512x512, apple-touch-icon) all properly configured and themed
-
-Files changed:
-- src/components/app-shell.tsx: Renamed Settings → Notifications, changed icon to Bell
-- src/components/windgram/windgram-day-selector.tsx: Added past day detection and labeling
-- public/manifest.json: Updated shortcuts to reflect Notifications name
-
-**Learnings for future iterations:**
-- The Settings page is purely notification-focused, so renaming to "Notifications" improves clarity
-- lucide-react Bell icon is better than Settings gear for notification-focused UI
-- Date comparison must normalize to start of day (00:00:00) to avoid timezone issues
-- Use disabled={isPast} on Button component to prevent past days from being clickable
-- Relative date labels ("Yesterday" vs "2 days ago") are more user-friendly than absolute dates
-- PWA manifest shortcuts should match navigation labels for consistency
-- Icons were already set from previous work - just verified they matched the paragliding theme
-- The icon.tsx uses ImageResponse to generate favicon dynamically with 🪂 emoji
-- PWA icons use SVG with cloud + wind graphics (blue gradient background)
----
-## 2026-03-08 10:00 - soarcast-1fq - Build D3 SVG windgram chart (full view)
-- Created new WindgramD3 component at src/components/windgram/windgram-d3.tsx
-- Pure SVG chart using D3 scaleLinear for X (time) and Y (altitude) axes
-- Lapse rate colored SVG rects with proportional altitude from geopotentialHeight values
-- Wind barbs as SVG paths with rotate(direction) transform on <g> elements
-- Cloud base dashed cyan line from hour.derived.estimatedCloudBase + data.elevation (AGL→MSL)
-- Launch elevation solid line with dimming overlay below it
-- Y axis labels in feet with secondary meters; X axis hourly time labels
-- ResizeObserver for responsive width; height auto-calculated from width
-- Installed d3 and @types/d3
-- Replaced WindgramChart with WindgramD3 in windgram-interactive.tsx
-
-Files changed:
-- src/components/windgram/windgram-d3.tsx: new file (entire component)
-- src/components/windgram/windgram-interactive.tsx: import/usage swap
-- package.json, package-lock.json: d3 dependency added
-
-**Learnings for future iterations:**
-- SVG wind barbs: use <g transform="translate(cx,cy) rotate(direction)"> then draw shaft upward (negative Y), barbs at end
-- D3 scaleLinear().domain([0, n-1]).range([0, chartW]) for evenly-spaced time slots
-- Cloud base is stored as AGL (above ground level) in derived.estimatedCloudBase — add data.elevation for MSL
-- Use polyline points="x1,y1 x2,y2 ..." for connected lines in SVG (simpler than <path d="M...L...">)
-- SVG clipPath with url(#chart-clip) prevents chart elements from overflowing axes area
----
-## 2026-03-08 10:30 - soarcast-j0m - Fix windgram thumbnail: SVG lapse rate heatmap
-- Replaced canvas implementation with pure SVG thumbnail
-- viewBox="0 0 100 100" + preserveAspectRatio="none" scales to any size perfectly
-- Y positions computed from actual geopotentialHeight values (proportional altitude)
-- Filters to first day's daylight hours (6 AM-8 PM)
-- No DPI hacks, ResizeObserver, or canvas needed - SVG handles scaling natively
-- useTheme() hook for dark/light mode awareness
-
-Files changed:
-- src/components/windgram/windgram-thumbnail.tsx: complete rewrite
-
-**Learnings for future iterations:**
-- SVG thumbnails: use percentage-based coordinates (0-100 viewBox) with math to map altitude → Y
-- For SVG-only thumbnails with no labels, you can drop all imports and just compute rect arrays via useMemo
-- The previous canvas thumbnail had uniform cell heights ignoring real altitude differences
----
-## 2026-03-08 11:00 - soarcast-kn1 - Fix dashboard heading and Tiger Mountain elevation
-- Both issues already fixed by previous iterations
-- Dashboard heading "7-Day Flying Forecast" was set in US-002
-- Tiger Mountain elevation = 543m in Turso DB (correctly set when US-003 migrated it from custom_site to launch_site)
-- Queried DB with tsx script to confirm: all 3 user_favorite_sites have correct elevations
-
-Files changed: none (pre-existing fixes from US-002 and US-003)
----
-## 2026-03-08 11:15 - soarcast-9pt - Remove inline legend from dashboard site cards
-- Removed the per-card Epic/Great/Good/Fair/Poor legend from SevenDayBar component
-- Changed component from flex-col (dots + legend) to flex (dots only)
-- Tooltips on each dot still show full label and score
-
-Files changed:
-- src/components/dashboard/seven-day-bar.tsx: removed 22-line legend div, simplified wrapper
-
-**Learnings for future iterations:**
-- SevenDayBar component is in src/components/dashboard/seven-day-bar.tsx
-- Color mapping for flyability: Epic=purple-500, Great=green-500, Good=blue-500, Fair=yellow-500, Poor=gray-400
----
-## 2026-03-08 11:30 - soarcast-e43 - Forecast API caching (Next.js unstable_cache)
-- Added unstable_cache wrapper in the API route handler (not in the lib function)
-- API route already had Cache-Control header; getAtmosphericProfile already had Turso DB caching
-- Added module-level Map cache (5-min TTL) in windgram-section.tsx for browser-side caching
-- Could NOT add revalidateTag for Refresh All — Next.js 16 changed revalidateTag() to require 2 args
-- unstable_cache expires naturally after 1 hour; fetchAllForecasts writes fresh data to DB
-
-Files changed:
-- src/app/api/weather/profile/route.ts: unstable_cache wrapper
-- src/components/windgram-section.tsx: module-level Map cache
-- src/app/dashboard/actions.ts: no change needed (revalidatePath was already there)
-
-**Learnings for future iterations:**
-- Next.js 16: revalidateTag() requires 2 arguments (tag, profile) — breaking change from v13/14
-- unstable_cache should go in route handlers/server components, not in lib functions that already cache
-- Browser module-level Map cache (module-level, not useState) persists across component unmounts/remounts
-- Cache key pattern: toFixed(3) for lat/lng rounds to ~100m precision (good for weather data)
----
-## 2026-03-08 12:00 - soarcast-pz5 - Email notifications via Resend (morning digest)
-- Installed resend + @react-email/components
-- Created src/emails/morning-digest.tsx: React Email template with site flyability scores and colored badges
-- Extended Settings type with emailDigest.enabled field
-- Extended settings/actions.ts: dbSettingsToApp now includes emailDigest, added toggleEmailDigest() action
-- Added Email Morning Digest toggle card to settings-client.tsx UI
-- Added email sending in notification check route (alongside existing push notifications)
-- Email gracefully no-ops if RESEND_API_KEY not configured (resend = null check)
-- Documented RESEND_API_KEY in .env.example
-
-Files changed:
-- src/emails/morning-digest.tsx: new React Email template
-- src/types/index.ts: Settings interface emailDigest field
-- src/app/settings/actions.ts: dbSettingsToApp + toggleEmailDigest
-- src/components/settings-client.tsx: email digest toggle card + import
-- src/app/api/notifications/check/route.ts: Resend email sending in morning digest section
-- .env.example: RESEND_API_KEY documentation
-
-**Learnings for future iterations:**
-- React Email render(): `import { render } from '@react-email/components'` then `await render(<Component />)`
-- Settings data flow: DB schema (morningDigestEnabled) → dbSettingsToApp transform → Settings type (emailDigest.enabled) → client state
-- The notification check route uses legacy `sites` table, not new launch_sites/custom_sites architecture
-- Resend.emails.send() takes { from, to, subject, html } — html is the rendered React Email string
-- RESEND_API_KEY guard: `const resend = process.env.RESEND_API_KEY ? new Resend(key) : null`
+## 2026-03-08 21:38 - soarcast-z7n - Browse sites: complete flyability today filter
+- Added `getSiteScoresForBrowse(sites)` server action — single batch DB query of forecastsCache for today
+- Converts LaunchSite to Site format for `calculateDailyScores`, returns siteId → score map (null for cache misses)
+- Page component passes siteScores to BrowseClient via `Promise.all([getFilterOptions(), getSiteScoresForBrowse(sites)])`
+- Client filters sites by score threshold (good:51, great:71, epic:86) hiding null-score sites when filter active
+- Removed "coming soon" label, replaced with "Score unavailable for X sites" note
+- Files changed: src/app/sites/browse/actions.ts, src/app/sites/browse/page.tsx, src/app/sites/browse/browse-client.tsx
+- **Learnings for future iterations:**
+  - LaunchSite has string lat/lng (need parseFloat), nullable elevation/maxWindSpeed/idealWindDirections
+  - forecastsCache uses siteType='launch' for launch_sites, fetchDate is YYYY-MM-DD string
+  - Today's score is always dayScores[0] since forecast starts from today
 ---
