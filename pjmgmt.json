@@ -1,0 +1,14 @@
+{
+  "name": "soarcast",
+  "status": "active",
+  "projects": [
+    {
+      "name": "soarcast",
+      "path": ".",
+      "framework": "nextjs",
+      "deployTarget": "vercel",
+      "database": "turso",
+      "uiLibrary": "shadcn"
+    }
+  ]
+}
