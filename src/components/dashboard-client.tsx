@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
@@ -25,6 +26,7 @@ export function DashboardClient({
   isAuthenticated,
 }: DashboardClientProps) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
@@ -34,7 +36,7 @@ export function DashboardClient({
     startTransition(async () => {
       const result = await refreshAction();
       if (result.success) {
-        console.log(result.message);
+        router.refresh();
       } else {
         console.error(result.message);
       }
