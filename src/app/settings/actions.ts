@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/db';
-import { settings, pushSubscriptions, type SiteNotificationPreferences } from '@/db/schema';
+import { settings, pushSubscriptions, userFavoriteSites, type SiteNotificationPreferences } from '@/db/schema';
 import { auth } from '@/auth';
 import type { Settings } from '@/types';
 
@@ -318,6 +318,36 @@ export async function completeOnboarding(): Promise<void> {
     })
     .where(eq(settings.userId, session.user.id));
 
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Update the custom max wind speed for a specific favorited site
+ */
+export async function updateSiteCustomMaxWind(
+  siteId: string,
+  customMaxWind: number | null,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (customMaxWind !== null && (customMaxWind < 10 || customMaxWind > 100)) {
+    throw new Error('Wind speed must be between 10 and 100 km/h');
+  }
+
+  await db
+    .update(userFavoriteSites)
+    .set({ customMaxWind })
+    .where(
+      and(
+        eq(userFavoriteSites.userId, session.user.id),
+        eq(userFavoriteSites.siteId, siteId),
+      ),
+    );
+
+  revalidatePath('/settings');
   revalidatePath('/dashboard');
 }
 

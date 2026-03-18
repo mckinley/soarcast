@@ -142,6 +142,27 @@ export async function isSiteFavorited(siteId: string): Promise<boolean> {
 }
 
 /**
+ * Get the user's favorite record for a specific site (for customMaxWind etc.)
+ * Returns null if not favorited or unauthenticated
+ */
+export async function getUserFavoriteSite(
+  siteId: string,
+): Promise<{ customMaxWind: number | null } | null> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const favorite = await db.query.userFavoriteSites.findFirst({
+    where: and(eq(userFavoriteSites.userId, session.user.id), eq(userFavoriteSites.siteId, siteId)),
+    columns: { customMaxWind: true },
+  });
+
+  return favorite ?? null;
+}
+
+/**
  * Add a site to user's favorites
  */
 export async function favoriteSite(siteId: string): Promise<void> {

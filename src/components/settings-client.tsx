@@ -6,20 +6,37 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { updateSettings, toggleSiteNotifications, toggleEmailDigest, updateDigestTime, updateSiteMinRating } from '@/app/settings/actions';
+import { updateSettings, toggleSiteNotifications, toggleEmailDigest, updateDigestTime, updateSiteMinRating, updateSiteCustomMaxWind } from '@/app/settings/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Settings, Site } from '@/types';
+import type { Settings } from '@/types';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface SettingsSite {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  elevation: number;
+  customMaxWind?: number | null;
+  defaultMaxWind?: number | null;
+}
+
 interface SettingsClientProps {
   initialSettings: Settings;
-  sites: Site[];
+  sites: SettingsSite[];
 }
 
 export function SettingsClient({ initialSettings, sites }: SettingsClientProps) {
   const [isPending, startTransition] = useTransition();
   const [settings, setSettings] = useState(initialSettings);
+  const [siteCustomWinds, setSiteCustomWinds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      sites
+        .filter((s) => s.customMaxWind != null)
+        .map((s) => [s.id, String(s.customMaxWind)]),
+    ),
+  );
   const [pushEnabled, setPushEnabled] = useState(initialSettings.notifications.enabled);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
@@ -60,6 +77,16 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
     startTransition(async () => {
       const updated = await updateSettings({ daysAhead: days });
       setSettings(updated);
+    });
+  };
+
+  const handleUpdateCustomWind = (siteId: string, value: string) => {
+    setSiteCustomWinds((prev) => ({ ...prev, [siteId]: value }));
+    const num = parseInt(value, 10);
+    const customMaxWind = value === '' ? null : isNaN(num) ? null : num;
+    if (value !== '' && (isNaN(num) || num < 10 || num > 100)) return;
+    startTransition(async () => {
+      await updateSiteCustomMaxWind(siteId, customMaxWind);
     });
   };
 
@@ -413,38 +440,53 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                       />
                     </div>
                     {isEnabled && (
-                      <div className="flex items-center gap-2 pl-8">
-                        <Label className="text-sm text-muted-foreground whitespace-nowrap">Min rating:</Label>
-                        <Select
-                          value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
-                          onValueChange={(value) => {
-                            const rating = value === 'any' ? undefined : value as 'Good' | 'Great' | 'Epic';
-                            setSettings({
-                              ...settings,
-                              notifications: {
-                                ...settings.notifications,
-                                siteMinRatings: {
-                                  ...settings.notifications.siteMinRatings,
-                                  [site.id]: rating,
+                      <div className="flex flex-wrap items-center gap-4 pl-8">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm text-muted-foreground whitespace-nowrap">Min rating:</Label>
+                          <Select
+                            value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
+                            onValueChange={(value) => {
+                              const rating = value === 'any' ? undefined : value as 'Good' | 'Great' | 'Epic';
+                              setSettings({
+                                ...settings,
+                                notifications: {
+                                  ...settings.notifications,
+                                  siteMinRatings: {
+                                    ...settings.notifications.siteMinRatings,
+                                    [site.id]: rating,
+                                  },
                                 },
-                              },
-                            });
-                            startTransition(async () => {
-                              await updateSiteMinRating(site.id, rating);
-                            });
-                          }}
-                          disabled={isPending}
-                        >
-                          <SelectTrigger className="w-[120px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="any">Any</SelectItem>
-                            <SelectItem value="Good">Good+</SelectItem>
-                            <SelectItem value="Great">Great+</SelectItem>
-                            <SelectItem value="Epic">Epic</SelectItem>
-                          </SelectContent>
-                        </Select>
+                              });
+                              startTransition(async () => {
+                                await updateSiteMinRating(site.id, rating);
+                              });
+                            }}
+                            disabled={isPending}
+                          >
+                            <SelectTrigger className="w-[120px] h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="any">Any</SelectItem>
+                              <SelectItem value="Good">Good+</SelectItem>
+                              <SelectItem value="Great">Great+</SelectItem>
+                              <SelectItem value="Epic">Epic</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm text-muted-foreground whitespace-nowrap">Wind limit (km/h):</Label>
+                          <Input
+                            type="number"
+                            min="10"
+                            max="100"
+                            placeholder={site.defaultMaxWind ? String(site.defaultMaxWind) : '40'}
+                            value={siteCustomWinds[site.id] ?? ''}
+                            onChange={(e) => handleUpdateCustomWind(site.id, e.target.value)}
+                            disabled={isPending}
+                            className="w-[80px] h-8"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { getLaunchSiteBySlug, isSiteFavorited } from '../browse/actions';
+import { getLaunchSiteBySlug, isSiteFavorited, getUserFavoriteSite } from '../browse/actions';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,7 +71,11 @@ export default async function LaunchSiteDetailPage({
   }
 
   // Fetch session and favorites in parallel (relatively fast)
-  const [session, isFavorited] = await Promise.all([auth(), isSiteFavorited(site.id)]);
+  const [session, isFavorited, userFavorite] = await Promise.all([
+    auth(),
+    isSiteFavorited(site.id),
+    getUserFavoriteSite(site.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -158,9 +162,21 @@ export default async function LaunchSiteDetailPage({
                 {/* Max wind speed */}
                 <div>
                   <span className="font-medium">Max Wind Speed:</span>{' '}
-                  <span className="text-muted-foreground">
-                    {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
-                  </span>
+                  {userFavorite?.customMaxWind ? (
+                    <span className="text-muted-foreground">
+                      {userFavorite.customMaxWind} km/h{' '}
+                      <span className="text-xs">(your limit)</span>
+                      {site.maxWindSpeed && (
+                        <span className="text-xs ml-1 opacity-60">
+                          · site default: {site.maxWindSpeed} km/h
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Coordinates - less prominent */}
