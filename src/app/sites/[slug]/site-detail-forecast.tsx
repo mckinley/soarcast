@@ -49,7 +49,7 @@ export async function SiteDetailForecast({ site }: SiteDetailForecastProps) {
 
       // Use v2 scoring with atmospheric profile when available
       try {
-        const profileResult = await getAtmosphericProfile(lat, lng);
+        const profileResult = await getAtmosphericProfile(lat, lng, 7);
         scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
       } catch {
         // Fall back to v1 scoring if profile fetch fails

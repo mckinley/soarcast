@@ -98,7 +98,7 @@ export async function getDashboardData(): Promise<SiteForecastData[]> {
         // Use v2 scoring with atmospheric profile when available
         let scores: DayScore[];
         try {
-          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude);
+          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
           scores = calculateDailyScoresFromProfile(
             profileResult.profile,
             forecastResult.forecast,
