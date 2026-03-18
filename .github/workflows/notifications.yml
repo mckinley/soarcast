@@ -1,0 +1,16 @@
+name: Send Notifications
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"   # 6am and 6pm UTC daily
+  workflow_dispatch:           # manual trigger for testing
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger notification check
+        run: |
+          curl -X POST "${{ secrets.SOARCAST_URL }}/api/notifications/check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail

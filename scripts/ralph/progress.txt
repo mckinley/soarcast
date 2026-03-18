@@ -114,3 +114,18 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
   - forecastsCache uses siteType='launch' for launch_sites, fetchDate is YYYY-MM-DD string
   - Today's score is always dayScores[0] since forecast starts from today
 ---
+
+## 2026-03-18 - soarcast-8uh - Per-site max wind speed customization UI in settings
+- Added `updateSiteCustomMaxWind(siteId, customMaxWind)` server action in settings/actions.ts
+- Updated settings/page.tsx to use `getUserFavoriteSites()` instead of legacy `getSites()` — passes customMaxWind per site
+- Defined `SettingsSite` interface in settings-client.tsx (replaces legacy `Site` type for settings prop)
+- Added `siteCustomWinds` state and `handleUpdateCustomWind` handler in settings-client.tsx
+- Added "Wind limit (km/h)" number input (min 10, max 100) in per-site notification rows, shown when site is enabled
+- Added `getUserFavoriteSite(siteId)` helper in browse/actions.ts for per-site favorite data
+- Updated site detail page to show "X km/h (your limit)" with site default when user has customMaxWind set
+- Files changed: src/app/settings/actions.ts, src/app/settings/page.tsx, src/app/sites/[slug]/page.tsx, src/app/sites/browse/actions.ts, src/components/settings-client.tsx
+- **Learnings for future iterations:**
+  - Settings page was using legacy `sites` table — must use `getUserFavoriteSites()` to access `customMaxWind` on `userFavoriteSites`
+  - Settings per-site section now uses `SettingsSite` interface (not legacy `Site`) to avoid polluting global type with favorite-specific fields
+  - Input placeholder shows site defaultMaxWind (from launchSites.maxWindSpeed) for UX context
+---
