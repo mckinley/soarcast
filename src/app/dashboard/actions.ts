@@ -158,11 +158,13 @@ export async function refreshAllForecasts(): Promise<{ success: boolean; message
         id: s.id,
         latitude: parseFloat(s.latitude),
         longitude: parseFloat(s.longitude),
+        siteType: 'custom' as const,
       })),
       ...favoriteSites.map((s) => ({
         id: s.id,
         latitude: parseFloat(s.latitude),
         longitude: parseFloat(s.longitude),
+        siteType: 'launch' as const,
       })),
     ];
 

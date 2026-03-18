@@ -265,10 +265,10 @@ export async function getForecast(
  * @returns Map of siteId to Forecast
  */
 export async function fetchAllForecasts(
-  sites: Array<{ id: string; latitude: number; longitude: number }>,
+  sites: Array<{ id: string; latitude: number; longitude: number; siteType?: 'launch' | 'custom' | 'legacy' }>,
 ): Promise<Record<string, Forecast>> {
   const forecastPromises = sites.map((site) =>
-    getForecast(site.id, site.latitude, site.longitude).then((result) => ({
+    getForecast(site.id, site.latitude, site.longitude, site.siteType ?? 'legacy').then((result) => ({
       id: site.id,
       forecast: result.forecast,
     })),
