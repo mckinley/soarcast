@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getDashboardData, refreshAllForecasts } from './actions';
 import { getSettings, getOnboardingStatus } from '@/app/settings/actions';
 import { DashboardClient } from '@/components/dashboard-client';
