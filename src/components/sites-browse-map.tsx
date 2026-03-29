@@ -1,9 +1,7 @@
-'use client';
-
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import Link from 'next/link';
+import { Link } from 'react-router';
 import type { LaunchSite } from '@/db/schema';
 import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
@@ -98,7 +96,7 @@ export function SitesBrowseMap({ sites }: SitesBrowseMapProps) {
                       )}
                     </div>
                     <Link
-                      href={`/sites/${site.slug}`}
+                      to={`/sites/${site.slug}`}
                       className="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
                     >
                       View Details →

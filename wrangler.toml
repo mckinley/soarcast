@@ -1,0 +1,19 @@
+name = "soarcast"
+main = "./worker.ts"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./build/client"
+binding = "ASSETS"
+
+[vars]
+BETTER_AUTH_URL = "https://soarcast.mckinleydigital.com"
+
+[[routes]]
+pattern = "soarcast.mckinleydigital.com"
+custom_domain = true
+
+[[routes]]
+pattern = "soarcast.mckinleyaviation.com"
+custom_domain = true

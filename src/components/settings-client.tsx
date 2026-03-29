@@ -1,13 +1,17 @@
-'use client';
-
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useFetcher } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { updateSettings, toggleSiteNotifications, toggleEmailDigest, updateDigestTime, updateSiteMinRating, updateSiteCustomMaxWind } from '@/app/settings/actions';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Settings } from '@/types';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,16 +29,16 @@ interface SettingsSite {
 interface SettingsClientProps {
   initialSettings: Settings;
   sites: SettingsSite[];
+  vapidPublicKey?: string;
 }
 
-export function SettingsClient({ initialSettings, sites }: SettingsClientProps) {
-  const [isPending, startTransition] = useTransition();
+export function SettingsClient({ initialSettings, sites, vapidPublicKey }: SettingsClientProps) {
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== 'idle';
   const [settings, setSettings] = useState(initialSettings);
   const [siteCustomWinds, setSiteCustomWinds] = useState<Record<string, string>>(() =>
     Object.fromEntries(
-      sites
-        .filter((s) => s.customMaxWind != null)
-        .map((s) => [s.id, String(s.customMaxWind)]),
+      sites.filter((s) => s.customMaxWind != null).map((s) => [s.id, String(s.customMaxWind)]),
     ),
   );
   const [pushEnabled, setPushEnabled] = useState(initialSettings.notifications.enabled);
@@ -64,20 +68,22 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
     const threshold = parseInt(value, 10);
     if (isNaN(threshold) || threshold < 0 || threshold > 100) return;
 
-    startTransition(async () => {
-      const updated = await updateSettings({ minScoreThreshold: threshold });
-      setSettings(updated);
+    setSettings({
+      ...settings,
+      notifications: { ...settings.notifications, minScoreThreshold: threshold },
     });
+    fetcher.submit(
+      { intent: 'updateSettings', minScoreThreshold: String(threshold) },
+      { method: 'POST' },
+    );
   };
 
   const handleUpdateDaysAhead = (value: string) => {
     const days = parseInt(value, 10);
     if (isNaN(days) || days < 1 || days > 7) return;
 
-    startTransition(async () => {
-      const updated = await updateSettings({ daysAhead: days });
-      setSettings(updated);
-    });
+    setSettings({ ...settings, notifications: { ...settings.notifications, daysAhead: days } });
+    fetcher.submit({ intent: 'updateSettings', daysAhead: String(days) }, { method: 'POST' });
   };
 
   const handleUpdateCustomWind = (siteId: string, value: string) => {
@@ -85,26 +91,32 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
     const num = parseInt(value, 10);
     const customMaxWind = value === '' ? null : isNaN(num) ? null : num;
     if (value !== '' && (isNaN(num) || num < 10 || num > 100)) return;
-    startTransition(async () => {
-      await updateSiteCustomMaxWind(siteId, customMaxWind);
-    });
+    fetcher.submit(
+      {
+        intent: 'updateSiteCustomMaxWind',
+        siteId,
+        customMaxWind: customMaxWind == null ? '' : String(customMaxWind),
+      },
+      { method: 'POST' },
+    );
   };
 
   const handleToggleSiteNotifications = (siteId: string, enabled: boolean) => {
-    startTransition(async () => {
-      await toggleSiteNotifications(siteId, enabled);
-      // Update local state immediately for responsive UI
-      setSettings({
-        ...settings,
-        notifications: {
-          ...settings.notifications,
-          sitePreferences: {
-            ...settings.notifications.sitePreferences,
-            [siteId]: enabled,
-          },
+    // Update local state immediately for responsive UI
+    setSettings({
+      ...settings,
+      notifications: {
+        ...settings.notifications,
+        sitePreferences: {
+          ...settings.notifications.sitePreferences,
+          [siteId]: enabled,
         },
-      });
+      },
     });
+    fetcher.submit(
+      { intent: 'toggleSiteNotifications', siteId, enabled: String(enabled) },
+      { method: 'POST' },
+    );
   };
 
   const handleEnablePushNotifications = async () => {
@@ -123,7 +135,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       }
 
       // Subscribe to push notifications
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      // vapidPublicKey is passed as a prop from the route loader
       if (!vapidPublicKey) {
         throw new Error('VAPID public key not configured');
       }
@@ -365,10 +377,14 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               id="email-digest"
               checked={settings.emailDigest.enabled}
               onCheckedChange={(checked) => {
-                setSettings({ ...settings, emailDigest: { ...settings.emailDigest, enabled: checked } });
-                startTransition(async () => {
-                  await toggleEmailDigest(checked);
+                setSettings({
+                  ...settings,
+                  emailDigest: { ...settings.emailDigest, enabled: checked },
                 });
+                fetcher.submit(
+                  { intent: 'toggleEmailDigest', enabled: String(checked) },
+                  { method: 'POST' },
+                );
               }}
               disabled={isPending}
             />
@@ -382,10 +398,14 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                 value={settings.emailDigest.digestTime}
                 onChange={(e) => {
                   const time = e.target.value;
-                  setSettings({ ...settings, emailDigest: { ...settings.emailDigest, digestTime: time } });
-                  startTransition(async () => {
-                    await updateDigestTime(time);
+                  setSettings({
+                    ...settings,
+                    emailDigest: { ...settings.emailDigest, digestTime: time },
                   });
+                  fetcher.submit(
+                    { intent: 'updateDigestTime', digestTime: time },
+                    { method: 'POST' },
+                  );
                 }}
                 disabled={isPending}
                 className="max-w-[140px]"
@@ -414,10 +434,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               {sites.map((site) => {
                 const isEnabled = settings.notifications.sitePreferences[site.id] ?? true; // default to enabled
                 return (
-                  <div
-                    key={site.id}
-                    className="rounded-lg border p-4 space-y-3"
-                  >
+                  <div key={site.id} className="rounded-lg border p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {isEnabled ? (
@@ -428,25 +445,30 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                         <div>
                           <div className="font-medium">{site.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}
-                            m
+                            {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} •{' '}
+                            {site.elevation}m
                           </div>
                         </div>
                       </div>
                       <Switch
                         checked={isEnabled}
-                        onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
+                        onCheckedChange={(checked) =>
+                          handleToggleSiteNotifications(site.id, checked)
+                        }
                         disabled={isPending}
                       />
                     </div>
                     {isEnabled && (
                       <div className="flex flex-wrap items-center gap-4 pl-8">
                         <div className="flex items-center gap-2">
-                          <Label className="text-sm text-muted-foreground whitespace-nowrap">Min rating:</Label>
+                          <Label className="text-sm text-muted-foreground whitespace-nowrap">
+                            Min rating:
+                          </Label>
                           <Select
                             value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
                             onValueChange={(value) => {
-                              const rating = value === 'any' ? undefined : value as 'Good' | 'Great' | 'Epic';
+                              const rating =
+                                value === 'any' ? undefined : (value as 'Good' | 'Great' | 'Epic');
                               setSettings({
                                 ...settings,
                                 notifications: {
@@ -457,9 +479,14 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                                   },
                                 },
                               });
-                              startTransition(async () => {
-                                await updateSiteMinRating(site.id, rating);
-                              });
+                              fetcher.submit(
+                                {
+                                  intent: 'updateSiteMinRating',
+                                  siteId: site.id,
+                                  rating: rating ?? '',
+                                },
+                                { method: 'POST' },
+                              );
                             }}
                             disabled={isPending}
                           >
@@ -475,7 +502,9 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
                           </Select>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Label className="text-sm text-muted-foreground whitespace-nowrap">Wind limit (km/h):</Label>
+                          <Label className="text-sm text-muted-foreground whitespace-nowrap">
+                            Wind limit (km/h):
+                          </Label>
                           <Input
                             type="number"
                             min="10"

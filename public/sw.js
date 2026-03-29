@@ -6,11 +6,7 @@ const CACHE_NAME = 'soarcast-v3';
 const API_CACHE_NAME = 'soarcast-api-v2';
 
 // Only cache truly static assets (icons, fonts — things that never change)
-const STATIC_ASSETS = [
-  '/icon-192.png',
-  '/icon-512.png',
-  '/manifest.json',
-];
+const STATIC_ASSETS = ['/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 // Install event - cache only static assets
 self.addEventListener('install', (event) => {
@@ -49,8 +45,7 @@ self.addEventListener('fetch', (event) => {
 
   // API: stale-while-revalidate for weather/sites
   const isApiRequest =
-    url.pathname.startsWith('/api/weather/profile') ||
-    url.pathname.startsWith('/api/sites');
+    url.pathname.startsWith('/api/weather/profile') || url.pathname.startsWith('/api/sites');
 
   if (isApiRequest) {
     event.respondWith(
@@ -75,13 +70,16 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        });
+        return (
+          cached ||
+          fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return response;
+          })
+        );
       }),
     );
     return;
@@ -89,9 +87,7 @@ self.addEventListener('fetch', (event) => {
 
   // Static icons/images: cache-first
   if (STATIC_ASSETS.includes(url.pathname)) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => cached || fetch(event.request)),
-    );
+    event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
     return;
   }
 
@@ -107,7 +103,7 @@ self.addEventListener('push', (event) => {
   let data;
   try {
     data = event.data.json();
-  } catch (e) {
+  } catch {
     data = { title: 'SoarCast', body: event.data.text() };
   }
 

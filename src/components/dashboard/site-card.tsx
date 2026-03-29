@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router';
 import type { Site, DayScore } from '@/types';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { WindgramThumbnail } from '@/components/windgram/windgram-thumbnail';
@@ -105,7 +103,7 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
   const siteUrl = siteType === 'launch' && slug ? `/sites/${slug}` : `/sites/custom/${site.id}`;
 
   return (
-    <Link href={siteUrl}>
+    <Link to={siteUrl}>
       <div
         ref={cardRef}
         className={`border rounded-lg p-4 hover:shadow-lg transition-shadow bg-card ${className}`}

@@ -1,7 +1,4 @@
-'use client';
-
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,15 +13,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Site } from '@/types';
 
-// Dynamically import map picker (Leaflet requires window/document)
-const MapPicker = dynamic(() => import('@/components/map-picker').then((mod) => mod.MapPicker), {
-  ssr: false,
-  loading: () => (
+// Lazily import map picker (Leaflet requires window/document)
+const MapPicker = lazy(() =>
+  import('@/components/map-picker').then((mod) => ({ default: mod.MapPicker })),
+);
+
+function MapPickerFallback() {
+  return (
     <div className="h-[400px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
       <p className="text-sm text-muted-foreground">Loading map...</p>
     </div>
-  ),
-});
+  );
+}
 
 interface SiteFormDialogProps {
   site?: Site;
@@ -167,17 +167,19 @@ export function SiteFormDialog({ site, trigger, onSubmit }: SiteFormDialogProps)
             {/* Map picker */}
             <div className="grid gap-2">
               <Label>Location *</Label>
-              <MapPicker
-                latitude={formData.latitude}
-                longitude={formData.longitude}
-                onLocationSelect={(lat, lng) => {
-                  setFormData({
-                    ...formData,
-                    latitude: lat,
-                    longitude: lng,
-                  });
-                }}
-              />
+              <Suspense fallback={<MapPickerFallback />}>
+                <MapPicker
+                  latitude={formData.latitude}
+                  longitude={formData.longitude}
+                  onLocationSelect={(lat, lng) => {
+                    setFormData({
+                      ...formData,
+                      latitude: lat,
+                      longitude: lng,
+                    });
+                  }}
+                />
+              </Suspense>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

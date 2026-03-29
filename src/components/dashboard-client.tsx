@@ -1,46 +1,30 @@
-'use client';
-
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useFetcher, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import { SiteCard } from '@/components/dashboard/site-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { SiteForecastData } from '@/app/dashboard/actions';
+import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
 import type { DayScore, Site, Forecast, Settings } from '@/types';
 import { RefreshCw, LayoutGrid, Table } from 'lucide-react';
-import Link from 'next/link';
 
 interface DashboardClientProps {
   data: SiteForecastData[];
   settings: Settings;
-  refreshAction: () => Promise<{ success: boolean; message: string }>;
   isAuthenticated: boolean; // Always true since dashboard requires auth
 }
 
-export function DashboardClient({
-  data,
-  settings,
-  refreshAction,
-  isAuthenticated,
-}: DashboardClientProps) {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+export function DashboardClient({ data, settings, isAuthenticated }: DashboardClientProps) {
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== 'idle';
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [selectedForecast, setSelectedForecast] = useState<Forecast | null>(null);
 
   const handleRefresh = () => {
-    startTransition(async () => {
-      const result = await refreshAction();
-      if (result.success) {
-        router.refresh();
-      } else {
-        console.error(result.message);
-      }
-    });
+    fetcher.submit({ intent: 'refreshForecasts' }, { method: 'POST' });
   };
 
   const handleCellClick = (score: DayScore, site: Site, forecast: Forecast) => {
@@ -58,7 +42,7 @@ export function DashboardClient({
         <p className="text-muted-foreground mb-6 text-center max-w-md">
           No sites yet. Browse launch sites to find your home site.
         </p>
-        <Link href="/sites/browse">
+        <Link to="/sites/browse">
           <Button size="lg">Browse Launch Sites</Button>
         </Link>
       </div>
@@ -111,19 +95,22 @@ export function DashboardClient({
 
   // Find today's best site (highest score)
   const todayDate = dates[0];
-  const bestSiteToday = data.length >= 2
-    ? data.reduce<{ siteData: SiteForecastData; score: DayScore; siteType: string; slug?: string } | null>(
-        (best, item) => {
+  const bestSiteToday =
+    data.length >= 2
+      ? data.reduce<{
+          siteData: SiteForecastData;
+          score: DayScore;
+          siteType: string;
+          slug?: string;
+        } | null>((best, item) => {
           const todayScore = item.scores.find((s) => s.date === todayDate);
           if (!todayScore) return best;
           if (!best || todayScore.overallScore > best.score.overallScore) {
             return { siteData: item, score: todayScore, siteType: item.siteType, slug: item.slug };
           }
           return best;
-        },
-        null,
-      )
-    : null;
+        }, null)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -135,7 +122,7 @@ export function DashboardClient({
               Today&apos;s Best
             </span>
             <Link
-              href={
+              to={
                 bestSiteToday.siteType === 'launch' && bestSiteToday.slug
                   ? `/sites/${bestSiteToday.slug}`
                   : `/sites/custom/${bestSiteToday.siteData.site.id}`

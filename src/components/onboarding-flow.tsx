@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate, useFetcher } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, ArrowRight, Loader2, MapPin } from 'lucide-react';
-import { completeOnboarding } from '@/app/settings/actions';
 
 interface OnboardingFlowProps {
   popularSites?: Array<{
@@ -18,17 +17,17 @@ interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({ popularSites }: OnboardingFlowProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const fetcher = useFetcher();
   const [isDismissing, setIsDismissing] = useState(false);
 
-  const handleDismiss = async () => {
+  const handleDismiss = () => {
     setIsDismissing(true);
-    await completeOnboarding();
-    router.refresh();
+    fetcher.submit({ intent: 'completeOnboarding' }, { method: 'POST' });
   };
 
   const handleBrowseSites = () => {
-    router.push('/sites/browse');
+    navigate('/sites/browse');
   };
 
   return (
@@ -72,7 +71,7 @@ export function OnboardingFlow({ popularSites }: OnboardingFlowProps) {
                   {popularSites.slice(0, 3).map((site) => (
                     <button
                       key={site.id}
-                      onClick={() => router.push(`/sites/${site.slug}`)}
+                      onClick={() => navigate(`/sites/${site.slug}`)}
                       className="flex w-full items-center gap-2 rounded-md border border-border p-3 text-left transition-colors hover:bg-accent"
                     >
                       <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />

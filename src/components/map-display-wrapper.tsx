@@ -1,15 +1,8 @@
-'use client';
+import { lazy, Suspense, useState, useEffect } from 'react';
 
-import dynamic from 'next/dynamic';
-
-const MapDisplay = dynamic(() => import('@/components/map-display').then((mod) => mod.MapDisplay), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[300px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading map...</p>
-    </div>
-  ),
-});
+const MapDisplay = lazy(() =>
+  import('@/components/map-display').then((mod) => ({ default: mod.MapDisplay })),
+);
 
 export function MapDisplayWrapper({
   latitude,
@@ -18,5 +11,29 @@ export function MapDisplayWrapper({
   latitude: number;
   longitude: number;
 }) {
-  return <MapDisplay latitude={latitude} longitude={longitude} />;
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="h-[300px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading map...</p>
+      </div>
+    );
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div className="h-[300px] rounded-md border bg-muted animate-pulse flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      }
+    >
+      <MapDisplay latitude={latitude} longitude={longitude} />
+    </Suspense>
+  );
 }

@@ -1,6 +1,15 @@
 // Atmospheric profile data service using Open-Meteo pressure-level API
 // Fetches full vertical atmospheric profiles for windgram visualizations
 
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+// DB injection for CF Workers compatibility
+let _injectedDb: LibSQLDatabase<unknown> | null = null;
+
+export function setProfileDb(db: LibSQLDatabase<unknown>) {
+  _injectedDb = db;
+}
+
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 const CACHE_DURATION_HOURS = 3;
 
@@ -561,8 +570,13 @@ export async function getAtmosphericProfile(
   longitude: number,
   days: number = 2,
 ): Promise<AtmosphericProfileResult> {
-  // Lazy import to avoid requiring DB env vars at module load time
-  const { db } = await import('@/db');
+  // Use injected DB for CF Workers compatibility
+  const db = _injectedDb;
+  if (!db) {
+    throw new Error(
+      'Profile DB not initialized. Call setProfileDb(getDb(env)) before using profile functions.',
+    );
+  }
   const { atmosphericProfilesCache } = await import('@/db/schema');
   const { eq, and } = await import('drizzle-orm');
 

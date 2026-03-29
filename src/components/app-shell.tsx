@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { Cloud, Bell, LayoutDashboard, Menu, Sun, Moon, LogOut, Compass } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { authClient } from '~/app/lib/auth-client';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -34,7 +33,7 @@ import {
 const navItems = [
   {
     title: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
@@ -80,15 +79,16 @@ function ThemeToggle() {
 }
 
 function UserMenu() {
-  const { data: session, status } = useSession();
+  const { data: session, isPending } = authClient.useSession();
+  const navigate = useNavigate();
 
-  if (status === 'loading') {
+  if (isPending) {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />;
   }
 
   if (!session?.user) {
     return (
-      <Button onClick={() => signIn()} variant="default" size="sm">
+      <Button onClick={() => navigate('/auth/signin')} variant="default" size="sm">
         Sign In
       </Button>
     );
@@ -97,12 +97,17 @@ function UserMenu() {
   const userInitials =
     session.user.name
       ?.split(' ')
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2) ||
     session.user.email?.[0]?.toUpperCase() ||
     '?';
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    navigate('/');
+  };
 
   return (
     <DropdownMenu>
@@ -123,7 +128,7 @@ function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings" className="cursor-pointer">
+          <Link to="/settings" className="cursor-pointer">
             <Bell className="mr-2 h-4 w-4" />
             Notifications
           </Link>
@@ -131,7 +136,7 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
@@ -142,7 +147,8 @@ function UserMenu() {
 }
 
 function AppSidebar() {
-  const pathname = usePathname();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   return (
     <Sidebar>
@@ -160,7 +166,7 @@ function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href}>
-                    <Link href={item.href}>
+                    <Link to={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -177,7 +183,8 @@ function AppSidebar() {
 
 function MobileNav() {
   const [open, setOpen] = React.useState(false);
-  const pathname = usePathname();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -198,7 +205,7 @@ function MobileNav() {
           {navItems.map((item) => (
             <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${
                 pathname === item.href ? 'bg-accent' : ''

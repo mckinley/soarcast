@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -65,7 +63,7 @@ export function SiteCard({ site, onUpdate, onDelete }: SiteCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex gap-2">
-        <Link href={`/sites/custom/${site.id}`}>
+        <Link to={`/sites/custom/${site.id}`}>
           <Button variant="default" size="sm">
             View Forecast
           </Button>

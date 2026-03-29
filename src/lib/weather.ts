@@ -1,8 +1,25 @@
 // Weather data fetching service using Open-Meteo API
 import { Forecast } from '@/types';
-import { db } from '@/db';
 import { forecastsCache } from '@/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+
+// Accept a db instance for CF Workers compatibility.
+// Callers must pass getDb(env) from their route context.
+let _injectedDb: LibSQLDatabase<unknown> | null = null;
+
+export function setWeatherDb(db: LibSQLDatabase<unknown>) {
+  _injectedDb = db;
+}
+
+function getDb(): LibSQLDatabase<unknown> {
+  if (!_injectedDb) {
+    throw new Error(
+      'Weather DB not initialized. Call setWeatherDb(getDb(env)) before using weather functions.',
+    );
+  }
+  return _injectedDb;
+}
 
 // Open-Meteo API configuration
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -185,7 +202,7 @@ export async function getForecast(
   const now = new Date();
 
   // Try to get cached forecast from Turso (both fresh and stale)
-  const [cachedRow] = await db
+  const [cachedRow] = await getDb()
     .select()
     .from(forecastsCache)
     .where(
@@ -211,7 +228,7 @@ export async function getForecast(
     const freshForecast = await fetchWeatherForecast(siteId, latitude, longitude);
 
     // Store in Turso cache (upsert pattern)
-    await db
+    await getDb()
       .insert(forecastsCache)
       .values({
         siteId,
@@ -265,13 +282,20 @@ export async function getForecast(
  * @returns Map of siteId to Forecast
  */
 export async function fetchAllForecasts(
-  sites: Array<{ id: string; latitude: number; longitude: number; siteType?: 'launch' | 'custom' | 'legacy' }>,
+  sites: Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    siteType?: 'launch' | 'custom' | 'legacy';
+  }>,
 ): Promise<Record<string, Forecast>> {
   const forecastPromises = sites.map((site) =>
-    getForecast(site.id, site.latitude, site.longitude, site.siteType ?? 'legacy').then((result) => ({
-      id: site.id,
-      forecast: result.forecast,
-    })),
+    getForecast(site.id, site.latitude, site.longitude, site.siteType ?? 'legacy').then(
+      (result) => ({
+        id: site.id,
+        forecast: result.forecast,
+      }),
+    ),
   );
 
   const results = await Promise.all(forecastPromises);
@@ -294,5 +318,7 @@ export async function clearExpiredForecasts(): Promise<void> {
 
   // Delete expired forecasts from Turso using SQL template
   // Drizzle ORM doesn't have lt() operator, so we use sql template for date comparison
-  await db.delete(forecastsCache).where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
+  await getDb()
+    .delete(forecastsCache)
+    .where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
 }
