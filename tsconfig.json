@@ -1,6 +1,6 @@
 {
   "include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*", "worker-configuration.d.ts"],
-  "exclude": ["node_modules", "drizzle.config.ts"],
+  "exclude": ["node_modules", "drizzle.config.ts", "worker.ts", "build"],
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "ES2022"],
