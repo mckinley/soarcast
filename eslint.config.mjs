@@ -1,13 +1,9 @@
-import { defineConfig, globalIgnores } from 'eslint/config'
-import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 
 const eslintConfig = defineConfig([
   ...tseslint.configs.recommended,
-  globalIgnores([
-    'build/**',
-    '.react-router/**',
-    'node_modules/**',
-  ]),
-])
+  globalIgnores(['build/**', '.react-router/**', 'node_modules/**']),
+]);
 
-export default eslintConfig
+export default eslintConfig;

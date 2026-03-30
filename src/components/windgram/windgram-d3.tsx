@@ -211,7 +211,15 @@ export function WindgramD3({
         const config = windSpeedToBarb(pl.windSpeed, pl.windDirection, isDark);
 
         if (config.speedKnots === 0) {
-          barbs.push({ cx, cy, rotation: 0, path: '', color: config.color, isCalm: true, calmR: 5 });
+          barbs.push({
+            cx,
+            cy,
+            rotation: 0,
+            path: '',
+            color: config.color,
+            isCalm: true,
+            calmR: 5,
+          });
         } else {
           const path = windBarbPath(config.flags, config.fullBarbs, config.halfBarbs);
           barbs.push({
@@ -386,28 +394,14 @@ export function WindgramD3({
           <clipPath id="chart-clip">
             <rect x={0} y={0} width={chartW} height={chartH} />
           </clipPath>
-          <marker
-            id="none"
-            markerWidth="0"
-            markerHeight="0"
-            refX="0"
-            refY="0"
-            orient="auto"
-          />
+          <marker id="none" markerWidth="0" markerHeight="0" refX="0" refY="0" orient="auto" />
         </defs>
 
         {/* ── W* strip above chart ── */}
         <g transform={`translate(${PADDING.left},${PADDING.top - 32})`}>
           {wStarStrip.map((cell, i) => (
             <g key={i}>
-              <rect
-                x={cell.x}
-                y={0}
-                width={cell.w}
-                height={20}
-                fill={cell.color}
-                rx={2}
-              />
+              <rect x={cell.x} y={0} width={cell.w} height={20} fill={cell.color} rx={2} />
               {cell.show && (
                 <text
                   x={cell.x + cell.w / 2}
@@ -486,15 +480,7 @@ export function WindgramD3({
 
           {/* ── Vertical grid lines at time labels ── */}
           {timeLabels.map(({ i, x }) => (
-            <line
-              key={i}
-              x1={x}
-              y1={0}
-              x2={x}
-              y2={chartH}
-              stroke={gridColor}
-              strokeWidth={0.6}
-            />
+            <line key={i} x1={x} y1={0} x2={x} y2={chartH} stroke={gridColor} strokeWidth={0.6} />
           ))}
 
           {/* ── Launch elevation dimming overlay (below launch line) ── */}
@@ -544,26 +530,28 @@ export function WindgramD3({
           )}
 
           {/* Cloud base label at right edge */}
-          {cloudBaseLine && daylightHours.length > 0 && (() => {
-            const lastHour = daylightHours[daylightHours.length - 1];
-            const cloudBaseAGL = lastHour.derived.estimatedCloudBase;
-            if (cloudBaseAGL === null) return null;
-            const cloudBaseMSL = cloudBaseAGL + data.elevation;
-            if (cloudBaseMSL < MIN_ALT_M || cloudBaseMSL > MAX_ALT_M) return null;
-            const y = yScale(cloudBaseMSL);
-            return (
-              <text
-                x={chartW + 4}
-                y={y}
-                fill={cloudBaseColor}
-                fontSize={10}
-                dominantBaseline="middle"
-                fontFamily="inherit"
-              >
-                Cloud Base
-              </text>
-            );
-          })()}
+          {cloudBaseLine &&
+            daylightHours.length > 0 &&
+            (() => {
+              const lastHour = daylightHours[daylightHours.length - 1];
+              const cloudBaseAGL = lastHour.derived.estimatedCloudBase;
+              if (cloudBaseAGL === null) return null;
+              const cloudBaseMSL = cloudBaseAGL + data.elevation;
+              if (cloudBaseMSL < MIN_ALT_M || cloudBaseMSL > MAX_ALT_M) return null;
+              const y = yScale(cloudBaseMSL);
+              return (
+                <text
+                  x={chartW + 4}
+                  y={y}
+                  fill={cloudBaseColor}
+                  fontSize={10}
+                  dominantBaseline="middle"
+                  fontFamily="inherit"
+                >
+                  Cloud Base
+                </text>
+              );
+            })()}
 
           {/* ── Freezing level line (dashed icy-blue) ── */}
           {freezingLevelLine && (
@@ -577,24 +565,26 @@ export function WindgramD3({
             />
           )}
           {/* Freezing level label at right edge */}
-          {freezingLevelLine && daylightHours.length > 0 && (() => {
-            const lastHour = daylightHours[daylightHours.length - 1];
-            const fl = lastHour.derived.freezingLevel;
-            if (fl === null || fl < MIN_ALT_M || fl > MAX_ALT_M) return null;
-            const y = yScale(fl);
-            return (
-              <text
-                x={chartW + 4}
-                y={y}
-                fill="#93c5fd"
-                fontSize={10}
-                dominantBaseline="middle"
-                fontFamily="inherit"
-              >
-                0°C
-              </text>
-            );
-          })()}
+          {freezingLevelLine &&
+            daylightHours.length > 0 &&
+            (() => {
+              const lastHour = daylightHours[daylightHours.length - 1];
+              const fl = lastHour.derived.freezingLevel;
+              if (fl === null || fl < MIN_ALT_M || fl > MAX_ALT_M) return null;
+              const y = yScale(fl);
+              return (
+                <text
+                  x={chartW + 4}
+                  y={y}
+                  fill="#93c5fd"
+                  fontSize={10}
+                  dominantBaseline="middle"
+                  fontFamily="inherit"
+                >
+                  0°C
+                </text>
+              );
+            })()}
 
           {/* ── Soaring ceiling line (gold, thick) ── */}
           {ceilingLine && (
@@ -608,25 +598,27 @@ export function WindgramD3({
             />
           )}
           {/* Ceiling label at right edge */}
-          {ceilingLine && daylightHours.length > 0 && (() => {
-            const lastHour = daylightHours[daylightHours.length - 1];
-            const tol = lastHour.derived.estimatedTopOfLift;
-            if (tol === null || tol < MIN_ALT_M || tol > MAX_ALT_M) return null;
-            const y = yScale(tol);
-            return (
-              <text
-                x={chartW + 4}
-                y={y}
-                fill="#fbbf24"
-                fontSize={10}
-                dominantBaseline="middle"
-                fontWeight="bold"
-                fontFamily="inherit"
-              >
-                Ceiling
-              </text>
-            );
-          })()}
+          {ceilingLine &&
+            daylightHours.length > 0 &&
+            (() => {
+              const lastHour = daylightHours[daylightHours.length - 1];
+              const tol = lastHour.derived.estimatedTopOfLift;
+              if (tol === null || tol < MIN_ALT_M || tol > MAX_ALT_M) return null;
+              const y = yScale(tol);
+              return (
+                <text
+                  x={chartW + 4}
+                  y={y}
+                  fill="#fbbf24"
+                  fontSize={10}
+                  dominantBaseline="middle"
+                  fontWeight="bold"
+                  fontFamily="inherit"
+                >
+                  Ceiling
+                </text>
+              );
+            })()}
 
           {/* ── Launch elevation line ── */}
           {launchY !== null && (
@@ -639,13 +631,7 @@ export function WindgramD3({
                 stroke={launchLineColor}
                 strokeWidth={2}
               />
-              <text
-                x={4}
-                y={launchY - 4}
-                fill={launchLineColor}
-                fontSize={10}
-                fontFamily="inherit"
-              >
+              <text x={4} y={launchY - 4} fill={launchLineColor} fontSize={10} fontFamily="inherit">
                 Launch: {Math.round(launchElevation!)}m /{' '}
                 {Math.round(mToFt(launchElevation!)).toLocaleString()}ft
               </text>

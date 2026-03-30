@@ -6,13 +6,13 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // Accept a db instance for CF Workers compatibility.
 // Callers must pass getDb(env) from their route context.
-let _injectedDb: LibSQLDatabase<unknown> | null = null;
+let _injectedDb: LibSQLDatabase<Record<string, unknown>> | null = null;
 
-export function setWeatherDb(db: LibSQLDatabase<unknown>) {
+export function setWeatherDb(db: LibSQLDatabase<Record<string, unknown>>) {
   _injectedDb = db;
 }
 
-function getDb(): LibSQLDatabase<unknown> {
+function getDb(): LibSQLDatabase<Record<string, unknown>> {
   if (!_injectedDb) {
     throw new Error(
       'Weather DB not initialized. Call setWeatherDb(getDb(env)) before using weather functions.',

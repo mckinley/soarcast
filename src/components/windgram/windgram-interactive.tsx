@@ -177,7 +177,7 @@ export function WindgramInteractive({
         <LapseRateLegend />
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;

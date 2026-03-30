@@ -23,6 +23,8 @@ describe('calculateDailyScores', () => {
       modelElevation: 1000,
       sunrise: '2024-01-01T08:00:00Z',
       sunset: '2024-01-01T17:00:00Z',
+      sunriseByDay: { '2024-01-01': '2024-01-01T08:00:00Z' },
+      sunsetByDay: { '2024-01-01': '2024-01-01T17:00:00Z' },
       hourly: {
         time: [
           '2024-01-01T10:00',
@@ -79,6 +81,8 @@ describe('calculateDailyScores', () => {
       modelElevation: 1000,
       sunrise: '2024-01-01T08:00:00Z',
       sunset: '2024-01-01T17:00:00Z',
+      sunriseByDay: {},
+      sunsetByDay: {},
       hourly: {
         time: [],
         temperature_2m: [],

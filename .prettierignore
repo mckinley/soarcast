@@ -27,3 +27,9 @@ yarn.lock
 # Misc
 .DS_Store
 *.log
+
+# React Router generated types
+.react-router/
+
+# Beads metadata
+.beads/

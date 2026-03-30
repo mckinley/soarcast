@@ -70,9 +70,7 @@ try {
   console.log('✓ Created favicon.svg');
 
   // Also create a simple favicon.ico placeholder message
-  console.log(
-    '\nNote: SVG icons created. For production, convert SVGs to PNG using:',
-  );
+  console.log('\nNote: SVG icons created. For production, convert SVGs to PNG using:');
   console.log('  - Online tool: https://convertio.co/svg-png/');
   console.log('  - CLI: npm install -g sharp-cli && sharp input.svg -o output.png');
   console.log('\n✓ All PWA icon SVGs generated successfully!');

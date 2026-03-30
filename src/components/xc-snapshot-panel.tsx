@@ -84,13 +84,7 @@ function lapseRateLabel(lr: number | null): { label: string; colorClass: string 
   return { label: 'Unstable', colorClass: 'text-green-600 dark:text-green-400' };
 }
 
-function MetricCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function MetricCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border bg-card p-3 space-y-1">
       <div className="text-xs text-muted-foreground font-medium">{title}</div>
@@ -177,9 +171,7 @@ export function XcSnapshotPanel({ dayScore, profile, dateString, loading }: XcSn
       {/* 2. Max Altitude */}
       <MetricCard title="Max Altitude">
         <div className="font-semibold">
-          {dayScore.peakCeilingMsl
-            ? `${dayScore.peakCeilingMsl.toLocaleString()}m`
-            : '—'}
+          {dayScore.peakCeilingMsl ? `${dayScore.peakCeilingMsl.toLocaleString()}m` : '—'}
         </div>
         <div className="text-xs text-muted-foreground">
           {dayScore.peakCeilingMsl
@@ -190,9 +182,7 @@ export function XcSnapshotPanel({ dayScore, profile, dateString, loading }: XcSn
 
       {/* 3. Cloud Base */}
       <MetricCard title="Cloud Base">
-        <div className="font-semibold">
-          {avgCloudBase !== null ? `${avgCloudBase}m AGL` : '—'}
-        </div>
+        <div className="font-semibold">{avgCloudBase !== null ? `${avgCloudBase}m AGL` : '—'}</div>
         <div className="text-xs text-muted-foreground">
           {avgCloudBase !== null
             ? `${Math.round(mToFt(avgCloudBase)).toLocaleString()} ft AGL`

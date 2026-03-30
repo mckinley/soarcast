@@ -53,33 +53,12 @@ function createIcon(size) {
   // Left bump
   ctx.arc(cloudX + cloudSize * 0.2, cloudY + cloudSize * 0.3, cloudSize * 0.15, Math.PI, 0, false);
   // Top middle bump
-  ctx.arc(
-    cloudX + cloudSize * 0.5,
-    cloudY + cloudSize * 0.15,
-    cloudSize * 0.25,
-    Math.PI,
-    0,
-    false,
-  );
+  ctx.arc(cloudX + cloudSize * 0.5, cloudY + cloudSize * 0.15, cloudSize * 0.25, Math.PI, 0, false);
   // Right bump
-  ctx.arc(
-    cloudX + cloudSize * 0.8,
-    cloudY + cloudSize * 0.3,
-    cloudSize * 0.15,
-    Math.PI,
-    0,
-    false,
-  );
+  ctx.arc(cloudX + cloudSize * 0.8, cloudY + cloudSize * 0.3, cloudSize * 0.15, Math.PI, 0, false);
   // Bottom
   ctx.lineTo(cloudX + cloudSize, cloudY + cloudSize * 0.5);
-  ctx.arc(
-    cloudX + cloudSize * 0.5,
-    cloudY + cloudSize * 0.5,
-    cloudSize * 0.5,
-    0,
-    Math.PI,
-    false,
-  );
+  ctx.arc(cloudX + cloudSize * 0.5, cloudY + cloudSize * 0.5, cloudSize * 0.5, 0, Math.PI, false);
   ctx.closePath();
   ctx.fill();
 
@@ -123,10 +102,7 @@ try {
 
   // Apple touch icon (180x180)
   const appleIcon = createIcon(180);
-  fs.writeFileSync(
-    path.join(publicDir, 'apple-touch-icon.png'),
-    appleIcon.toBuffer('image/png'),
-  );
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), appleIcon.toBuffer('image/png'));
   console.log('✓ Created apple-touch-icon.png');
 
   // Favicon (32x32)

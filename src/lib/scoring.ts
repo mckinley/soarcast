@@ -379,10 +379,7 @@ function scoreWStar(wStar: number | null): number {
  * Determines the dynamic flyable window from sunrise/sunset
  * start = max(10:00, sunrise + 2h), end = min(19:00, sunset - 1.5h)
  */
-function getFlyableWindow(
-  sunrise: string,
-  sunset: string,
-): { startHour: number; endHour: number } {
+function getFlyableWindow(sunrise: string, sunset: string): { startHour: number; endHour: number } {
   const sunriseHour = parseTimeToHour(sunrise);
   const sunsetHour = parseTimeToHour(sunset);
 
@@ -521,9 +518,7 @@ export function calculateDailyScoresFromProfile(
     }
 
     // Wind shear penalty
-    const maxShear = Math.max(
-      ...profileHours.map((h) => h.derived.windShearMax ?? 0),
-    );
+    const maxShear = Math.max(...profileHours.map((h) => h.derived.windShearMax ?? 0));
     let windShear: DayScore['windShear'] = 'none';
     if (maxShear > 40) {
       overallScore -= 15;
@@ -544,9 +539,7 @@ export function calculateDailyScoresFromProfile(
     // Freezing concern: freezing level within 500m of cloud base MSL
     // Cloud base AGL + site elevation ≈ cloud base MSL
     const minFreezing = Math.min(
-      ...profileHours
-        .map((h) => h.derived.freezingLevel)
-        .filter((v): v is number => v !== null),
+      ...profileHours.map((h) => h.derived.freezingLevel).filter((v): v is number => v !== null),
       Infinity,
     );
     const cloudBaseAgls = profileHours

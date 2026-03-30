@@ -23,7 +23,7 @@ function initDb() {
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   get(_, prop) {
     if (!_db) _db = initDb();
-    return (_db as Record<string | symbol, unknown>)[prop];
+    return (_db as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 

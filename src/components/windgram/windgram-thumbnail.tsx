@@ -81,9 +81,7 @@ export function WindgramThumbnail({ data, className = '' }: WindgramThumbnailPro
 
   if (!data || daylightHours.length === 0) {
     return (
-      <div
-        className={`bg-muted rounded flex items-center justify-center h-20 ${className}`}
-      >
+      <div className={`bg-muted rounded flex items-center justify-center h-20 ${className}`}>
         <span className="text-xs text-muted-foreground">No data</span>
       </div>
     );
@@ -98,14 +96,7 @@ export function WindgramThumbnail({ data, className = '' }: WindgramThumbnailPro
       aria-label="Windgram thumbnail showing atmospheric stability"
     >
       {cells.map((cell, i) => (
-        <rect
-          key={i}
-          x={cell.x}
-          y={cell.y}
-          width={cell.w}
-          height={cell.h}
-          fill={cell.color}
-        />
+        <rect key={i} x={cell.x} y={cell.y} width={cell.w} height={cell.h} fill={cell.color} />
       ))}
     </svg>
   );

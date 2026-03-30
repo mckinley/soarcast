@@ -16,7 +16,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   if (request.method === 'POST') {
     try {
-      const body = await request.json();
+      const body = (await request.json()) as {
+        endpoint?: string;
+        keys?: { p256dh: string; auth: string };
+      };
       const { endpoint, keys } = body;
 
       if (!endpoint || !keys?.p256dh || !keys?.auth) {
@@ -48,7 +51,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   if (request.method === 'DELETE') {
     try {
-      const body = await request.json();
+      const body = (await request.json()) as { endpoint?: string };
       const { endpoint } = body;
 
       if (!endpoint) {

@@ -1007,7 +1007,7 @@ export function WindgramChart({
       )}
 
       {/* CSS animations for mobile bottom sheet */}
-      <style jsx>{`
+      <style>{`
         @keyframes slideUp {
           from {
             transform: translateY(100%);

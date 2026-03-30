@@ -46,7 +46,16 @@ export function MorningDigestEmail({
     <Html>
       <Head />
       <Body style={{ backgroundColor: '#f8fafc', fontFamily: 'system-ui, sans-serif', margin: 0 }}>
-        <Container style={{ maxWidth: '480px', margin: '32px auto', backgroundColor: '#ffffff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Container
+          style={{
+            maxWidth: '480px',
+            margin: '32px auto',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
           {/* Header */}
           <Section style={{ backgroundColor: '#0ea5e9', padding: '24px 32px' }}>
             <Heading style={{ color: '#ffffff', margin: 0, fontSize: '22px', fontWeight: '700' }}>
@@ -65,20 +74,44 @@ export function MorningDigestEmail({
               </Text>
             ) : (
               <>
-                <Text style={{ color: '#374151', fontSize: '15px', fontWeight: '600', margin: '0 0 16px' }}>
+                <Text
+                  style={{
+                    color: '#374151',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    margin: '0 0 16px',
+                  }}
+                >
                   Today&apos;s Conditions
                 </Text>
                 {sites.map((site, i) => {
-                  const hasV2Data = site.wStar != null || site.peakCeilingFt != null || site.bestWindow;
+                  const hasV2Data =
+                    site.wStar != null || site.peakCeilingFt != null || site.bestWindow;
                   const dataSegments: string[] = [];
-                  if (site.wStar != null && site.wStar > 0) dataSegments.push(`W* ${site.wStar.toFixed(1)} m/s`);
-                  if (site.peakCeilingFt != null) dataSegments.push(`Ceiling ~${site.peakCeilingFt.toLocaleString()}ft`);
+                  if (site.wStar != null && site.wStar > 0)
+                    dataSegments.push(`W* ${site.wStar.toFixed(1)} m/s`);
+                  if (site.peakCeilingFt != null)
+                    dataSegments.push(`Ceiling ~${site.peakCeilingFt.toLocaleString()}ft`);
                   if (site.bestWindow) dataSegments.push(`Best: ${site.bestWindow}`);
 
                   return (
-                    <Row key={i} style={{ marginBottom: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+                    <Row
+                      key={i}
+                      style={{
+                        marginBottom: '12px',
+                        borderBottom: '1px solid #f1f5f9',
+                        paddingBottom: '12px',
+                      }}
+                    >
                       <Column style={{ width: '70%' }}>
-                        <Text style={{ margin: 0, fontWeight: '600', color: '#111827', fontSize: '15px' }}>
+                        <Text
+                          style={{
+                            margin: 0,
+                            fontWeight: '600',
+                            color: '#111827',
+                            fontSize: '15px',
+                          }}
+                        >
                           {site.name}
                         </Text>
                         {hasV2Data && dataSegments.length > 0 ? (
@@ -91,21 +124,30 @@ export function MorningDigestEmail({
                           </Text>
                         )}
                         {site.topConcern && (
-                          <Text style={{ margin: '2px 0 0', color: '#ea580c', fontSize: '12px', fontWeight: '500' }}>
+                          <Text
+                            style={{
+                              margin: '2px 0 0',
+                              color: '#ea580c',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                            }}
+                          >
                             ⚠ {site.topConcern}
                           </Text>
                         )}
                       </Column>
                       <Column style={{ width: '30%', textAlign: 'right' }}>
-                        <span style={{
-                          backgroundColor: labelColors[site.label] || '#9ca3af',
-                          color: '#ffffff',
-                          borderRadius: '20px',
-                          padding: '3px 12px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          display: 'inline-block',
-                        }}>
+                        <span
+                          style={{
+                            backgroundColor: labelColors[site.label] || '#9ca3af',
+                            color: '#ffffff',
+                            borderRadius: '20px',
+                            padding: '3px 12px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            display: 'inline-block',
+                          }}
+                        >
                           {site.label}
                         </span>
                       </Column>
@@ -138,7 +180,9 @@ export function MorningDigestEmail({
           </Section>
 
           {/* Footer */}
-          <Section style={{ backgroundColor: '#f8fafc', padding: '16px 32px', textAlign: 'center' }}>
+          <Section
+            style={{ backgroundColor: '#f8fafc', padding: '16px 32px', textAlign: 'center' }}
+          >
             <Text style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>
               SoarCast · Paragliding Soaring Forecast ·{' '}
               <Link href={`${appUrl}/settings`} style={{ color: '#9ca3af' }}>

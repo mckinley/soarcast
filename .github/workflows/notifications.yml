@@ -2,8 +2,8 @@ name: Send Notifications
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"   # 6am and 6pm UTC daily
-  workflow_dispatch:           # manual trigger for testing
+    - cron: '0 6,18 * * *' # 6am and 6pm UTC daily
+  workflow_dispatch: # manual trigger for testing
 
 jobs:
   notify:

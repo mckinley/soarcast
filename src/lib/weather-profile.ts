@@ -4,9 +4,9 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 
 // DB injection for CF Workers compatibility
-let _injectedDb: LibSQLDatabase<unknown> | null = null;
+let _injectedDb: LibSQLDatabase<Record<string, unknown>> | null = null;
 
-export function setProfileDb(db: LibSQLDatabase<unknown>) {
+export function setProfileDb(db: LibSQLDatabase<Record<string, unknown>>) {
   _injectedDb = db;
 }
 

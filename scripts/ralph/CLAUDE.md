@@ -38,6 +38,7 @@ Priority: 0 (highest) → 4 (lowest)
 ## Progress Report Format
 
 APPEND to `scripts/ralph/progress.txt` (never replace, always append):
+
 ```
 ## [Date/Time] - [Task ID] - [Task Title]
 - What was implemented
@@ -71,6 +72,7 @@ Before committing, check if any edited files have learnings worth preserving in 
 3. **Add valuable learnings** — API patterns, gotchas, non-obvious requirements, dependencies between files
 
 **Do NOT add:**
+
 - Task-specific implementation details
 - Temporary debugging notes
 - Information already in progress.txt
