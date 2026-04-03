@@ -8,11 +8,7 @@ directory = "./build/client"
 binding = "ASSETS"
 
 [vars]
-BETTER_AUTH_URL = "https://soarcast.mckinleydigital.com"
-
-[[routes]]
-pattern = "soarcast.mckinleydigital.com"
-custom_domain = true
+BETTER_AUTH_URL = "https://soarcast.mckinleyaviation.com"
 
 [[routes]]
 pattern = "soarcast.mckinleyaviation.com"
