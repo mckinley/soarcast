@@ -87,6 +87,33 @@ function windBarbPath(flags: number, fullBarbs: number, halfBarbs: number): stri
   return parts.join(' ');
 }
 
+/** Vertically interpolate a lapse rate at a given altitude within a column of data points */
+function interpolateColumn(
+  column: { alt: number; rate: number | null }[],
+  altM: number,
+): number | null {
+  if (column.length === 0) return null;
+
+  // Below lowest point
+  if (altM <= column[0].alt) return column[0].rate;
+  // Above highest point
+  if (altM >= column[column.length - 1].alt) return column[column.length - 1].rate;
+
+  // Find bracketing points
+  for (let i = 0; i < column.length - 1; i++) {
+    if (altM >= column[i].alt && altM <= column[i + 1].alt) {
+      const r0 = column[i].rate;
+      const r1 = column[i + 1].rate;
+      if (r0 === null && r1 === null) return null;
+      if (r0 === null) return r1;
+      if (r1 === null) return r0;
+      const t = (altM - column[i].alt) / (column[i + 1].alt - column[i].alt);
+      return r0 * (1 - t) + r1 * t;
+    }
+  }
+  return null;
+}
+
 export function WindgramD3({
   data,
   loading = false,
@@ -137,46 +164,84 @@ export function WindgramD3({
     [chartH],
   );
 
-  // Lapse rate background cells
-  const lapseRateCells = useMemo(() => {
-    if (!xScale || daylightHours.length === 0) return [];
+  // Smooth heatmap: build a grid of lapse rates, then render via canvas with bilinear interpolation
+  const heatmapDataUrl = useMemo(() => {
+    if (!xScale || daylightHours.length === 0 || chartW <= 0 || chartH <= 0) return null;
 
-    const cells: Array<{
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      color: string;
-    }> = [];
+    // Build lapse rate grid: [timeIndex][altIndex] where altIndex maps to midpoint altitude of each layer
+    const timeCount = daylightHours.length;
+    const grid: { alt: number; rate: number | null }[][] = [];
 
-    for (let t = 0; t < daylightHours.length; t++) {
+    for (let t = 0; t < timeCount; t++) {
       const hour = daylightHours[t];
       const lapseRates = computeLapseRatesForHour(hour);
       const levels = hour.pressureLevels;
+      const column: { alt: number; rate: number | null }[] = [];
 
       for (let l = 0; l < levels.length - 1; l++) {
-        const lowerAlt = levels[l].geopotentialHeight;
-        const upperAlt = levels[l + 1].geopotentialHeight;
+        const midAlt = (levels[l].geopotentialHeight + levels[l + 1].geopotentialHeight) / 2;
+        column.push({ alt: midAlt, rate: lapseRates[l] });
+      }
+      grid.push(column);
+    }
 
-        const clampedLower = Math.max(MIN_ALT_M, lowerAlt);
-        const clampedUpper = Math.min(MAX_ALT_M, upperAlt);
-        if (clampedLower >= clampedUpper) continue;
+    // Render to canvas with pixel-level interpolation
+    const canvasW = Math.round(chartW);
+    const canvasH = Math.round(chartH);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
-        // Cell x boundaries
-        const x0 = t === 0 ? 0 : xScale(t - 0.5);
-        const x1 = t === daylightHours.length - 1 ? chartW : xScale(t + 0.5);
+    const imageData = ctx.createImageData(canvasW, canvasH);
+    const pixels = imageData.data;
 
-        const rectX = x0;
-        const rectY = yScale(clampedUpper);
-        const rectW = x1 - x0;
-        const rectH = yScale(clampedLower) - yScale(clampedUpper);
+    // For each pixel, find the interpolated lapse rate and map to color
+    for (let py = 0; py < canvasH; py++) {
+      const altM = MIN_ALT_M + (MAX_ALT_M - MIN_ALT_M) * (1 - py / (canvasH - 1));
 
-        const color = lapseRateToColor(lapseRates[l] ?? null, isDark);
-        cells.push({ x: rectX, y: rectY, w: rectW, h: rectH, color });
+      for (let px = 0; px < canvasW; px++) {
+        // Map pixel x back to fractional time index
+        const tFrac = xScale.invert(px);
+
+        // Find surrounding time columns
+        const t0 = Math.max(0, Math.min(timeCount - 1, Math.floor(tFrac)));
+        const t1 = Math.min(timeCount - 1, t0 + 1);
+        const tx = t0 === t1 ? 0 : (tFrac - t0) / (t1 - t0);
+
+        // Find lapse rate at this altitude for each time column via vertical interpolation
+        const rateAtT0 = interpolateColumn(grid[t0], altM);
+        const rateAtT1 = interpolateColumn(grid[t1], altM);
+
+        // Horizontal interpolation between time columns
+        let rate: number | null;
+        if (rateAtT0 === null && rateAtT1 === null) {
+          rate = null;
+        } else if (rateAtT0 === null) {
+          rate = rateAtT1;
+        } else if (rateAtT1 === null) {
+          rate = rateAtT0;
+        } else {
+          rate = rateAtT0 * (1 - tx) + rateAtT1 * tx;
+        }
+
+        const colorStr = lapseRateToColor(rate, isDark);
+        // Parse rgb(r, g, b)
+        const match = colorStr.match(/(\d+)/g);
+        const idx = (py * canvasW + px) * 4;
+        if (match) {
+          pixels[idx] = parseInt(match[0]);
+          pixels[idx + 1] = parseInt(match[1]);
+          pixels[idx + 2] = parseInt(match[2]);
+          pixels[idx + 3] = 255;
+        }
       }
     }
-    return cells;
-  }, [daylightHours, xScale, yScale, chartW, isDark]);
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+  }, [daylightHours, xScale, chartW, chartH, isDark]);
 
   // Wind barbs
   const windBarbs = useMemo(() => {
@@ -237,7 +302,18 @@ export function WindgramD3({
     return barbs;
   }, [daylightHours, xScale, yScale, isDark, width]);
 
-  // Cloud base polyline points
+  // Smooth curve generator
+  const curveGenerator = useMemo(
+    () =>
+      d3
+        .line<[number, number]>()
+        .x((d) => d[0])
+        .y((d) => d[1])
+        .curve(d3.curveCatmullRom.alpha(0.5)),
+    [],
+  );
+
+  // Cloud base smooth curve path
   const cloudBaseLine = useMemo(() => {
     if (!xScale || daylightHours.length === 0) return null;
 
@@ -252,8 +328,8 @@ export function WindgramD3({
       .filter((p): p is [number, number] => p !== null);
 
     if (points.length < 2) return null;
-    return points.map(([x, y]) => `${x},${y}`).join(' ');
-  }, [daylightHours, xScale, yScale, data]);
+    return curveGenerator(points);
+  }, [daylightHours, xScale, yScale, data, curveGenerator]);
 
   // Altitude tick marks (within visible range)
   const altTicks = useMemo(
@@ -300,7 +376,7 @@ export function WindgramD3({
     });
   }, [daylightHours, xScale, chartW, width]);
 
-  // Freezing level polyline
+  // Freezing level smooth curve path
   const freezingLevelLine = useMemo(() => {
     if (!xScale || daylightHours.length === 0) return null;
     const points = daylightHours
@@ -311,8 +387,8 @@ export function WindgramD3({
       })
       .filter((p): p is [number, number] => p !== null);
     if (points.length < 2) return null;
-    return points.map(([x, y]) => `${x},${y}`).join(' ');
-  }, [daylightHours, xScale, yScale]);
+    return curveGenerator(points);
+  }, [daylightHours, xScale, yScale, curveGenerator]);
 
   // Wind shear zone bands
   const shearBands = useMemo(() => {
@@ -343,7 +419,7 @@ export function WindgramD3({
     return bands;
   }, [daylightHours, xScale, yScale, chartW]);
 
-  // Soaring ceiling (top of lift) polyline
+  // Soaring ceiling (top of lift) smooth curve path
   const ceilingLine = useMemo(() => {
     if (!xScale || daylightHours.length === 0) return null;
     const points = daylightHours
@@ -354,8 +430,8 @@ export function WindgramD3({
       })
       .filter((p): p is [number, number] => p !== null);
     if (points.length < 2) return null;
-    return points.map(([x, y]) => `${x},${y}`).join(' ');
-  }, [daylightHours, xScale, yScale]);
+    return curveGenerator(points);
+  }, [daylightHours, xScale, yScale, curveGenerator]);
 
   if (loading || !data) {
     return (
@@ -433,19 +509,18 @@ export function WindgramD3({
         </g>
 
         <g transform={`translate(${PADDING.left},${PADDING.top})`}>
-          {/* ── Lapse rate background ── */}
-          <g clipPath="url(#chart-clip)">
-            {lapseRateCells.map((cell, i) => (
-              <rect
-                key={i}
-                x={cell.x}
-                y={cell.y}
-                width={cell.w}
-                height={cell.h}
-                fill={cell.color}
-              />
-            ))}
-          </g>
+          {/* ── Lapse rate background (smooth interpolated heatmap) ── */}
+          {heatmapDataUrl && (
+            <image
+              href={heatmapDataUrl}
+              x={0}
+              y={0}
+              width={chartW}
+              height={chartH}
+              clipPath="url(#chart-clip)"
+              preserveAspectRatio="none"
+            />
+          )}
 
           {/* ── Wind shear zone bands ── */}
           <g clipPath="url(#chart-clip)">
@@ -517,10 +592,10 @@ export function WindgramD3({
             ))}
           </g>
 
-          {/* ── Cloud base line (dashed cyan) ── */}
+          {/* ── Cloud base line (dashed cyan, smooth curve) ── */}
           {cloudBaseLine && (
-            <polyline
-              points={cloudBaseLine}
+            <path
+              d={cloudBaseLine}
               fill="none"
               stroke={cloudBaseColor}
               strokeWidth={2}
@@ -553,10 +628,10 @@ export function WindgramD3({
               );
             })()}
 
-          {/* ── Freezing level line (dashed icy-blue) ── */}
+          {/* ── Freezing level line (dashed icy-blue, smooth curve) ── */}
           {freezingLevelLine && (
-            <polyline
-              points={freezingLevelLine}
+            <path
+              d={freezingLevelLine}
               fill="none"
               stroke="#93c5fd"
               strokeWidth={2}
@@ -586,10 +661,10 @@ export function WindgramD3({
               );
             })()}
 
-          {/* ── Soaring ceiling line (gold, thick) ── */}
+          {/* ── Soaring ceiling line (gold, thick, smooth curve) ── */}
           {ceilingLine && (
-            <polyline
-              points={ceilingLine}
+            <path
+              d={ceilingLine}
               fill="none"
               stroke="#fbbf24"
               strokeWidth={3}

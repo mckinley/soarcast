@@ -68,7 +68,7 @@ export function windSpeedToBarb(
 
   if (speedKnots === 0) {
     category = 'calm';
-    color = isDarkTheme ? 'rgb(156, 163, 175)' : 'rgb(107, 114, 128)'; // gray for calm
+    color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white, consistent with barbs
   } else if (speedKnots <= 10) {
     category = 'light';
     color = isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(255, 255, 255)'; // white
