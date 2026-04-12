@@ -35,6 +35,10 @@ Priority: 0 (highest) → 4 (lowest)
 
 **Never use** `bd edit` (opens interactive editor). Use `bd update` with flags instead.
 
+## IMPORTANT: Commit before closing
+
+You MUST `git add` and `git commit` your changes BEFORE running `bd close`. If you don't commit, your work will be lost in the next iteration.
+
 ## Progress Report Format
 
 APPEND to `scripts/ralph/progress.txt` (never replace, always append):
@@ -44,38 +48,10 @@ APPEND to `scripts/ralph/progress.txt` (never replace, always append):
 - What was implemented
 - Files changed
 - **Learnings for future iterations:**
-  - Patterns discovered (e.g., "this codebase uses X for Y")
-  - Gotchas encountered (e.g., "don't forget to update Z when changing W")
-  - Useful context (e.g., "the evaluation panel is in component X")
+  - Patterns discovered
+  - Gotchas encountered
 ---
 ```
-
-## Consolidate Patterns
-
-If you discover a **reusable pattern**, add it to the `## Codebase Patterns` section at the TOP of `progress.txt` (create it if it doesn't exist):
-
-```
-## Codebase Patterns
-- Example: Use `sql<number>` template for aggregations
-- Example: Always use `IF NOT EXISTS` for migrations
-- Example: Export types from actions.ts for UI components
-```
-
-Only add patterns that are **general and reusable**, not task-specific details.
-
-## Update CLAUDE.md Files
-
-Before committing, check if any edited files have learnings worth preserving in nearby CLAUDE.md files:
-
-1. **Identify directories with edited files**
-2. **Check for existing CLAUDE.md** in those directories or parents
-3. **Add valuable learnings** — API patterns, gotchas, non-obvious requirements, dependencies between files
-
-**Do NOT add:**
-
-- Task-specific implementation details
-- Temporary debugging notes
-- Information already in progress.txt
 
 ## Quality Requirements
 
@@ -83,16 +59,6 @@ Before committing, check if any edited files have learnings worth preserving in 
 - Do NOT commit broken code
 - Keep changes focused and minimal
 - Follow existing code patterns
-
-## Browser Testing (If Available)
-
-For any story that changes UI, verify it works in the browser if browser testing tools are configured (e.g., via MCP):
-
-1. Navigate to the relevant page
-2. Verify the UI changes work as expected
-3. Screenshot if helpful for the progress log
-
-If no browser tools are available, note in progress report that manual verification is needed.
 
 ## Stop Condition
 
@@ -107,5 +73,5 @@ If tasks remain, end your response normally — the next iteration will pick up 
 
 - Work on ONE task per iteration
 - Claim tasks with `bd update --status in_progress` BEFORE starting work
-- Commit frequently, keep CI green
+- **ALWAYS commit before closing a task**
 - Read Codebase Patterns in `progress.txt` before starting each iteration
