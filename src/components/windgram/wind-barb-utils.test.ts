@@ -141,14 +141,13 @@ describe('windSpeedToBarb', () => {
       expect(darkBarb.color).toBe('rgb(255, 255, 255)');
     });
 
-    it('should use gray for calm winds', () => {
+    it('should use white for calm winds', () => {
       const calmLight = windSpeedToBarb(0, 180, false);
       const calmDark = windSpeedToBarb(0, 180, true);
 
-      // Calm winds use gray (different for light/dark theme)
-      expect(calmLight.color).toBe('rgb(107, 114, 128)');
-      expect(calmDark.color).toBe('rgb(156, 163, 175)');
-      expect(calmLight.color).not.toBe(calmDark.color);
+      // Calm winds use white, consistent with barb colors
+      expect(calmLight.color).toBe('rgb(255, 255, 255)');
+      expect(calmDark.color).toBe('rgb(255, 255, 255)');
     });
 
     it('should assign white color for all wind speeds above calm', () => {
