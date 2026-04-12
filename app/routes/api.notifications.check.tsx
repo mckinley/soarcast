@@ -1,7 +1,8 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { getDb } from '~/app/lib/db.server';
-import { users, sites, pushSubscriptions, settings as settingsTable } from '~/db/schema';
+import { users, launchSites, userFavoriteSites, customSites, pushSubscriptions, settings as settingsTable } from '~/db/schema';
 import { eq } from 'drizzle-orm';
+import { getIdealWindDirections } from '~/lib/site-utils';
 import { getForecast, setWeatherDb } from '~/lib/weather';
 import { calculateDailyScores, scoreToLabel } from '~/lib/scoring';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
@@ -67,7 +68,61 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
         if (subscriptions.length === 0) continue;
 
-        const userSites = await db.select().from(sites).where(eq(sites.userId, user.id));
+        // Get user's monitored sites from both favorite launch sites and custom sites
+        const favoriteSitesResult = await db
+          .select({
+            id: launchSites.id,
+            name: launchSites.name,
+            latitude: launchSites.latitude,
+            longitude: launchSites.longitude,
+            altitude: launchSites.altitude,
+            windN: launchSites.windN,
+            windNe: launchSites.windNe,
+            windE: launchSites.windE,
+            windSe: launchSites.windSe,
+            windS: launchSites.windS,
+            windSw: launchSites.windSw,
+            windW: launchSites.windW,
+            windNw: launchSites.windNw,
+            maxWindSpeed: launchSites.maxWindSpeed,
+            customMaxWind: userFavoriteSites.customMaxWind,
+            createdAt: launchSites.createdAt,
+            updatedAt: launchSites.updatedAt,
+          })
+          .from(userFavoriteSites)
+          .innerJoin(launchSites, eq(userFavoriteSites.siteId, launchSites.id))
+          .where(eq(userFavoriteSites.userId, user.id));
+
+        const customSitesResult = await db
+          .select()
+          .from(customSites)
+          .where(eq(customSites.userId, user.id));
+
+        // Map both to Site interface
+        const userSites: Site[] = [
+          ...favoriteSitesResult.map((s) => ({
+            id: s.id,
+            name: s.name,
+            latitude: s.latitude as number,
+            longitude: s.longitude as number,
+            elevation: s.altitude || 0,
+            idealWindDirections: getIdealWindDirections(s),
+            maxWindSpeed: s.customMaxWind || s.maxWindSpeed || 40,
+            createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
+            updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
+          })),
+          ...customSitesResult.map((s) => ({
+            id: s.id,
+            name: s.name,
+            latitude: parseFloat(s.latitude),
+            longitude: parseFloat(s.longitude),
+            elevation: s.elevation || 0,
+            idealWindDirections: (s.idealWindDirections as number[]) || [],
+            maxWindSpeed: s.maxWindSpeed || 40,
+            createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
+            updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
+          })),
+        ];
         if (userSites.length === 0) continue;
 
         // Morning digest
@@ -95,23 +150,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
               try {
                 const atmosphericResult = await getAtmosphericProfile(
-                  parseFloat(site.latitude),
-                  parseFloat(site.longitude),
+                  site.latitude,
+                  site.longitude,
                   1,
                 );
 
-                const siteObj: Site = {
-                  id: site.id,
-                  name: site.name,
-                  latitude: parseFloat(site.latitude),
-                  longitude: parseFloat(site.longitude),
-                  elevation: site.elevation,
-                  idealWindDirections: site.idealWindDirections as number[],
-                  maxWindSpeed: site.maxWindSpeed || 40,
-                  notes: site.notes ?? undefined,
-                  createdAt: new Date(site.createdAt).toISOString(),
-                  updatedAt: new Date(site.updatedAt).toISOString(),
-                };
+                const siteObj = site;
 
                 const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, todayStr);
                 if (analysis) {
@@ -253,28 +297,17 @@ export async function action({ request, context }: ActionFunctionArgs) {
           try {
             const forecastResult = await getForecast(
               site.id,
-              parseFloat(site.latitude),
-              parseFloat(site.longitude),
+              site.latitude,
+              site.longitude,
             );
 
             const atmosphericResult = await getAtmosphericProfile(
-              parseFloat(site.latitude),
-              parseFloat(site.longitude),
+              site.latitude,
+              site.longitude,
               userSettings.daysAhead,
             );
 
-            const siteObj: Site = {
-              id: site.id,
-              name: site.name,
-              latitude: parseFloat(site.latitude),
-              longitude: parseFloat(site.longitude),
-              elevation: site.elevation,
-              idealWindDirections: site.idealWindDirections as number[],
-              maxWindSpeed: site.maxWindSpeed || 40,
-              notes: site.notes ?? undefined,
-              createdAt: new Date(site.createdAt).toISOString(),
-              updatedAt: new Date(site.updatedAt).toISOString(),
-            };
+            const siteObj = site;
 
             const dailyScores = calculateDailyScores(forecastResult.forecast, siteObj);
 
