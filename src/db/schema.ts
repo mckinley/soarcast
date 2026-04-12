@@ -149,22 +149,22 @@ export const sites = sqliteTable('sites', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
+  userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  latitude: text('latitude').notNull(), // Store as text to preserve precision
+  latitude: text('latitude').notNull(),
   longitude: text('longitude').notNull(),
   elevation: integer('elevation').notNull(), // meters
-  idealWindDirections: text('idealWindDirections', { mode: 'json' }).notNull().$type<number[]>(),
-  maxWindSpeed: integer('maxWindSpeed').notNull(), // km/h
+  idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
+  maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
   notes: text('notes'),
-  createdAt: integer('createdAt', { mode: 'timestamp' })
+  createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' })
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`(unixepoch())`),
 });
 
 // Forecasts cache - supports both launch_sites and custom_sites via discriminator
@@ -174,14 +174,14 @@ export const forecastsCache = sqliteTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    siteId: text('siteId').notNull(), // ID reference (no FK, flexible)
+    siteId: text('site_id').notNull(), // ID reference (no FK, flexible)
     siteType: text('site_type').notNull(), // 'launch' | 'custom' | 'legacy'
-    fetchDate: text('fetchDate').notNull(), // ISO date string (YYYY-MM-DD)
+    fetchDate: text('fetch_date').notNull(), // ISO date string (YYYY-MM-DD)
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
-    fetchedAt: integer('fetchedAt', { mode: 'timestamp' })
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
-    expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
+      .default(sql`(unixepoch())`),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => ({
     // Unique constraint for cache key (one forecast per site per day)
@@ -202,38 +202,38 @@ export const settings = sqliteTable('settings', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
+  userId: text('user_id')
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: 'cascade' }),
-  minScoreThreshold: integer('minScoreThreshold').notNull().default(70),
-  daysAhead: integer('daysAhead').notNull().default(2),
-  siteNotifications: text('siteNotifications', { mode: 'json' })
+  minScoreThreshold: integer('min_score_threshold').notNull().default(70),
+  daysAhead: integer('days_ahead').notNull().default(2),
+  siteNotifications: text('site_notifications', { mode: 'json' })
     .notNull()
     .default('{}')
     .$type<Record<string, SiteNotificationPreferences>>(),
-  morningDigestEnabled: integer('morningDigestEnabled', { mode: 'boolean' })
+  morningDigestEnabled: integer('morning_digest_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),
-  morningDigestTime: text('morningDigestTime').default('08:00'), // HH:MM format in user's local timezone
-  onboardingCompleted: integer('onboardingCompleted', { mode: 'boolean' }).notNull().default(false),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' })
+  morningDigestTime: text('morning_digest_time').default('08:00'), // HH:MM format in user's local timezone
+  onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' }).notNull().default(false),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`(unixepoch())`),
 });
 
 export const pushSubscriptions = sqliteTable('push_subscriptions', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
+  userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   endpoint: text('endpoint').notNull().unique(),
   keys: text('keys', { mode: 'json' }).notNull().$type<{ p256dh: string; auth: string }>(),
-  createdAt: integer('createdAt', { mode: 'timestamp' })
+  createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`(unixepoch())`),
 });
 
 // Atmospheric profiles cache - separate from simple forecasts, 3-hour TTL
@@ -248,7 +248,7 @@ export const atmosphericProfilesCache = sqliteTable(
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
     fetchedAt: integer('fetched_at', { mode: 'timestamp' })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`(unixepoch())`),
     expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => ({
