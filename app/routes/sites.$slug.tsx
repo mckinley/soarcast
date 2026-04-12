@@ -22,6 +22,130 @@ import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { OrientationBadges } from '@/components/orientation-badges';
 import { WindDirectionBadges } from '@/components/wind-direction-badges';
 import { ElevationDisplay } from '@/components/elevation-display';
+import {
+  searchSites,
+  getSiteById,
+  getPgsitesApiKey,
+  type PgSite,
+} from '~/lib/pgsites-client';
+
+/** Site shape used by the detail page — works for both local and pgsites-only sites. */
+interface DetailSite {
+  id: string;
+  name: string;
+  slug: string;
+  countryCode: string | null;
+  region: string | null;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  landingAltitude: number | null;
+  landingLatitude: number | null;
+  landingLongitude: number | null;
+  windN: number;
+  windNe: number;
+  windE: number;
+  windSe: number;
+  windS: number;
+  windSw: number;
+  windW: number;
+  windNw: number;
+  isParagliding: boolean;
+  isHanggliding: boolean;
+  maxWindSpeed: number | null;
+  description: string | null;
+  landingDescription: string | null;
+  pgeLink: string | null;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Generate a URL-safe slug from a site name and pgsites UUID. */
+function generateSlug(name: string, id: string): string {
+  const nameSlug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${nameSlug}-${id.slice(0, 8)}`;
+}
+
+/** Extract search name and UUID prefix from a slug. */
+function parseSlug(slug: string): { nameQuery: string; uuidPrefix: string } {
+  const lastHyphen = slug.lastIndexOf('-');
+  if (lastHyphen === -1) return { nameQuery: slug.replace(/-/g, ' '), uuidPrefix: '' };
+  const uuidPrefix = slug.slice(lastHyphen + 1);
+  const nameSlug = slug.slice(0, lastHyphen);
+  return { nameQuery: nameSlug.replace(/-/g, ' '), uuidPrefix };
+}
+
+/** Map a PgSite from the API to the DetailSite shape. */
+function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
+  return {
+    id: site.id,
+    name: site.name,
+    slug,
+    countryCode: site.country_code || null,
+    region: null,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    altitude: site.altitude,
+    landingAltitude: site.landing_altitude,
+    landingLatitude: site.landing_latitude,
+    landingLongitude: site.landing_longitude,
+    windN: site.wind_n,
+    windNe: site.wind_ne,
+    windE: site.wind_e,
+    windSe: site.wind_se,
+    windS: site.wind_s,
+    windSw: site.wind_sw,
+    windW: site.wind_w,
+    windNw: site.wind_nw,
+    isParagliding: !!site.is_paragliding,
+    isHanggliding: !!site.is_hanggliding,
+    maxWindSpeed: null,
+    description: site.description || null,
+    landingDescription: null,
+    pgeLink: site.pge_link || null,
+    source: 'pgsites',
+    createdAt: site.created_at ? new Date(site.created_at * 1000).toISOString() : new Date().toISOString(),
+    updatedAt: site.updated_at ? new Date(site.updated_at * 1000).toISOString() : new Date().toISOString(),
+  };
+}
+
+/** Map a local LaunchSite DB row to the DetailSite shape. */
+function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSite {
+  return {
+    id: site.id,
+    name: site.name,
+    slug: site.slug,
+    countryCode: site.countryCode || null,
+    region: site.region || null,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    altitude: site.altitude,
+    landingAltitude: site.landingAltitude,
+    landingLatitude: site.landingLatitude,
+    landingLongitude: site.landingLongitude,
+    windN: site.windN,
+    windNe: site.windNe,
+    windE: site.windE,
+    windSe: site.windSe,
+    windS: site.windS,
+    windSw: site.windSw,
+    windW: site.windW,
+    windNw: site.windNw,
+    isParagliding: site.isParagliding,
+    isHanggliding: site.isHanggliding,
+    maxWindSpeed: site.maxWindSpeed,
+    description: site.description || null,
+    landingDescription: site.landingDescription || null,
+    pgeLink: site.pgeLink || null,
+    source: site.source,
+    createdAt: site.createdAt ? new Date(site.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: site.updatedAt ? new Date(site.updatedAt).toISOString() : new Date().toISOString(),
+  };
+}
 
 export function meta({ data }: Route.MetaArgs) {
   if (!data?.site) return [{ title: 'Site Not Found | SoarCast' }];
@@ -37,14 +161,45 @@ export function meta({ data }: Route.MetaArgs) {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env as Env;
   const db = getDb(env);
+  const apiKey = getPgsitesApiKey(env);
   const { slug } = params;
 
-  const site = await db.query.launchSites.findFirst({
+  // 1. Try local launch_sites first (fast, for cached/favorited sites)
+  const localSite = await db.query.launchSites.findFirst({
     where: eq(launchSites.slug, slug!),
   });
 
-  if (!site) {
-    throw new Response('Site not found', { status: 404 });
+  let site: DetailSite;
+  let isLocalSite = false;
+  let localSiteId: string | null = null;
+
+  if (localSite) {
+    site = localSiteToDetailSite(localSite);
+    isLocalSite = true;
+    localSiteId = localSite.id;
+  } else {
+    // 2. Not found locally — resolve from pgsites API
+    const { nameQuery, uuidPrefix } = parseSlug(slug!);
+
+    let pgSite: PgSite | null = null;
+
+    // Try direct lookup if UUID prefix looks like a full-length pgsites ID prefix
+    if (uuidPrefix.length >= 8) {
+      // Search by name and match by UUID prefix
+      const results = await searchSites(apiKey, nameQuery, 50);
+      pgSite = results.find((s) => s.id.startsWith(uuidPrefix)) ?? null;
+
+      // Fallback: try direct getSiteById with the prefix (in case API supports it)
+      if (!pgSite) {
+        pgSite = await getSiteById(apiKey, uuidPrefix);
+      }
+    }
+
+    if (!pgSite) {
+      throw new Response('Site not found', { status: 404 });
+    }
+
+    site = pgSiteToDetailSite(pgSite, slug!);
   }
 
   // Check if user has favorited this site
@@ -52,68 +207,69 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   let isFavorited = false;
   let customMaxWind: number | null = null;
 
-  if (session?.user?.id) {
+  if (session?.user?.id && localSiteId) {
     const favorite = await db.query.userFavoriteSites.findFirst({
       where: and(
         eq(userFavoriteSites.userId, session.user.id),
-        eq(userFavoriteSites.siteId, site.id),
+        eq(userFavoriteSites.siteId, localSiteId),
       ),
     });
     isFavorited = !!favorite;
     customMaxWind = favorite?.customMaxWind ?? null;
   }
 
-  // Initialize weather/profile DBs for this request
-  setWeatherDb(db);
-  setProfileDb(db);
-
-  // Fetch forecast and scoring data
+  // Fetch forecast and scoring data (only for local/favorited sites)
   let forecast = null;
   let scores = null;
   let forecastError = null;
 
-  try {
-    const lat = site.latitude;
-    const lng = site.longitude;
-    const forecastResult = await getForecast(site.id, lat, lng, 'launch');
-    forecast = forecastResult.forecast;
+  if (isLocalSite) {
+    try {
+      setWeatherDb(db);
+      setProfileDb(db);
 
-    if (forecast) {
-      const siteForScoring = {
-        id: site.id,
-        name: site.name,
-        latitude: lat,
-        longitude: lng,
-        elevation: site.altitude || 0,
-        idealWindDirections: getIdealWindDirections(site),
-        maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
-        createdAt: new Date(site.createdAt).toISOString(),
-        updatedAt: new Date(site.updatedAt).toISOString(),
-      };
+      const forecastResult = await getForecast(localSiteId!, site.latitude, site.longitude, 'launch');
+      forecast = forecastResult.forecast;
 
-      try {
-        const profileResult = await getAtmosphericProfile(lat, lng, 7);
-        scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
-      } catch {
-        scores = calculateDailyScores(forecast, siteForScoring);
+      if (forecast) {
+        const siteForScoring = {
+          id: localSiteId!,
+          name: site.name,
+          latitude: site.latitude,
+          longitude: site.longitude,
+          elevation: site.altitude || 0,
+          idealWindDirections: getIdealWindDirections(site),
+          maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
+          createdAt: site.createdAt,
+          updatedAt: site.updatedAt,
+        };
+
+        try {
+          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
+          scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
+        } catch {
+          scores = calculateDailyScores(forecast, siteForScoring);
+        }
       }
+    } catch (e) {
+      forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
     }
-  } catch (e) {
-    forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
   }
 
   return {
     site,
+    pgsitesId: localSite?.pgsitesId ?? site.id,
     isFavorited,
     customMaxWind,
     isAuthenticated: !!session?.user?.id,
+    isLocalSite,
     forecast,
     scores,
     forecastError,
   };
 }
 
-export async function action({ request, params, context }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env as Env;
   const session = await getSession(request, env);
 
@@ -122,34 +278,87 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   const db = getDb(env);
+  const apiKey = getPgsitesApiKey(env);
   const formData = await request.formData();
   const intent = formData.get('intent');
-  const { slug } = params;
-
-  const site = await db.query.launchSites.findFirst({
-    where: eq(launchSites.slug, slug!),
-  });
-
-  if (!site) {
-    return Response.json({ error: 'Site not found' }, { status: 404 });
-  }
+  const pgsitesId = formData.get('pgsitesId') as string;
 
   switch (intent) {
     case 'favorite': {
-      await db.insert(userFavoriteSites).values({
-        userId: session.user.id,
-        siteId: site.id,
-        notify: false,
+      // Check if site already exists locally
+      let localSite = await db.query.launchSites.findFirst({
+        where: eq(launchSites.pgsitesId, pgsitesId),
       });
+
+      // If not, fetch from pgsites API and insert
+      if (!localSite) {
+        const pgSite = await getSiteById(apiKey, pgsitesId);
+        if (!pgSite) {
+          return Response.json({ error: 'Site not found' }, { status: 404 });
+        }
+
+        const slug = generateSlug(pgSite.name, pgSite.id);
+        const id = crypto.randomUUID();
+
+        await db.insert(launchSites).values({
+          id,
+          name: pgSite.name,
+          slug,
+          countryCode: pgSite.country_code,
+          latitude: pgSite.latitude,
+          longitude: pgSite.longitude,
+          altitude: pgSite.altitude,
+          landingAltitude: pgSite.landing_altitude,
+          landingLatitude: pgSite.landing_latitude,
+          landingLongitude: pgSite.landing_longitude,
+          windN: pgSite.wind_n,
+          windNe: pgSite.wind_ne,
+          windE: pgSite.wind_e,
+          windSe: pgSite.wind_se,
+          windS: pgSite.wind_s,
+          windSw: pgSite.wind_sw,
+          windW: pgSite.wind_w,
+          windNw: pgSite.wind_nw,
+          isParagliding: !!pgSite.is_paragliding,
+          isHanggliding: !!pgSite.is_hanggliding,
+          source: 'pgsites',
+          pgsitesId: pgSite.id,
+          description: pgSite.description,
+          pgeLink: pgSite.pge_link,
+        });
+
+        localSite = await db.query.launchSites.findFirst({
+          where: eq(launchSites.id, id),
+        });
+      }
+
+      if (localSite) {
+        await db.insert(userFavoriteSites).values({
+          userId: session.user.id,
+          siteId: localSite.id,
+          notify: false,
+        });
+      }
+
       return { success: true };
     }
 
     case 'unfavorite': {
-      await db
-        .delete(userFavoriteSites)
-        .where(
-          and(eq(userFavoriteSites.userId, session.user.id), eq(userFavoriteSites.siteId, site.id)),
-        );
+      const localSite = await db.query.launchSites.findFirst({
+        where: eq(launchSites.pgsitesId, pgsitesId),
+      });
+
+      if (localSite) {
+        await db
+          .delete(userFavoriteSites)
+          .where(
+            and(
+              eq(userFavoriteSites.userId, session.user.id),
+              eq(userFavoriteSites.siteId, localSite.id),
+            ),
+          );
+      }
+
       return { success: true };
     }
 
@@ -159,10 +368,11 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 }
 
 function FavoriteButton({
+  pgsitesId,
   initialIsFavorited,
   isAuthenticated,
 }: {
-  siteId: string;
+  pgsitesId: string;
   initialIsFavorited: boolean;
   isAuthenticated: boolean;
 }) {
@@ -185,6 +395,7 @@ function FavoriteButton({
   return (
     <fetcher.Form method="post">
       <input type="hidden" name="intent" value={optimisticFavorited ? 'unfavorite' : 'favorite'} />
+      <input type="hidden" name="pgsitesId" value={pgsitesId} />
       <Button
         type="submit"
         variant={optimisticFavorited ? 'default' : 'outline'}
@@ -199,7 +410,7 @@ function FavoriteButton({
 }
 
 export default function SiteDetailPage() {
-  const { site, isFavorited, customMaxWind, isAuthenticated, forecast, scores, forecastError } =
+  const { site, pgsitesId, isFavorited, customMaxWind, isAuthenticated, isLocalSite, forecast, scores, forecastError } =
     useLoaderData<typeof loader>();
 
   return (
@@ -215,7 +426,7 @@ export default function SiteDetailPage() {
           </Button>
         </Link>
         <FavoriteButton
-          siteId={site.id}
+          pgsitesId={pgsitesId}
           initialIsFavorited={isFavorited}
           isAuthenticated={isAuthenticated}
         />
@@ -224,15 +435,19 @@ export default function SiteDetailPage() {
       {/* Site name */}
       <div>
         <h1 className="text-3xl font-bold">{site.name}</h1>
-        {site.region && site.countryCode && (
+        {(site.region || site.countryCode) && (
           <p className="text-lg text-muted-foreground mt-1">
-            {site.region}, {site.countryCode}
+            {site.region ? `${site.region}, ` : ''}{site.countryCode || ''}
           </p>
         )}
       </div>
 
       {/* Forecast section with windgram and scoring */}
-      {forecastError ? (
+      {!isLocalSite ? (
+        <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
+          <p className="text-muted-foreground">Favorite this site to see forecasts and scores</p>
+        </div>
+      ) : forecastError ? (
         <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
           <p className="font-medium">Error loading forecast</p>
           <p className="text-sm">{forecastError}</p>
@@ -247,8 +462,8 @@ export default function SiteDetailPage() {
             elevation: site.altitude || 0,
             idealWindDirections: getIdealWindDirections(site),
             maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
-            createdAt: new Date(site.createdAt).toISOString(),
-            updatedAt: new Date(site.updatedAt).toISOString(),
+            createdAt: site.createdAt,
+            updatedAt: site.updatedAt,
           }}
           forecast={forecast}
           scores={scores}
