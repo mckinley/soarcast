@@ -75,9 +75,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const sites = favorites.map((f) => ({
     id: f.site.id,
     name: f.site.name,
-    latitude: parseFloat(f.site.latitude),
-    longitude: parseFloat(f.site.longitude),
-    elevation: f.site.elevation ?? 0,
+    latitude: f.site.latitude,
+    longitude: f.site.longitude,
+    elevation: f.site.altitude ?? 0,
     customMaxWind: f.favorite.customMaxWind,
     defaultMaxWind: f.site.maxWindSpeed,
   }));

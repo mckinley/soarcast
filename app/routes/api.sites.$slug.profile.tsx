@@ -22,12 +22,8 @@ export async function loader({ params, request, context }: LoaderFunctionArgs) {
       return Response.json({ error: 'Launch site not found', status: 404 }, { status: 404 });
     }
 
-    const lat = parseFloat(site.latitude);
-    const lng = parseFloat(site.longitude);
-
-    if (isNaN(lat) || isNaN(lng)) {
-      return Response.json({ error: 'Invalid site coordinates', status: 400 }, { status: 400 });
-    }
+    const lat = site.latitude;
+    const lng = site.longitude;
 
     const profile = await fetchAtmosphericProfile(lat, lng, days);
 

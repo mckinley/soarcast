@@ -76,18 +76,15 @@ export function findNearbySites(
     id: string;
     name: string;
     slug: string;
-    latitude: string;
-    longitude: string;
+    latitude: number;
+    longitude: number;
   }>,
   radiusKm: number = 5,
 ): NearbySite[] {
   const nearby: NearbySite[] = [];
 
   for (const site of allLaunchSites) {
-    const siteLat = parseFloat(site.latitude);
-    const siteLng = parseFloat(site.longitude);
-
-    const distance = calculateDistance(targetLat, targetLng, siteLat, siteLng);
+    const distance = calculateDistance(targetLat, targetLng, site.latitude, site.longitude);
 
     if (distance <= radiusKm) {
       const nameSimilarity = namesAreSimilar(targetName, site.name);
@@ -105,4 +102,67 @@ export function findNearbySites(
   nearby.sort((a, b) => a.distance - b.distance);
 
   return nearby;
+}
+
+/**
+ * Compass direction to degrees mapping for wind columns.
+ */
+const WIND_DIRECTION_DEGREES: Record<string, number> = {
+  windN: 0,
+  windNe: 45,
+  windE: 90,
+  windSe: 135,
+  windS: 180,
+  windSw: 225,
+  windW: 270,
+  windNw: 315,
+};
+
+/**
+ * Compute ideal wind directions (degrees) from wind column ratings.
+ * A rating of 2 means "ideal" for that direction.
+ */
+export function getIdealWindDirections(site: {
+  windN: number;
+  windNe: number;
+  windE: number;
+  windSe: number;
+  windS: number;
+  windSw: number;
+  windW: number;
+  windNw: number;
+}): number[] {
+  const directions: number[] = [];
+  for (const [key, degrees] of Object.entries(WIND_DIRECTION_DEGREES)) {
+    if (site[key as keyof typeof site] === 2) {
+      directions.push(degrees);
+    }
+  }
+  return directions.sort((a, b) => a - b);
+}
+
+/**
+ * Build an orientations record from wind columns (for UI display).
+ * Returns { N: 2, NE: 1, ... } mapping.
+ */
+export function getOrientations(site: {
+  windN: number;
+  windNe: number;
+  windE: number;
+  windSe: number;
+  windS: number;
+  windSw: number;
+  windW: number;
+  windNw: number;
+}): Record<string, number> {
+  return {
+    N: site.windN,
+    NE: site.windNe,
+    E: site.windE,
+    SE: site.windSe,
+    S: site.windS,
+    SW: site.windSw,
+    W: site.windW,
+    NW: site.windNw,
+  };
 }
