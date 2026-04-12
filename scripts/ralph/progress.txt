@@ -138,3 +138,23 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
   - Settings per-site section now uses `SettingsSite` interface (not legacy `Site`) to avoid polluting global type with favorite-specific fields
   - Input placeholder shows site defaultMaxWind (from launchSites.maxWindSpeed) for UX context
 ---
+
+## 2026-04-11 - soarcast-jpc - Schema migration: refactor launch_sites columns for pgsites consistency
+- Created drizzle/0009_pgsites_standardization.sql with CREATE TABLE...SELECT...DROP...RENAME strategy
+- Renamed columns: elevation→altitude, landing_elevation→landing_altitude, landing_lat→landing_latitude, landing_lng→landing_longitude, source_id→pgsites_id
+- Changed latitude/longitude from TEXT to REAL (CAST)
+- Replaced orientations JSON with individual wind_n/ne/e/se/s/sw/w/nw INTEGER columns (json_extract)
+- Replaced flying_types JSON with is_paragliding/is_hanggliding INTEGER flags (json_each subquery)
+- Removed ideal_wind_directions column (computed at runtime from wind columns)
+- Added pge_link column for ParaglidingEarth URLs
+- Converted timestamps from milliseconds to seconds (divide by 1000)
+- Updated source value from "paraglidingearth" to "pgsites"
+- Also converted user_favorite_sites and custom_sites timestamps (ms→s) with safe guard (>9999999999)
+- Files changed: drizzle/0009_pgsites_standardization.sql
+- **Learnings for future iterations:**
+  - SQLite doesn't support ALTER TABLE RENAME COLUMN well for complex changes — use CREATE/INSERT/DROP/RENAME pattern
+  - json_extract returns NULL for missing keys so COALESCE to 0 for wind columns
+  - Use json_each subquery with EXISTS for checking array membership (flying_types)
+  - Schema.ts update deferred to separate task to avoid cascading type errors across codebase
+  - Pre-existing test failure in wind-barb-utils.test.ts (calm wind color) — not related to this work
+---
