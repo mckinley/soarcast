@@ -8,6 +8,8 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
 - DerivedParameters in `weather-profile.ts` holds all computed atmospheric fields; add new ones there and wire up in the `data.hourly.time.map()` loop inside `fetchAtmosphericProfile`
 - Pressure levels array is ordered by PRESSURE_LEVELS constant (1000→500 hPa, i.e., lowest altitude first)
 - Scoring v2 uses `calculateDailyScoresFromProfile(profile, forecast, site)` — callers should try v2 with fallback to v1 `calculateDailyScores`
+- Wind directions: use `getIdealWindDirections(site)` and `getOrientations(site)` from `src/lib/site-utils.ts` to derive from wind columns
+- LaunchSite lat/lng are `number` (real), customSites lat/lng are still `string` (text) — no parseFloat needed for launch sites
 - DayScore has optional v2 fields (wStar, bestWindow, odRisk, windShear, freezingConcern, peakCeilingMsl) — always check for undefined
 
 ---
@@ -157,4 +159,23 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
   - Use json_each subquery with EXISTS for checking array membership (flying_types)
   - Schema.ts update deferred to separate task to avoid cascading type errors across codebase
   - Pre-existing test failure in wind-barb-utils.test.ts (calm wind color) — not related to this work
+---
+
+## 2026-04-12 - soarcast-7eq - Update launch_sites Drizzle schema to match new column names and types
+- Updated launchSites table in src/db/schema.ts: latitude/longitude now `real` (was text), elevation→altitude, landingElevation→landingAltitude, landingLat→landingLatitude, landingLng→landingLongitude, sourceId→pgsitesId
+- Replaced orientations JSON with individual windN/windNe/.../windNw integer columns
+- Replaced flyingTypes JSON with isParagliding/isHanggliding boolean columns
+- Removed idealWindDirections column (now computed at runtime)
+- Added pgeLink column, timestamps changed from timestamp_ms to timestamp mode
+- Updated userFavoriteSites and customSites timestamps from ms to seconds
+- Added `getIdealWindDirections()` and `getOrientations()` helpers to src/lib/site-utils.ts
+- Fixed all downstream consumers: removed parseFloat() calls (lat/lng now number), updated column references
+- Updated scraper (paraglidingearth.ts) to output new schema format, updated all tests
+- Files changed: src/db/schema.ts, src/lib/site-utils.ts, src/lib/scraper/paraglidingearth.ts, src/lib/scraper/__tests__/paraglidingearth.test.ts, app/routes/_auth.dashboard.tsx, app/routes/_auth.settings.tsx, app/routes/api.sites.tsx, app/routes/api.sites.$slug.profile.tsx, app/routes/sites.$slug.tsx, app/routes/sites.browse.tsx, src/components/sites-browse-client.tsx, src/components/sites-browse-map.tsx, scripts/migrate-duplicate-sites.ts
+- **Learnings for future iterations:**
+  - `real` import from drizzle-orm/sqlite-core needed for real columns
+  - When renaming schema columns, alias in select queries (`elevation: launchSites.altitude`) to avoid cascading UI type changes
+  - getIdealWindDirections/getOrientations in site-utils.ts are the canonical way to derive wind info from wind columns
+  - customSites table still uses text lat/lng and elevation — only launchSites was changed
+  - Pre-existing test failure in wind-barb-utils.test.ts still present (calm wind color)
 ---
