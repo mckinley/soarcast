@@ -7,6 +7,7 @@ import { eq, and, like, or, inArray } from 'drizzle-orm';
 import { calculateDailyScores } from '~/lib/scoring';
 import type { Forecast } from '~/types';
 import { SitesBrowseClient } from '@/components/sites-browse-client';
+import { getIdealWindDirections } from '~/lib/site-utils';
 
 export function meta() {
   return [
@@ -81,10 +82,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       const dayScores = calculateDailyScores(forecast, {
         id: site.id,
         name: site.name,
-        latitude: parseFloat(site.latitude),
-        longitude: parseFloat(site.longitude),
-        elevation: site.elevation || 0,
-        idealWindDirections: site.idealWindDirections || [],
+        latitude: site.latitude,
+        longitude: site.longitude,
+        elevation: site.altitude || 0,
+        idealWindDirections: getIdealWindDirections(site),
         maxWindSpeed: site.maxWindSpeed || 40,
         createdAt: site.createdAt?.toISOString() || '',
         updatedAt: site.updatedAt?.toISOString() || '',

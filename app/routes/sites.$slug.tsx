@@ -4,6 +4,7 @@ import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
 import { launchSites, userFavoriteSites } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { getIdealWindDirections, getOrientations } from '~/lib/site-utils';
 import { getForecast, setWeatherDb } from '~/lib/weather';
 import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
@@ -72,8 +73,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   let forecastError = null;
 
   try {
-    const lat = parseFloat(site.latitude);
-    const lng = parseFloat(site.longitude);
+    const lat = site.latitude;
+    const lng = site.longitude;
     const forecastResult = await getForecast(site.id, lat, lng, 'launch');
     forecast = forecastResult.forecast;
 
@@ -83,8 +84,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         name: site.name,
         latitude: lat,
         longitude: lng,
-        elevation: site.elevation || 0,
-        idealWindDirections: site.idealWindDirections || [],
+        elevation: site.altitude || 0,
+        idealWindDirections: getIdealWindDirections(site),
         maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
         createdAt: new Date(site.createdAt).toISOString(),
         updatedAt: new Date(site.updatedAt).toISOString(),
@@ -241,10 +242,10 @@ export default function SiteDetailPage() {
           site={{
             id: site.id,
             name: site.name,
-            latitude: parseFloat(site.latitude),
-            longitude: parseFloat(site.longitude),
-            elevation: site.elevation || 0,
-            idealWindDirections: site.idealWindDirections || [],
+            latitude: site.latitude,
+            longitude: site.longitude,
+            elevation: site.altitude || 0,
+            idealWindDirections: getIdealWindDirections(site),
             maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
             createdAt: new Date(site.createdAt).toISOString(),
             updatedAt: new Date(site.updatedAt).toISOString(),
@@ -267,35 +268,44 @@ export default function SiteDetailPage() {
           <AccordionContent>
             <div className="space-y-6">
               <div className="space-y-3 text-sm">
-                {site.elevation && (
+                {site.altitude && (
                   <div>
-                    <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
+                    <ElevationDisplay elevationMeters={site.altitude} label="Takeoff" />
                   </div>
                 )}
-                {site.landingElevation && (
+                {site.landingAltitude && (
                   <div>
-                    <ElevationDisplay elevationMeters={site.landingElevation} label="Landing" />
+                    <ElevationDisplay elevationMeters={site.landingAltitude} label="Landing" />
                   </div>
                 )}
-                {site.flyingTypes && site.flyingTypes.length > 0 && (
+                {(site.isParagliding || site.isHanggliding) && (
                   <div>
                     <span className="font-medium">Flying Types:</span>{' '}
-                    <span className="text-muted-foreground">{site.flyingTypes.join(', ')}</span>
+                    <span className="text-muted-foreground">
+                      {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
                   </div>
                 )}
-                {site.orientations &&
-                  Object.values(site.orientations).some((r: number) => r >= 1) && (
+                {(() => {
+                  const orientations = getOrientations(site);
+                  return Object.values(orientations).some((r: number) => r >= 1) ? (
                     <div>
                       <div className="font-medium mb-2">Orientations:</div>
-                      <OrientationBadges orientations={site.orientations} />
+                      <OrientationBadges orientations={orientations} />
                     </div>
-                  )}
-                {site.idealWindDirections && site.idealWindDirections.length > 0 && (
-                  <div>
-                    <div className="font-medium mb-2">Ideal Wind Directions:</div>
-                    <WindDirectionBadges directions={site.idealWindDirections} />
-                  </div>
-                )}
+                  ) : null;
+                })()}
+                {(() => {
+                  const idealDirs = getIdealWindDirections(site);
+                  return idealDirs.length > 0 ? (
+                    <div>
+                      <div className="font-medium mb-2">Ideal Wind Directions:</div>
+                      <WindDirectionBadges directions={idealDirs} />
+                    </div>
+                  ) : null;
+                })()}
                 <div>
                   <span className="font-medium">Max Wind Speed:</span>{' '}
                   {customMaxWind ? (
@@ -314,8 +324,7 @@ export default function SiteDetailPage() {
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Location: {parseFloat(site.latitude).toFixed(4)}°,{' '}
-                  {parseFloat(site.longitude).toFixed(4)}°
+                  Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°
                 </div>
               </div>
 
@@ -326,7 +335,7 @@ export default function SiteDetailPage() {
                 </div>
               )}
 
-              {site.landingLat && site.landingLng && site.landingDescription && (
+              {site.landingLatitude && site.landingLongitude && site.landingDescription && (
                 <div>
                   <h3 className="font-semibold mb-2">Landing Information</h3>
                   <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
@@ -336,14 +345,14 @@ export default function SiteDetailPage() {
               <div>
                 <h3 className="text-sm font-medium mb-2">Location Map</h3>
                 <MapDisplayWrapper
-                  latitude={parseFloat(site.latitude)}
-                  longitude={parseFloat(site.longitude)}
+                  latitude={site.latitude}
+                  longitude={site.longitude}
                 />
               </div>
 
               <p className="text-xs text-muted-foreground">
                 Data source:{' '}
-                {site.source === 'paraglidingearth' ? 'ParaglidingEarth.com' : site.source}
+                {site.source === 'pgsites' ? 'ParaglidingEarth.com' : site.source}
               </p>
             </div>
           </AccordionContent>

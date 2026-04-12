@@ -3,6 +3,7 @@ import { Icon } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router';
 import type { LaunchSite } from '@/db/schema';
+import { getOrientations } from '@/lib/site-utils';
 import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
 
@@ -28,7 +29,7 @@ function MapBoundsUpdater({ sites }: { sites: LaunchSite[] }) {
   useEffect(() => {
     if (sites.length > 0) {
       const bounds = sites.map(
-        (site) => [parseFloat(site.latitude), parseFloat(site.longitude)] as [number, number],
+        (site) => [site.latitude, site.longitude] as [number, number],
       );
 
       // Fit map to show all markers
@@ -44,8 +45,8 @@ export function SitesBrowseMap({ sites }: SitesBrowseMapProps) {
   const center: [number, number] =
     sites.length > 0
       ? [
-          sites.reduce((sum, s) => sum + parseFloat(s.latitude), 0) / sites.length,
-          sites.reduce((sum, s) => sum + parseFloat(s.longitude), 0) / sites.length,
+          sites.reduce((sum, s) => sum + s.latitude, 0) / sites.length,
+          sites.reduce((sum, s) => sum + s.longitude, 0) / sites.length,
         ]
       : [47.5, -120.5]; // Washington State center
 
@@ -73,8 +74,8 @@ export function SitesBrowseMap({ sites }: SitesBrowseMapProps) {
         >
           {sites.map((site) => {
             const position: [number, number] = [
-              parseFloat(site.latitude),
-              parseFloat(site.longitude),
+              site.latitude,
+              site.longitude,
             ];
 
             return (
@@ -83,17 +84,17 @@ export function SitesBrowseMap({ sites }: SitesBrowseMapProps) {
                   <div className="space-y-2">
                     <h3 className="font-semibold">{site.name}</h3>
                     <div className="text-sm text-muted-foreground space-y-1">
-                      {site.elevation && <p>Elevation: {site.elevation}m</p>}
+                      {site.altitude && <p>Elevation: {site.altitude}m</p>}
                       {site.region && <p>Region: {site.region}</p>}
-                      {site.orientations && (
-                        <p>
-                          Orientations:{' '}
-                          {Object.entries(site.orientations)
-                            .filter(([, rating]) => rating >= 1)
-                            .map(([dir]) => dir)
-                            .join(', ')}
-                        </p>
-                      )}
+                      {(() => {
+                        const orientations = getOrientations(site);
+                        const activeOrientations = Object.entries(orientations)
+                          .filter(([, rating]) => rating >= 1)
+                          .map(([dir]) => dir);
+                        return activeOrientations.length > 0 ? (
+                          <p>Orientations: {activeOrientations.join(', ')}</p>
+                        ) : null;
+                      })()}
                     </div>
                     <Link
                       to={`/sites/${site.slug}`}
