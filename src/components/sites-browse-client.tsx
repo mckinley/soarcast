@@ -3,8 +3,30 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, SlidersHorizontal, Clock, Heart } from 'lucide-react';
-import type { LaunchSite } from '@/db/schema';
 import { getOrientations } from '@/lib/site-utils';
+
+/** Minimal site shape used by the browse page — works with both pgsites API and local DB sites. */
+export interface BrowseSite {
+  id: string;
+  name: string;
+  slug: string;
+  countryCode: string | null;
+  region: string | null;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  windN: number;
+  windNe: number;
+  windE: number;
+  windSe: number;
+  windS: number;
+  windSw: number;
+  windW: number;
+  windNw: number;
+  isParagliding: boolean;
+  isHanggliding: boolean;
+  createdAt: string | null;
+}
 import {
   getRecentSearches,
   addRecentSearch,
@@ -33,17 +55,13 @@ import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { Link } from 'react-router';
 
 interface SitesBrowseClientProps {
-  initialSites: LaunchSite[];
+  initialSites: BrowseSite[];
   filterOptions: {
-    regions: string[];
     countries: string[];
-    siteTypes: string[];
   };
   searchParams: {
     search?: string;
-    region?: string;
     country?: string;
-    siteType?: string;
     orientations?: string;
     sort?: string;
     minScore?: string;
@@ -85,9 +103,7 @@ export function SitesBrowseClient({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [searchValue, setSearchValue] = useState(searchParams.search || '');
-  const [selectedRegion, setSelectedRegion] = useState(searchParams.region || '');
   const [selectedCountry, setSelectedCountry] = useState(searchParams.country || '');
-  const [selectedSiteType, setSelectedSiteType] = useState(searchParams.siteType || '');
   const [selectedOrientations, setSelectedOrientations] = useState<string[]>(
     searchParams.orientations ? searchParams.orientations.split(',') : [],
   );
@@ -184,29 +200,16 @@ export function SitesBrowseClient({
   const updateURL = () => {
     const params = new URLSearchParams(urlSearchParams);
 
-    // Set or delete each parameter
     if (searchValue.trim()) {
       params.set('search', searchValue.trim());
     } else {
       params.delete('search');
     }
 
-    if (selectedRegion) {
-      params.set('region', selectedRegion);
-    } else {
-      params.delete('region');
-    }
-
     if (selectedCountry) {
       params.set('country', selectedCountry);
     } else {
       params.delete('country');
-    }
-
-    if (selectedSiteType) {
-      params.set('siteType', selectedSiteType);
-    } else {
-      params.delete('siteType');
     }
 
     if (selectedOrientations.length > 0) {
@@ -250,9 +253,7 @@ export function SitesBrowseClient({
 
   const handleClear = () => {
     setSearchValue('');
-    setSelectedRegion('');
     setSelectedCountry('');
-    setSelectedSiteType('');
     setSelectedOrientations([]);
     setSortBy('name');
     setMinScore('all');
@@ -270,9 +271,7 @@ export function SitesBrowseClient({
 
   const hasActiveFilters =
     searchValue ||
-    selectedRegion ||
     selectedCountry ||
-    selectedSiteType ||
     selectedOrientations.length > 0 ||
     sortBy !== 'name' ||
     minScore !== 'all';
@@ -409,24 +408,6 @@ export function SitesBrowseClient({
                   })()}
               </div>
 
-              {/* Region */}
-              <div className="space-y-2">
-                <Label>Region</Label>
-                <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All regions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All regions</SelectItem>
-                    {filterOptions.regions.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Country */}
               <div className="space-y-2">
                 <Label>Country</Label>
@@ -439,24 +420,6 @@ export function SitesBrowseClient({
                     {filterOptions.countries.map((country) => (
                       <SelectItem key={country} value={country}>
                         {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Site Type */}
-              <div className="space-y-2">
-                <Label>Site Type</Label>
-                <Select value={selectedSiteType} onValueChange={setSelectedSiteType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
-                    {filterOptions.siteTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -508,22 +471,10 @@ export function SitesBrowseClient({
               <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSearchValue('')} />
             </Badge>
           )}
-          {selectedRegion && (
-            <Badge variant="secondary">
-              Region: {selectedRegion}
-              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSelectedRegion('')} />
-            </Badge>
-          )}
           {selectedCountry && (
             <Badge variant="secondary">
               Country: {selectedCountry}
               <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSelectedCountry('')} />
-            </Badge>
-          )}
-          {selectedSiteType && (
-            <Badge variant="secondary">
-              Type: {selectedSiteType}
-              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSelectedSiteType('')} />
             </Badge>
           )}
           {selectedOrientations.map((orientation) => (
@@ -573,6 +524,7 @@ export function SitesBrowseClient({
                 <h3 className="font-semibold text-lg mb-2 pr-6">{site.name}</h3>
                 <div className="text-sm text-muted-foreground space-y-1">
                   {site.region && <p>Region: {site.region}</p>}
+                  {!site.region && site.countryCode && <p>Country: {site.countryCode}</p>}
                   {site.altitude && <p>Elevation: {site.altitude}m</p>}
                   {(site.isParagliding || site.isHanggliding) && (
                     <p>

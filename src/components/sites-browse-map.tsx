@@ -2,7 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router';
-import type { LaunchSite } from '@/db/schema';
+import type { BrowseSite } from '@/components/sites-browse-client';
 import { getOrientations } from '@/lib/site-utils';
 import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
@@ -19,11 +19,11 @@ const markerIcon = new Icon({
 });
 
 interface SitesBrowseMapProps {
-  sites: LaunchSite[];
+  sites: BrowseSite[];
 }
 
 // Component to handle map bounds updates when sites change
-function MapBoundsUpdater({ sites }: { sites: LaunchSite[] }) {
+function MapBoundsUpdater({ sites }: { sites: BrowseSite[] }) {
   const map = useMap();
 
   useEffect(() => {

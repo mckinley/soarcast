@@ -1,11 +1,11 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import type { LaunchSite } from '@/db/schema';
+import type { BrowseSite } from '@/components/sites-browse-client';
 
 const SitesBrowseMap = lazy(() =>
   import('@/components/sites-browse-map').then((mod) => ({ default: mod.SitesBrowseMap })),
 );
 
-export function SitesBrowseMapWrapper({ sites }: { sites: LaunchSite[] }) {
+export function SitesBrowseMapWrapper({ sites }: { sites: BrowseSite[] }) {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
