@@ -51,7 +51,8 @@ async function fetchApi<T>(apiKey: string, path: string, params?: Record<string,
 export async function searchSites(apiKey: string, query: string, limit?: number): Promise<PgSite[]> {
   const params: Record<string, string | number> = { q: query };
   if (limit !== undefined) params.limit = limit;
-  return fetchApi<PgSite[]>(apiKey, '/api/sites/search', params);
+  const result = await fetchApi<{ sites: PgSite[]; query: string }>(apiKey, '/api/sites/search', params);
+  return result.sites;
 }
 
 export async function getSitesByCountry(
@@ -87,7 +88,8 @@ export async function nearbySites(
   const params: Record<string, string | number> = { lat, lng };
   if (radius !== undefined) params.radius = radius;
   if (limit !== undefined) params.limit = limit;
-  return fetchApi<PgSite[]>(apiKey, '/api/sites/nearby', params);
+  const result = await fetchApi<{ sites: PgSite[]; center: { lat: number; lng: number }; radius_km: number }>(apiKey, '/api/sites/near', params);
+  return result.sites;
 }
 
 export async function getAllSites(
