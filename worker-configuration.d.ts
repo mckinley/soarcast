@@ -11,4 +11,5 @@ interface Env {
   VAPID_PRIVATE_KEY: string;
   RESEND_API_KEY: string;
   CRON_SECRET: string;
+  PGSITES_API_KEY: string;
 }
