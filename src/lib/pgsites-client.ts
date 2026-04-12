@@ -102,3 +102,8 @@ export async function getAllSites(
   if (offset !== undefined) params.offset = offset;
   return fetchApi<{ sites: PgSite[]; total: number }>(apiKey, '/api/sites', params);
 }
+
+/** Get the pgsites API key from the Cloudflare Worker environment. */
+export function getPgsitesApiKey(env: { PGSITES_API_KEY?: string }): string {
+  return env.PGSITES_API_KEY || '';
+}
