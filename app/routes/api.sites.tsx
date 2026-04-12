@@ -17,7 +17,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
       slug: launchSites.slug,
       latitude: launchSites.latitude,
       longitude: launchSites.longitude,
-      elevation: launchSites.elevation,
+      elevation: launchSites.altitude,
       region: launchSites.region,
       countryCode: launchSites.countryCode,
     })

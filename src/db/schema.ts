@@ -1,5 +1,5 @@
 import { sql, relations } from 'drizzle-orm';
-import { text, integer, sqliteTable, primaryKey, unique } from 'drizzle-orm/sqlite-core';
+import { text, integer, real, sqliteTable, primaryKey, unique } from 'drizzle-orm/sqlite-core';
 
 // NextAuth adapter tables
 export const users = sqliteTable('users', {
@@ -53,7 +53,7 @@ export const verificationTokens = sqliteTable(
 
 // Application tables
 
-// Global launch sites imported from external sources (ParaglidingEarth, etc.)
+// Global launch sites imported from pgsites API
 export const launchSites = sqliteTable('launch_sites', {
   id: text('id')
     .primaryKey()
@@ -62,28 +62,38 @@ export const launchSites = sqliteTable('launch_sites', {
   slug: text('slug').notNull().unique(),
   countryCode: text('country_code'),
   region: text('region'),
-  latitude: text('latitude').notNull(), // real as text for precision
-  longitude: text('longitude').notNull(),
-  elevation: integer('elevation'), // meters (takeoff)
-  landingElevation: integer('landing_elevation'), // meters
-  orientations: text('orientations', { mode: 'json' }).$type<Record<string, number>>(), // {N: 2, NE: 1, ...}
+  latitude: real('latitude').notNull(),
+  longitude: real('longitude').notNull(),
+  altitude: integer('altitude'), // meters (takeoff)
+  landingAltitude: integer('landing_altitude'), // meters
+  landingLatitude: real('landing_latitude'),
+  landingLongitude: real('landing_longitude'),
+  // Wind direction ratings (0=none, 1=ok, 2=ideal) — replaces orientations JSON
+  windN: integer('wind_n').notNull().default(0),
+  windNe: integer('wind_ne').notNull().default(0),
+  windE: integer('wind_e').notNull().default(0),
+  windSe: integer('wind_se').notNull().default(0),
+  windS: integer('wind_s').notNull().default(0),
+  windSw: integer('wind_sw').notNull().default(0),
+  windW: integer('wind_w').notNull().default(0),
+  windNw: integer('wind_nw').notNull().default(0),
+  // Flying type flags — replaces flyingTypes JSON
+  isParagliding: integer('is_paragliding', { mode: 'boolean' }).notNull().default(false),
+  isHanggliding: integer('is_hanggliding', { mode: 'boolean' }).notNull().default(false),
   siteType: text('site_type'), // "takeoff", "landing", etc.
-  flyingTypes: text('flying_types', { mode: 'json' }).$type<string[]>(), // ["paragliding", "hanggliding"]
-  source: text('source').notNull(), // "paraglidingearth"
-  sourceId: text('source_id').notNull().unique(), // external ID
+  source: text('source').notNull(), // "pgsites"
+  pgsitesId: text('pgsites_id').notNull().unique(), // UUID from pgsites API
   description: text('description'),
-  landingLat: text('landing_lat'),
-  landingLng: text('landing_lng'),
   landingDescription: text('landing_description'),
   maxWindSpeed: integer('max_wind_speed'), // km/h
-  idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).$type<number[]>(), // derived from orientations
-  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+  pgeLink: text('pge_link'), // ParaglidingEarth URL
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`(unixepoch())`),
 });
 
 // User favorites of launch sites with optional customizations
@@ -103,9 +113,9 @@ export const userFavoriteSites = sqliteTable(
     customMaxWind: integer('custom_max_wind'), // km/h, overrides site default
     customIdealDirections: text('custom_ideal_directions', { mode: 'json' }).$type<number[]>(),
     notify: integer('notify', { mode: 'boolean' }).notNull().default(false),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+      .default(sql`(unixepoch())`),
   },
   (table) => ({
     uniqueUserSite: unique().on(table.userId, table.siteId),
@@ -126,12 +136,12 @@ export const customSites = sqliteTable('custom_sites', {
   elevation: integer('elevation').notNull(), // meters
   maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
   idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+  createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+    .default(sql`(unixepoch())`),
 });
 
 // Legacy sites table - kept for backward compatibility during transition

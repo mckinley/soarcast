@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, SlidersHorizontal, Clock, Heart } from 'lucide-react';
 import type { LaunchSite } from '@/db/schema';
+import { getOrientations } from '@/lib/site-utils';
 import {
   getRecentSearches,
   addRecentSearch,
@@ -120,12 +121,12 @@ export function SitesBrowseClient({
   const filteredAndSortedSites = useMemo(() => {
     let sites = [...initialSites];
 
-    // Filter by orientations (client-side, JSON field)
+    // Filter by orientations (computed from wind columns)
     if (selectedOrientations.length > 0) {
       sites = sites.filter((site) => {
-        if (!site.orientations) return false;
+        const orientations = getOrientations(site);
         return selectedOrientations.some((orientation) => {
-          const rating = site.orientations?.[orientation];
+          const rating = orientations[orientation];
           return rating && rating >= 1;
         });
       });
@@ -148,21 +149,21 @@ export function SitesBrowseClient({
             const distA = calculateDistance(
               userLocation.lat,
               userLocation.lng,
-              parseFloat(a.latitude),
-              parseFloat(a.longitude),
+              a.latitude,
+              a.longitude,
             );
             const distB = calculateDistance(
               userLocation.lat,
               userLocation.lng,
-              parseFloat(b.latitude),
-              parseFloat(b.longitude),
+              b.latitude,
+              b.longitude,
             );
             return distA - distB;
           });
         }
         break;
       case 'elevation':
-        sites.sort((a, b) => (b.elevation || 0) - (a.elevation || 0));
+        sites.sort((a, b) => (b.altitude || 0) - (a.altitude || 0));
         break;
       case 'recent':
         sites.sort((a, b) => {
@@ -572,19 +573,24 @@ export function SitesBrowseClient({
                 <h3 className="font-semibold text-lg mb-2 pr-6">{site.name}</h3>
                 <div className="text-sm text-muted-foreground space-y-1">
                   {site.region && <p>Region: {site.region}</p>}
-                  {site.elevation && <p>Elevation: {site.elevation}m</p>}
-                  {site.flyingTypes && site.flyingTypes.length > 0 && (
-                    <p>Flying: {site.flyingTypes.join(', ')}</p>
-                  )}
-                  {site.orientations && (
+                  {site.altitude && <p>Elevation: {site.altitude}m</p>}
+                  {(site.isParagliding || site.isHanggliding) && (
                     <p>
-                      Orientations:{' '}
-                      {Object.entries(site.orientations)
-                        .filter(([, rating]) => rating >= 1)
-                        .map(([dir]) => dir)
+                      Flying:{' '}
+                      {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
+                        .filter(Boolean)
                         .join(', ')}
                     </p>
                   )}
+                  {(() => {
+                    const orientations = getOrientations(site);
+                    const activeOrientations = Object.entries(orientations)
+                      .filter(([, rating]) => rating >= 1)
+                      .map(([dir]) => dir);
+                    return activeOrientations.length > 0 ? (
+                      <p>Orientations: {activeOrientations.join(', ')}</p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="mt-4 flex gap-2">
                   <Link

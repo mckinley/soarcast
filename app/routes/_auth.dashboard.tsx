@@ -10,6 +10,7 @@ import { getForecast, fetchAllForecasts, setWeatherDb } from '~/lib/weather';
 import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import type { Site, Forecast, DayScore } from '~/types';
+import { getIdealWindDirections } from '~/lib/site-utils';
 // import { DashboardClient } from '~/components/dashboard-client'
 // import { OnboardingFlow } from '~/components/onboarding-flow'
 
@@ -62,10 +63,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return {
       id: f.site.id,
       name: f.site.name,
-      latitude: parseFloat(f.site.latitude),
-      longitude: parseFloat(f.site.longitude),
-      elevation: f.site.elevation || 0,
-      idealWindDirections: f.favorite.customIdealDirections || f.site.idealWindDirections || [],
+      latitude: f.site.latitude,
+      longitude: f.site.longitude,
+      elevation: f.site.altitude || 0,
+      idealWindDirections: f.favorite.customIdealDirections || getIdealWindDirections(f.site),
       maxWindSpeed: f.favorite.customMaxWind || f.site.maxWindSpeed || 40,
       notes: f.favorite.notes ?? undefined,
       createdAt: new Date(f.site.createdAt).toISOString(),
@@ -150,7 +151,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         name: launchSites.name,
         slug: launchSites.slug,
         region: launchSites.region,
-        elevation: launchSites.elevation,
+        elevation: launchSites.altitude,
       })
       .from(launchSites)
       .orderBy(asc(launchSites.name))
@@ -214,8 +215,8 @@ export async function action({ request, context }: Route.ActionArgs) {
           })),
           ...favorites.map((f) => ({
             id: f.site.id,
-            latitude: parseFloat(f.site.latitude),
-            longitude: parseFloat(f.site.longitude),
+            latitude: f.site.latitude,
+            longitude: f.site.longitude,
             siteType: 'launch' as const,
           })),
         ];
