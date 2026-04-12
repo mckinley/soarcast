@@ -159,10 +159,10 @@ export const sites = sqliteTable('sites', {
   idealWindDirections: text('idealWindDirections', { mode: 'json' }).notNull().$type<number[]>(),
   maxWindSpeed: integer('maxWindSpeed').notNull(), // km/h
   notes: text('notes'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: integer('createdAt', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+  updatedAt: integer('updatedAt', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
 });
@@ -178,10 +178,10 @@ export const forecastsCache = sqliteTable(
     siteType: text('site_type').notNull(), // 'launch' | 'custom' | 'legacy'
     fetchDate: text('fetchDate').notNull(), // ISO date string (YYYY-MM-DD)
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
-    fetchedAt: integer('fetchedAt', { mode: 'timestamp_ms' })
+    fetchedAt: integer('fetchedAt', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
-    expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
   },
   (table) => ({
     // Unique constraint for cache key (one forecast per site per day)
@@ -217,7 +217,7 @@ export const settings = sqliteTable('settings', {
     .default(false),
   morningDigestTime: text('morningDigestTime').default('08:00'), // HH:MM format in user's local timezone
   onboardingCompleted: integer('onboardingCompleted', { mode: 'boolean' }).notNull().default(false),
-  updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+  updatedAt: integer('updatedAt', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
 });
@@ -231,7 +231,7 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
     .references(() => users.id, { onDelete: 'cascade' }),
   endpoint: text('endpoint').notNull().unique(),
   keys: text('keys', { mode: 'json' }).notNull().$type<{ p256dh: string; auth: string }>(),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: integer('createdAt', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
 });
@@ -246,10 +246,10 @@ export const atmosphericProfilesCache = sqliteTable(
     locationKey: text('location_key').notNull(), // "lat,lng" rounded to 2 decimals (~1km precision)
     fetchDate: text('fetch_date').notNull(), // ISO date string (YYYY-MM-DD)
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
-    fetchedAt: integer('fetched_at', { mode: 'timestamp_ms' })
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => ({
     uniqueLocationDate: unique().on(table.locationKey, table.fetchDate),

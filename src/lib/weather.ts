@@ -320,5 +320,5 @@ export async function clearExpiredForecasts(): Promise<void> {
   // Drizzle ORM doesn't have lt() operator, so we use sql template for date comparison
   await getDb()
     .delete(forecastsCache)
-    .where(sql`${forecastsCache.expiresAt} < ${now.getTime()}`);
+    .where(sql`${forecastsCache.expiresAt} < ${Math.floor(now.getTime() / 1000)}`);
 }
