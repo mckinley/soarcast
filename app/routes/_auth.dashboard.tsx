@@ -6,6 +6,7 @@ import { DashboardClient } from '@/components/dashboard-client';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import { userFavoriteSites, customSites, launchSites, settings } from '~/db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { getSitesByCountry, getPgsitesApiKey } from '~/lib/pgsites-client';
 import { getForecast, fetchAllForecasts, setWeatherDb } from '~/lib/weather';
 import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
@@ -136,7 +137,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     }),
   );
 
-  // Get popular sites for onboarding
+  // Get popular sites for onboarding from pgsites API
   let popularSites: Array<{
     id: string;
     name: string;
@@ -145,17 +146,36 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     elevation: number | null;
   }> = [];
   if (!onboardingCompleted) {
-    popularSites = await db
-      .select({
-        id: launchSites.id,
-        name: launchSites.name,
-        slug: launchSites.slug,
-        region: launchSites.region,
-        elevation: launchSites.altitude,
-      })
-      .from(launchSites)
-      .orderBy(asc(launchSites.name))
-      .limit(5);
+    try {
+      const apiKey = getPgsitesApiKey(env);
+      const result = await getSitesByCountry(apiKey, 'US', 5);
+      popularSites = result.sites.map((s) => {
+        const nameSlug = s.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        return {
+          id: s.id,
+          name: s.name,
+          slug: `${nameSlug}-${s.id.slice(0, 8)}`,
+          region: null,
+          elevation: s.altitude,
+        };
+      });
+    } catch {
+      // Fallback to local DB if API fails
+      popularSites = await db
+        .select({
+          id: launchSites.id,
+          name: launchSites.name,
+          slug: launchSites.slug,
+          region: launchSites.region,
+          elevation: launchSites.altitude,
+        })
+        .from(launchSites)
+        .orderBy(asc(launchSites.name))
+        .limit(5);
+    }
   }
 
   const appSettings = userSettings
