@@ -110,7 +110,16 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
 - Removed "coming soon" label, replaced with "Score unavailable for X sites" note
 - Files changed: src/app/sites/browse/actions.ts, src/app/sites/browse/page.tsx, src/app/sites/browse/browse-client.tsx
 - **Learnings for future iterations:**
-  - LaunchSite has string lat/lng (need parseFloat), nullable elevation/maxWindSpeed/idealWindDirections
+  - LaunchSite has string lat/lng — BEING CHANGED TO REAL in this refactor
+- Column renames in progress: elevation→altitude, landing_elevation→landing_altitude, landing_lat→landing_latitude, landing_lng→landing_longitude
+- orientations JSON column → individual wind_n/ne/e/se/s/sw/w/nw INTEGER columns (match pgsites API)
+- flying_types JSON → is_paragliding/is_hanggliding INTEGER flag columns (match pgsites API)
+- source_id → pgsites_id (UUID from pgsites API, was lat_lng string)
+- source: "paraglidingearth" → "pgsites"
+- Timestamps changing from milliseconds to seconds (match syncing-pilots and pgsites conventions)
+- pgsites API at pgsites.mckinleyaviation.com — auth via X-API-Key header, env var PGSITES_API_KEY
+- pgsites API returns snake_case fields matching these column names exactly
+- idealWindDirections can be computed at query time from wind_n/ne/e columns: rating=2 means ideal
   - forecastsCache uses siteType='launch' for launch_sites, fetchDate is YYYY-MM-DD string
   - Today's score is always dayScores[0] since forecast starts from today
 ---
