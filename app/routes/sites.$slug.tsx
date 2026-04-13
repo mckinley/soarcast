@@ -173,12 +173,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   });
 
   let site: DetailSite;
-  let isLocalSite = false;
   let localSiteId: string | null = null;
 
   if (localSite) {
     site = localSiteToDetailSite(localSite);
-    isLocalSite = true;
     localSiteId = localSite.id;
   } else {
     // 2. Not found locally — extract pgsites UUID from slug and do direct API lookup
@@ -232,7 +230,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       });
       if (cached) {
         localSiteId = cached.id;
-        isLocalSite = true;
         const favorite = await db.query.userFavoriteSites.findFirst({
           where: and(
             eq(userFavoriteSites.userId, session.user.id),
@@ -291,7 +288,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     isFavorited,
     customMaxWind,
     isAuthenticated: !!session?.user?.id,
-    isLocalSite,
     forecast,
     scores,
     forecastError,
@@ -439,7 +435,7 @@ function FavoriteButton({
 }
 
 export default function SiteDetailPage() {
-  const { site, pgsitesId, isFavorited, customMaxWind, isAuthenticated, isLocalSite, forecast, scores, forecastError } =
+  const { site, pgsitesId, isFavorited, customMaxWind, isAuthenticated, forecast, scores, forecastError } =
     useLoaderData<typeof loader>();
 
   return (
