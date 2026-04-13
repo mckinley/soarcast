@@ -418,12 +418,15 @@ export function SitesBrowseClient({
               {/* Country */}
               <div className="space-y-2">
                 <Label>Country</Label>
-                <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                <Select
+                  value={selectedCountry || 'all'}
+                  onValueChange={(v) => setSelectedCountry(v === 'all' ? '' : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All countries" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All countries</SelectItem>
+                    <SelectItem value="all">All countries</SelectItem>
                     {filterOptions.countries.map((country) => (
                       <SelectItem key={country} value={country}>
                         {country}
