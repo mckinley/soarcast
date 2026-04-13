@@ -472,11 +472,7 @@ export default function SiteDetailPage() {
       </div>
 
       {/* Forecast section with windgram and scoring */}
-      {!isLocalSite ? (
-        <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
-          <p className="text-muted-foreground">Favorite this site to see forecasts and scores</p>
-        </div>
-      ) : forecastError ? (
+      {forecastError ? (
         <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
           <p className="font-medium">Error loading forecast</p>
           <p className="text-sm">{forecastError}</p>
