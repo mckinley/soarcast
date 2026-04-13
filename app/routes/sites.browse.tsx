@@ -23,13 +23,14 @@ export function meta() {
   ];
 }
 
-/** Generate a URL-safe slug from a site name and pgsites UUID. */
+/** Generate a URL-safe slug from a site name and pgsites UUID.
+ *  Includes full UUID so the detail page can always resolve it. */
 function generateSlug(name: string, id: string): string {
   const nameSlug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-  return `${nameSlug}-${id.slice(0, 8)}`;
+  return `${nameSlug}--${id}`;
 }
 
 /** Map a PgSite from the API to the BrowseSite shape the client expects. */

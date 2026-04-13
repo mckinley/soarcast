@@ -61,22 +61,25 @@ interface DetailSite {
   updatedAt: string;
 }
 
-/** Generate a URL-safe slug from a site name and pgsites UUID. */
+/** Generate a URL-safe slug from a site name and pgsites UUID.
+ *  Uses -- separator so the UUID can be reliably extracted. */
 function generateSlug(name: string, id: string): string {
   const nameSlug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-  return `${nameSlug}-${id.slice(0, 8)}`;
+  return `${nameSlug}--${id}`;
 }
 
-/** Extract search name and UUID prefix from a slug. */
-function parseSlug(slug: string): { nameQuery: string; uuidPrefix: string } {
-  const lastHyphen = slug.lastIndexOf('-');
-  if (lastHyphen === -1) return { nameQuery: slug.replace(/-/g, ' '), uuidPrefix: '' };
-  const uuidPrefix = slug.slice(lastHyphen + 1);
-  const nameSlug = slug.slice(0, lastHyphen);
-  return { nameQuery: nameSlug.replace(/-/g, ' '), uuidPrefix };
+/** Extract the pgsites UUID from a slug. Supports both formats:
+ *  - New: "site-name--uuid-here" (double-dash separator)
+ *  - Legacy local: slugs from local launch_sites table */
+function extractPgsitesId(slug: string): string | null {
+  const doubleDash = slug.indexOf('--');
+  if (doubleDash !== -1) {
+    return slug.slice(doubleDash + 2);
+  }
+  return null;
 }
 
 /** Map a PgSite from the API to the DetailSite shape. */
@@ -178,36 +181,24 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     isLocalSite = true;
     localSiteId = localSite.id;
   } else {
-    // 2. Not found locally — resolve from pgsites API
-    const { nameQuery, uuidPrefix } = parseSlug(slug!);
-
+    // 2. Not found locally — extract pgsites UUID from slug and do direct API lookup
+    const pgsitesId = extractPgsitesId(slug!);
     let pgSite: PgSite | null = null;
 
-    // Search by name and match by UUID prefix
-    if (nameQuery) {
-      try {
-        const results = await searchSites(apiKey, nameQuery, 50);
-        // Try exact UUID prefix match first
-        if (uuidPrefix.length >= 6) {
-          pgSite = results.find((s) => s.id.startsWith(uuidPrefix)) ?? null;
-        }
-        // Fallback: take the first result with a matching name
-        if (!pgSite && results.length > 0) {
-          const nameSlug = slug!.slice(0, slug!.lastIndexOf('-'));
-          pgSite = results.find((s) => generateSlug(s.name, s.id).startsWith(nameSlug)) ?? results[0];
-        }
-      } catch {
-        // Search failed, try other methods
-      }
+    if (pgsitesId) {
+      pgSite = await getSiteById(apiKey, pgsitesId);
     }
 
-    // Last resort: try treating the full slug as a search query
+    // Fallback: search by the name portion of the slug
     if (!pgSite) {
-      try {
-        const results = await searchSites(apiKey, slug!.replace(/-/g, ' '), 5);
-        if (results.length > 0) pgSite = results[0];
-      } catch {
-        // give up
+      const nameQuery = slug!.split('--')[0].replace(/-/g, ' ');
+      if (nameQuery) {
+        try {
+          const results = await searchSites(apiKey, nameQuery, 5);
+          if (results.length > 0) pgSite = results[0];
+        } catch {
+          // search failed
+        }
       }
     }
 
@@ -223,15 +214,35 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   let isFavorited = false;
   let customMaxWind: number | null = null;
 
-  if (session?.user?.id && localSiteId) {
-    const favorite = await db.query.userFavoriteSites.findFirst({
-      where: and(
-        eq(userFavoriteSites.userId, session.user.id),
-        eq(userFavoriteSites.siteId, localSiteId),
-      ),
-    });
-    isFavorited = !!favorite;
-    customMaxWind = favorite?.customMaxWind ?? null;
+  if (session?.user?.id) {
+    // Check favorites — by local ID if cached, or by pgsites ID
+    if (localSiteId) {
+      const favorite = await db.query.userFavoriteSites.findFirst({
+        where: and(
+          eq(userFavoriteSites.userId, session.user.id),
+          eq(userFavoriteSites.siteId, localSiteId),
+        ),
+      });
+      isFavorited = !!favorite;
+      customMaxWind = favorite?.customMaxWind ?? null;
+    } else {
+      // Check if this pgsites site was favorited (look up by pgsitesId)
+      const cached = await db.query.launchSites.findFirst({
+        where: eq(launchSites.pgsitesId, site.id),
+      });
+      if (cached) {
+        localSiteId = cached.id;
+        isLocalSite = true;
+        const favorite = await db.query.userFavoriteSites.findFirst({
+          where: and(
+            eq(userFavoriteSites.userId, session.user.id),
+            eq(userFavoriteSites.siteId, cached.id),
+          ),
+        });
+        isFavorited = !!favorite;
+        customMaxWind = favorite?.customMaxWind ?? null;
+      }
+    }
   }
 
   // Fetch forecast and scoring data for ALL sites (local or pgsites API)
