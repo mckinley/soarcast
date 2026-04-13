@@ -68,6 +68,12 @@ interface SitesBrowseClientProps {
   };
   siteScores: Record<string, number | null>;
   initialFavoriteIds?: string[];
+  pagination?: {
+    page: number;
+    totalPages: number;
+    totalSites: number;
+    pageSize: number;
+  };
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -96,6 +102,7 @@ export function SitesBrowseClient({
   searchParams,
   siteScores,
   initialFavoriteIds = [],
+  pagination,
 }: SitesBrowseClientProps) {
   const navigate = useNavigate();
   const [urlSearchParams] = useSearchParams();
@@ -557,6 +564,46 @@ export function SitesBrowseClient({
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 pt-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.pageSize + 1}–
+            {Math.min(pagination.page * pagination.pageSize, pagination.totalSites)} of{' '}
+            {pagination.totalSites.toLocaleString()} sites
+          </p>
+          <div className="flex gap-2">
+            {pagination.page > 1 && (
+              <Link
+                to={`?${new URLSearchParams({
+                  ...(selectedCountry && { country: selectedCountry }),
+                  ...(searchValue && { search: searchValue }),
+                  page: String(pagination.page - 1),
+                })}`}
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted"
+              >
+                ← Previous
+              </Link>
+            )}
+            <span className="px-3 py-1.5 text-sm text-muted-foreground">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            {pagination.page < pagination.totalPages && (
+              <Link
+                to={`?${new URLSearchParams({
+                  ...(selectedCountry && { country: selectedCountry }),
+                  ...(searchValue && { search: searchValue }),
+                  page: String(pagination.page + 1),
+                })}`}
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted"
+              >
+                Next →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

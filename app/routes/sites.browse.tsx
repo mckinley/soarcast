@@ -65,21 +65,33 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const search = url.searchParams.get('search') || '';
   const country = url.searchParams.get('country') || '';
+  const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
+  const PAGE_SIZE = 100;
+  const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch sites from pgsites API
+  // Fetch sites from pgsites API with pagination
   let pgSites: PgSite[] = [];
+  let totalSites = 0;
   if (search) {
-    pgSites = await searchSites(apiKey, search, 500);
+    pgSites = await searchSites(apiKey, search, PAGE_SIZE);
+    totalSites = pgSites.length; // search doesn't return total
   } else {
-    const result = await getSitesByCountry(apiKey, country || 'US', 1000);
+    const result = await getSitesByCountry(apiKey, country || 'US', PAGE_SIZE, offset);
     pgSites = result.sites;
+    totalSites = result.total;
   }
 
   const sites: BrowseSite[] = pgSites.map(pgSiteToBrowseSite);
+  const totalPages = Math.ceil(totalSites / PAGE_SIZE);
 
-  // Build filter options from returned data
+  // Popular paragliding countries — sorted by site count
+  const PG_COUNTRIES = [
+    'FR', 'DE', 'CH', 'IT', 'ES', 'US', 'BR', 'AT', 'AU', 'TR', 'PT', 'IN',
+    'NZ', 'CO', 'JP', 'MX', 'CL', 'GR', 'SI', 'HR', 'GB', 'CZ', 'BA', 'NP',
+    'ZA', 'KR', 'TW', 'AR', 'PE', 'EC', 'MA', 'PH', 'ID', 'TH', 'NO',
+  ];
   const filterOptions = {
-    countries: [...new Set(pgSites.map((s) => s.country_code).filter(Boolean))] as string[],
+    countries: PG_COUNTRIES,
   };
 
   // Get user session and favorites
@@ -155,6 +167,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     scores,
     favoritePgsitesIds,
     searchParams: { search, country },
+    pagination: { page, totalPages, totalSites, pageSize: PAGE_SIZE },
   };
 }
 
@@ -256,7 +269,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, filterOptions, scores, favoritePgsitesIds, searchParams } =
+  const { sites, filterOptions, scores, favoritePgsitesIds, searchParams, pagination } =
     useLoaderData<typeof loader>();
 
   return (
@@ -266,6 +279,7 @@ export default function BrowseSitesPage() {
       searchParams={searchParams}
       siteScores={scores}
       initialFavoriteIds={favoritePgsitesIds}
+      pagination={pagination}
     />
   );
 }

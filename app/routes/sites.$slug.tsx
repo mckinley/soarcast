@@ -183,15 +183,31 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
     let pgSite: PgSite | null = null;
 
-    // Try direct lookup if UUID prefix looks like a full-length pgsites ID prefix
-    if (uuidPrefix.length >= 8) {
-      // Search by name and match by UUID prefix
-      const results = await searchSites(apiKey, nameQuery, 50);
-      pgSite = results.find((s) => s.id.startsWith(uuidPrefix)) ?? null;
+    // Search by name and match by UUID prefix
+    if (nameQuery) {
+      try {
+        const results = await searchSites(apiKey, nameQuery, 50);
+        // Try exact UUID prefix match first
+        if (uuidPrefix.length >= 6) {
+          pgSite = results.find((s) => s.id.startsWith(uuidPrefix)) ?? null;
+        }
+        // Fallback: take the first result with a matching name
+        if (!pgSite && results.length > 0) {
+          const nameSlug = slug!.slice(0, slug!.lastIndexOf('-'));
+          pgSite = results.find((s) => generateSlug(s.name, s.id).startsWith(nameSlug)) ?? results[0];
+        }
+      } catch {
+        // Search failed, try other methods
+      }
+    }
 
-      // Fallback: try direct getSiteById with the prefix (in case API supports it)
-      if (!pgSite) {
-        pgSite = await getSiteById(apiKey, uuidPrefix);
+    // Last resort: try treating the full slug as a search query
+    if (!pgSite) {
+      try {
+        const results = await searchSites(apiKey, slug!.replace(/-/g, ' '), 5);
+        if (results.length > 0) pgSite = results[0];
+      } catch {
+        // give up
       }
     }
 
@@ -218,42 +234,44 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     customMaxWind = favorite?.customMaxWind ?? null;
   }
 
-  // Fetch forecast and scoring data (only for local/favorited sites)
+  // Fetch forecast and scoring data for ALL sites (local or pgsites API)
+  // Use local site ID if available (favorited/cached), otherwise use pgsites UUID
+  const forecastSiteId = localSiteId || site.id;
+  // All pgsites sites are launch sites — use 'launch' as the cache discriminator
+  const forecastSiteType: 'launch' | 'custom' | 'legacy' = 'launch';
   let forecast = null;
   let scores = null;
   let forecastError = null;
 
-  if (isLocalSite) {
-    try {
-      setWeatherDb(db);
-      setProfileDb(db);
+  try {
+    setWeatherDb(db);
+    setProfileDb(db);
 
-      const forecastResult = await getForecast(localSiteId!, site.latitude, site.longitude, 'launch');
-      forecast = forecastResult.forecast;
+    const forecastResult = await getForecast(forecastSiteId, site.latitude, site.longitude, forecastSiteType);
+    forecast = forecastResult.forecast;
 
-      if (forecast) {
-        const siteForScoring = {
-          id: localSiteId!,
-          name: site.name,
-          latitude: site.latitude,
-          longitude: site.longitude,
-          elevation: site.altitude || 0,
-          idealWindDirections: getIdealWindDirections(site),
-          maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
-          createdAt: site.createdAt,
-          updatedAt: site.updatedAt,
-        };
+    if (forecast) {
+      const siteForScoring = {
+        id: forecastSiteId,
+        name: site.name,
+        latitude: site.latitude,
+        longitude: site.longitude,
+        elevation: site.altitude || 0,
+        idealWindDirections: getIdealWindDirections(site),
+        maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
+        createdAt: site.createdAt,
+        updatedAt: site.updatedAt,
+      };
 
-        try {
-          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
-          scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
-        } catch {
-          scores = calculateDailyScores(forecast, siteForScoring);
-        }
+      try {
+        const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
+        scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
+      } catch {
+        scores = calculateDailyScores(forecast, siteForScoring);
       }
-    } catch (e) {
-      forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
     }
+  } catch (e) {
+    forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
   }
 
   return {
