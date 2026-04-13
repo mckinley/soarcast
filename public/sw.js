@@ -2,11 +2,11 @@
 // Handles push notifications and PWA functionality
 // Strategy: network-first for HTML/pages, cache-first for hashed static assets only
 
-const CACHE_NAME = 'soarcast-v3';
+const CACHE_NAME = 'soarcast-v4';
 const API_CACHE_NAME = 'soarcast-api-v2';
 
 // Only cache truly static assets (icons, fonts — things that never change)
-const STATIC_ASSETS = ['/icon-192.png', '/icon-512.png', '/manifest.json'];
+const STATIC_ASSETS = ['/icon-192.svg', '/icon-512.svg', '/manifest.json'];
 
 // Install event - cache only static assets
 self.addEventListener('install', (event) => {
@@ -66,8 +66,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Hashed static assets (/_next/static/): cache-first (they're immutable)
-  if (url.pathname.startsWith('/_next/static/')) {
+  // Hashed static assets (/assets/): cache-first (they're immutable, content-hashed)
+  if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         return (
@@ -110,8 +110,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'SoarCast';
   const options = {
     body: data.body || 'New notification',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/icon-192.svg',
+    badge: '/icon-192.svg',
     data: { url: data.url || '/', siteId: data.siteId },
     tag: data.tag || 'soarcast-notification',
     requireInteraction: false,

@@ -52,6 +52,9 @@ type Pages = {
       "slug": string;
     };
   };
+  "/api/sites/near": {
+    params: {};
+  };
   "/dashboard": {
     params: {};
   };
@@ -63,7 +66,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/sites/browse" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile" | "/dashboard" | "/settings";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/sites/browse" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile" | "/api/sites/near" | "/dashboard" | "/settings";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -95,7 +98,7 @@ type RouteFiles = {
   };
   "routes/api.sites.tsx": {
     id: "routes/api.sites";
-    page: "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile";
+    page: "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile" | "/api/sites/near";
   };
   "routes/api.sites.$slug.tsx": {
     id: "routes/api.sites.$slug";
@@ -104,6 +107,10 @@ type RouteFiles = {
   "routes/api.sites.$slug.profile.tsx": {
     id: "routes/api.sites.$slug.profile";
     page: "/api/sites/:slug/profile";
+  };
+  "routes/api.sites.near.tsx": {
+    id: "routes/api.sites.near";
+    page: "/api/sites/near";
   };
   "routes/_index.tsx": {
     id: "routes/_index";
@@ -135,6 +142,7 @@ type RouteModules = {
   "routes/api.sites": typeof import("./app/routes/api.sites.tsx");
   "routes/api.sites.$slug": typeof import("./app/routes/api.sites.$slug.tsx");
   "routes/api.sites.$slug.profile": typeof import("./app/routes/api.sites.$slug.profile.tsx");
+  "routes/api.sites.near": typeof import("./app/routes/api.sites.near.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");
   "routes/_auth": typeof import("./app/routes/_auth.tsx");
   "routes/_auth.dashboard": typeof import("./app/routes/_auth.dashboard.tsx");
