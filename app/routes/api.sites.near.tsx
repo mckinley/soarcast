@@ -18,8 +18,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   const lat = parseFloat(url.searchParams.get('lat') ?? '');
   const lng = parseFloat(url.searchParams.get('lng') ?? '');
-  const radius = Math.min(parseFloat(url.searchParams.get('radius') ?? '100'), 500);
-  const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '200', 10), 500);
+  const radius = Math.min(parseFloat(url.searchParams.get('radius') ?? '100'), 5000);
+  const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '200', 10), 1000);
 
   if (isNaN(lat) || isNaN(lng)) {
     return new Response(JSON.stringify({ sites: [] }), {

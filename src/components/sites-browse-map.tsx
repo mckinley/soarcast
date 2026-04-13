@@ -89,8 +89,8 @@ function createClusterIcon(cluster: { getChildCount(): number }) {
 export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: SitesBrowseMapProps) {
   return (
     <MapContainer
-      center={[20, 10]}
-      zoom={3}
+      center={[47.44, -121.97]}
+      zoom={5}
       scrollWheelZoom={true}
       className="h-full w-full"
     >

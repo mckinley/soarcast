@@ -59,20 +59,21 @@ export function SitesBrowseClient({
   const [urlSearchParams] = useSearchParams();
   const [, startTransition] = useTransition();
 
+  // When the user has searched, show those results; otherwise show map-fetched sites.
+  const isSearchMode = initialSites.length > 0;
+
   const [searchValue, setSearchValue] = useState(searchParams.search ?? '');
   const [selectedOrientations, setSelectedOrientations] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Map-driven state
+  // Map-driven state — start loading=true so the panel doesn't flash "no sites"
+  // before the first bounds-change fetch fires.
   const [mapSites, setMapSites] = useState<BrowseSite[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!isSearchMode);
   const [zoomTooLow, setZoomTooLow] = useState(false);
 
   const favoriteSiteIds = useMemo(() => new Set(initialFavoriteIds), [initialFavoriteIds]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // When the user has searched, show those results; otherwise show map-fetched sites.
-  const isSearchMode = initialSites.length > 0;
   const rawSites = isSearchMode ? initialSites : mapSites;
 
   // Client-side filter by orientation
@@ -104,8 +105,8 @@ export function SitesBrowseClient({
           const params = new URLSearchParams({
             lat: lat.toFixed(5),
             lng: lng.toFixed(5),
-            radius: Math.min(radiusKm, 400).toString(),
-            limit: '200',
+            radius: Math.min(radiusKm, 3000).toString(),
+            limit: '500',
           });
           const res = await fetch(`/api/sites/near?${params}`);
           if (res.ok) {
@@ -284,16 +285,21 @@ export function SitesBrowseClient({
 
           {/* Site list */}
           <div className="flex-1 overflow-y-auto divide-y">
-            {zoomTooLow && !isSearchMode ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
-                <Mountain className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">Zoom the map in to see launch sites in this area</p>
-              </div>
-            ) : displaySites.length === 0 && !isLoading ? (
+            {isLoading && displaySites.length === 0 ? (
+              // Initial load — skeleton rows
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="px-3 py-3 space-y-1.5">
+                  <div className="h-3.5 bg-muted rounded w-3/4 animate-pulse" />
+                  <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
+                </div>
+              ))
+            ) : displaySites.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
                 <Mountain className="h-8 w-8 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">
-                  {isSearchMode ? 'No sites match your search' : 'No sites found in this area'}
+                  {isSearchMode
+                    ? 'No sites match your search'
+                    : 'No sites found here — try panning to a different area'}
                 </p>
               </div>
             ) : (
@@ -312,15 +318,11 @@ export function SitesBrowseClient({
       {/* ── Mobile site list below map ── */}
       <div className="md:hidden">
         <p className="text-sm text-muted-foreground mb-3">
-          {displaySites.length} site{displaySites.length !== 1 ? 's' : ''} in view
+          {isLoading ? 'Loading sites…' : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''} in view`}
         </p>
-        {zoomTooLow && !isSearchMode ? (
+        {displaySites.length === 0 && !isLoading ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Zoom the map in to see launch sites
-          </p>
-        ) : displaySites.length === 0 && !isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {isSearchMode ? 'No sites match your search' : 'No sites found in this area'}
+            {isSearchMode ? 'No sites match your search' : 'Pan or zoom the map to explore sites'}
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
