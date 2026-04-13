@@ -1,11 +1,22 @@
-import { useState, useTransition, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useState, useCallback, useTransition, useRef, useMemo } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, SlidersHorizontal, Clock, Heart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Search, SlidersHorizontal, X, Loader2, Mountain } from 'lucide-react';
+import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { getOrientations } from '@/lib/site-utils';
 
-/** Minimal site shape used by the browse page — works with both pgsites API and local DB sites. */
+/** Minimal site shape used by the browse page. */
 export interface BrowseSite {
   id: string;
   name: string;
@@ -27,276 +38,127 @@ export interface BrowseSite {
   isHanggliding: boolean;
   createdAt: string | null;
 }
-import {
-  getRecentSearches,
-  addRecentSearch,
-  clearRecentSearches,
-  type RecentSearch,
-} from '@/lib/recent-searches';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
-// Favorites are passed as initialFavoriteIds prop from route loader
-import { Link } from 'react-router';
 
 interface SitesBrowseClientProps {
+  /** Sites from server-side search. Empty when browsing by map. */
   initialSites: BrowseSite[];
-  filterOptions: {
-    countries: string[];
-  };
-  searchParams: {
-    search?: string;
-    country?: string;
-    orientations?: string;
-    sort?: string;
-    minScore?: string;
-  };
+  searchParams: { search?: string };
   siteScores: Record<string, number | null>;
   initialFavoriteIds?: string[];
-  pagination?: {
-    page: number;
-    totalPages: number;
-    totalSites: number;
-    pageSize: number;
-  };
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const SORT_OPTIONS = [
-  { value: 'name', label: 'Name (A-Z)' },
-  { value: 'distance', label: 'Distance (Nearest)' },
-  { value: 'elevation', label: 'Elevation (High-Low)' },
-  { value: 'recent', label: 'Recently Added' },
-];
-const MIN_SCORE_OPTIONS = [
-  { value: 'all', label: 'All Sites' },
-  { value: 'good', label: 'Good+ (51+)' },
-  { value: 'great', label: 'Great+ (71+)' },
-  { value: 'epic', label: 'Epic (86+)' },
-];
-
-const SCORE_THRESHOLDS: Record<string, number> = {
-  good: 51,
-  great: 71,
-  epic: 86,
-};
+const MIN_ZOOM_FOR_FETCH = 5;
 
 export function SitesBrowseClient({
   initialSites,
-  filterOptions,
   searchParams,
-  siteScores,
   initialFavoriteIds = [],
-  pagination,
 }: SitesBrowseClientProps) {
   const navigate = useNavigate();
   const [urlSearchParams] = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+
+  const [searchValue, setSearchValue] = useState(searchParams.search ?? '');
+  const [selectedOrientations, setSelectedOrientations] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const [searchValue, setSearchValue] = useState(searchParams.search || '');
-  const [selectedCountry, setSelectedCountry] = useState(searchParams.country || '');
-  const [selectedOrientations, setSelectedOrientations] = useState<string[]>(
-    searchParams.orientations ? searchParams.orientations.split(',') : [],
-  );
-  const [sortBy, setSortBy] = useState(searchParams.sort || 'name');
-  const [minScore, setMinScore] = useState(searchParams.minScore || 'all');
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>(() => getRecentSearches());
-  const [showRecentSearches, setShowRecentSearches] = useState(false);
-  const [favoriteSiteIds] = useState<Set<string>>(new Set(initialFavoriteIds));
+  // Map-driven state
+  const [mapSites, setMapSites] = useState<BrowseSite[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [zoomTooLow, setZoomTooLow] = useState(false);
 
-  // Request user location for distance sorting
-  useEffect(() => {
-    if (sortBy === 'distance' && !userLocation) {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setUserLocation({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            });
-          },
-          (error) => {
-            console.warn('Geolocation denied or unavailable:', error);
-          },
-        );
-      }
-    }
-  }, [sortBy, userLocation]);
+  const favoriteSiteIds = useMemo(() => new Set(initialFavoriteIds), [initialFavoriteIds]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Client-side filtering and sorting
-  const filteredAndSortedSites = useMemo(() => {
-    let sites = [...initialSites];
+  // When the user has searched, show those results; otherwise show map-fetched sites.
+  const isSearchMode = initialSites.length > 0;
+  const rawSites = isSearchMode ? initialSites : mapSites;
 
-    // Filter by orientations (computed from wind columns)
-    if (selectedOrientations.length > 0) {
-      sites = sites.filter((site) => {
-        const orientations = getOrientations(site);
-        return selectedOrientations.some((orientation) => {
-          const rating = orientations[orientation];
-          return rating && rating >= 1;
-        });
+  // Client-side filter by orientation
+  const displaySites = useMemo(() => {
+    if (selectedOrientations.length === 0) return rawSites;
+    return rawSites.filter((site) => {
+      const orientations = getOrientations(site);
+      return selectedOrientations.some((o) => {
+        const rating = orientations[o];
+        return rating != null && rating >= 1;
       });
-    }
-
-    // Filter by minimum flyability score
-    if (minScore !== 'all') {
-      const threshold = SCORE_THRESHOLDS[minScore] ?? 0;
-      sites = sites.filter((site) => {
-        const score = siteScores[site.id];
-        return score != null && score >= threshold;
-      });
-    }
-
-    // Sort
-    switch (sortBy) {
-      case 'distance':
-        if (userLocation) {
-          sites.sort((a, b) => {
-            const distA = calculateDistance(
-              userLocation.lat,
-              userLocation.lng,
-              a.latitude,
-              a.longitude,
-            );
-            const distB = calculateDistance(
-              userLocation.lat,
-              userLocation.lng,
-              b.latitude,
-              b.longitude,
-            );
-            return distA - distB;
-          });
-        }
-        break;
-      case 'elevation':
-        sites.sort((a, b) => (b.altitude || 0) - (a.altitude || 0));
-        break;
-      case 'recent':
-        sites.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
-        });
-        break;
-      case 'name':
-      default:
-        sites.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-
-    return sites;
-  }, [initialSites, selectedOrientations, sortBy, userLocation, minScore, siteScores]);
-
-  const updateURL = () => {
-    const params = new URLSearchParams(urlSearchParams);
-
-    if (searchValue.trim()) {
-      params.set('search', searchValue.trim());
-    } else {
-      params.delete('search');
-    }
-
-    if (selectedCountry) {
-      params.set('country', selectedCountry);
-    } else {
-      params.delete('country');
-    }
-
-    if (selectedOrientations.length > 0) {
-      params.set('orientations', selectedOrientations.join(','));
-    } else {
-      params.delete('orientations');
-    }
-
-    if (sortBy !== 'name') {
-      params.set('sort', sortBy);
-    } else {
-      params.delete('sort');
-    }
-
-    if (minScore !== 'all') {
-      params.set('minScore', minScore);
-    } else {
-      params.delete('minScore');
-    }
-
-    startTransition(() => {
-      navigate(`/sites/browse?${params.toString()}`);
     });
-  };
+  }, [rawSites, selectedOrientations]);
+
+  const handleBoundsChange = useCallback(
+    (lat: number, lng: number, radiusKm: number, zoom: number) => {
+      // Don't fetch when zoomed way out — too many sites / no useful radius
+      if (zoom < MIN_ZOOM_FOR_FETCH) {
+        setZoomTooLow(true);
+        setMapSites([]);
+        return;
+      }
+      setZoomTooLow(false);
+
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        setIsLoading(true);
+        try {
+          const params = new URLSearchParams({
+            lat: lat.toFixed(5),
+            lng: lng.toFixed(5),
+            radius: Math.min(radiusKm, 400).toString(),
+            limit: '200',
+          });
+          const res = await fetch(`/api/sites/near?${params}`);
+          if (res.ok) {
+            const data = (await res.json()) as { sites: BrowseSite[] };
+            setMapSites(data.sites);
+          }
+        } catch {
+          // silently swallow — map just won't update
+        } finally {
+          setIsLoading(false);
+        }
+      }, 600);
+    },
+    [],
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchValue.trim()) {
-      addRecentSearch(searchValue.trim());
-      setRecentSearches(getRecentSearches());
+    const q = searchValue.trim();
+    if (!q) {
+      // Clear search — go back to map browsing
+      startTransition(() => navigate('/sites/browse'));
+      return;
     }
-    setShowRecentSearches(false);
-    updateURL();
+    const params = new URLSearchParams(urlSearchParams);
+    params.set('search', q);
+    startTransition(() => navigate(`/sites/browse?${params}`));
   };
 
-  const handleRecentSearchClick = (query: string) => {
-    setSearchValue(query);
-    setShowRecentSearches(false);
-    // Don't immediately search, let user modify if needed
-  };
-
-  const handleClear = () => {
+  const clearSearch = () => {
     setSearchValue('');
-    setSelectedCountry('');
-    setSelectedOrientations([]);
-    setSortBy('name');
-    setMinScore('all');
-
-    startTransition(() => {
-      navigate('/sites/browse');
-    });
+    startTransition(() => navigate('/sites/browse'));
   };
 
-  const toggleOrientation = (orientation: string) => {
+  const toggleOrientation = (o: string) =>
     setSelectedOrientations((prev) =>
-      prev.includes(orientation) ? prev.filter((o) => o !== orientation) : [...prev, orientation],
+      prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o],
     );
-  };
 
-  const hasActiveFilters =
-    searchValue ||
-    selectedCountry ||
-    selectedOrientations.length > 0 ||
-    sortBy !== 'name' ||
-    minScore !== 'all';
+  const hasActiveFilters = selectedOrientations.length > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Search bar */}
-      <form onSubmit={handleSearch} className="flex gap-2 relative">
+    <div className="flex flex-col gap-3 h-full">
+      {/* ── Search bar ── */}
+      <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
-            placeholder="Search sites by name, region, or country..."
+            placeholder="Search by site name, country, or region…"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            onFocus={() => setShowRecentSearches(true)}
-            onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-            className="pl-9 pr-9"
+            className="pl-9 h-10"
           />
           {searchValue && (
             <button
@@ -307,327 +169,225 @@ export function SitesBrowseClient({
               <X className="h-4 w-4" />
             </button>
           )}
-
-          {/* Recent searches dropdown */}
-          {showRecentSearches && recentSearches.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-10">
-              <div className="p-2 border-b flex items-center justify-between">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Recent Searches
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearRecentSearches();
-                    setRecentSearches([]);
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Clear
-                </button>
-              </div>
-              <div className="py-1">
-                {recentSearches.map((search, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleRecentSearchClick(search.query)}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
-                  >
-                    {search.query}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Searching...' : 'Search'}
+
+        <Button type="submit" className="h-10 px-4 shrink-0">
+          Search
         </Button>
+
         <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="relative">
+            <Button variant="outline" className="h-10 px-4 shrink-0 relative">
               <SlidersHorizontal className="h-4 w-4 mr-2" />
               Filters
               {hasActiveFilters && (
-                <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center rounded-full">
-                  !
-                </Badge>
+                <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                  {selectedOrientations.length}
+                </span>
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetContent className="w-full sm:max-w-sm overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Filter & Sort</SheetTitle>
-              <SheetDescription>Refine your search for the perfect launch site</SheetDescription>
+              <SheetTitle>Filters</SheetTitle>
+              <SheetDescription>Narrow down sites in the current map view</SheetDescription>
             </SheetHeader>
             <div className="space-y-6 mt-6">
-              {/* Sort */}
-              <div className="space-y-2">
-                <Label>Sort By</Label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {sortBy === 'distance' && !userLocation && (
-                  <p className="text-xs text-muted-foreground">
-                    Enable location access to sort by distance
-                  </p>
-                )}
-              </div>
-
-              {/* Minimum Score (placeholder for future) */}
-              <div className="space-y-2">
-                <Label>Flyability Today</Label>
-                <Select value={minScore} onValueChange={setMinScore}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MIN_SCORE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {minScore !== 'all' &&
-                  (() => {
-                    const unavailableCount = initialSites.filter(
-                      (s) => siteScores[s.id] == null,
-                    ).length;
-                    return unavailableCount > 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        Score unavailable for {unavailableCount} site
-                        {unavailableCount !== 1 ? 's' : ''} — visit a site page to load its
-                        forecast.
-                      </p>
-                    ) : null;
-                  })()}
-              </div>
-
-              {/* Country */}
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Select
-                  value={selectedCountry || 'all'}
-                  onValueChange={(v) => setSelectedCountry(v === 'all' ? '' : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All countries" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All countries</SelectItem>
-                    {filterOptions.countries.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Orientations */}
-              <div className="space-y-2">
-                <Label>Orientations</Label>
+              {/* Wind orientations */}
+              <div className="space-y-3">
+                <Label>Wind Orientations</Label>
                 <div className="flex flex-wrap gap-2">
-                  {ORIENTATIONS.map((orientation) => (
+                  {ORIENTATIONS.map((o) => (
                     <Badge
-                      key={orientation}
-                      variant={selectedOrientations.includes(orientation) ? 'default' : 'outline'}
-                      className="cursor-pointer"
-                      onClick={() => toggleOrientation(orientation)}
+                      key={o}
+                      variant={selectedOrientations.includes(o) ? 'default' : 'outline'}
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleOrientation(o)}
                     >
-                      {orientation}
+                      {o}
                     </Badge>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Select wind directions (sites that work in these conditions)
+                  Show only sites that fly in these wind directions
                 </p>
               </div>
 
-              {/* Apply & Clear */}
-              <div className="flex gap-2 pt-4">
-                <Button onClick={updateURL} className="flex-1">
-                  Apply Filters
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedOrientations([])}
+                >
+                  Clear Filters
                 </Button>
-                {hasActiveFilters && (
-                  <Button variant="outline" onClick={handleClear}>
-                    Clear All
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
           </SheetContent>
         </Sheet>
       </form>
 
-      {/* Active filters display */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2">
-          {searchValue && (
-            <Badge variant="secondary">
-              Search: {searchValue}
-              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSearchValue('')} />
+      {/* ── Search result / active filter badges ── */}
+      {(isSearchMode || hasActiveFilters) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {isSearchMode && (
+            <Badge variant="secondary" className="gap-1">
+              Search: {searchParams.search}
+              <X className="h-3 w-3 cursor-pointer" onClick={clearSearch} />
             </Badge>
           )}
-          {selectedCountry && (
-            <Badge variant="secondary">
-              Country: {selectedCountry}
-              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setSelectedCountry('')} />
-            </Badge>
-          )}
-          {selectedOrientations.map((orientation) => (
-            <Badge key={orientation} variant="secondary">
-              {orientation}
-              <X
-                className="h-3 w-3 ml-1 cursor-pointer"
-                onClick={() => toggleOrientation(orientation)}
-              />
+          {selectedOrientations.map((o) => (
+            <Badge key={o} variant="secondary" className="gap-1">
+              {o}
+              <X className="h-3 w-3 cursor-pointer" onClick={() => toggleOrientation(o)} />
             </Badge>
           ))}
         </div>
       )}
 
-      {/* Results count */}
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredAndSortedSites.length} site
-        {filteredAndSortedSites.length !== 1 ? 's' : ''}
-        {sortBy === 'distance' && userLocation && ' sorted by distance'}
-        {sortBy === 'elevation' && ' sorted by elevation'}
-        {sortBy === 'recent' && ' (recently added)'}
-      </div>
+      {/* ── Main: map + site list ── */}
+      <div className="flex gap-0 border rounded-lg overflow-hidden" style={{ height: '72vh', minHeight: '400px' }}>
 
-      {/* Map */}
-      <div className="mt-6">
-        <SitesBrowseMapWrapper sites={filteredAndSortedSites} />
-      </div>
+        {/* Map */}
+        <div className="flex-1 relative min-w-0">
+          <SitesBrowseMapWrapper
+            sites={displaySites}
+            onBoundsChange={isSearchMode ? undefined : handleBoundsChange}
+            fitBounds={isSearchMode}
+          />
 
-      {/* Site list */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredAndSortedSites.length === 0 ? (
-          <div className="col-span-full text-center py-12 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground">No sites found matching your criteria</p>
-          </div>
-        ) : (
-          filteredAndSortedSites.map((site) => {
-            const isFavorited = favoriteSiteIds.has(site.id);
+          {/* Loading indicator overlay */}
+          {isLoading && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-background/90 border rounded-full px-3 py-1.5 flex items-center gap-2 shadow-sm text-sm">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading sites…
+            </div>
+          )}
 
-            return (
-              <div
-                key={site.id}
-                className="border rounded-lg p-4 hover:border-primary/50 transition-colors relative"
-              >
-                {isFavorited && (
-                  <Heart className="absolute top-3 right-3 h-4 w-4 fill-red-500 text-red-500" />
-                )}
-                <h3 className="font-semibold text-lg mb-2 pr-6">{site.name}</h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  {site.region && <p>Region: {site.region}</p>}
-                  {!site.region && site.countryCode && <p>Country: {site.countryCode}</p>}
-                  {site.altitude && <p>Elevation: {site.altitude}m</p>}
-                  {(site.isParagliding || site.isHanggliding) && (
-                    <p>
-                      Flying:{' '}
-                      {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  )}
-                  {(() => {
-                    const orientations = getOrientations(site);
-                    const activeOrientations = Object.entries(orientations)
-                      .filter(([, rating]) => rating >= 1)
-                      .map(([dir]) => dir);
-                    return activeOrientations.length > 0 ? (
-                      <p>Orientations: {activeOrientations.join(', ')}</p>
-                    ) : null;
-                  })()}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    to={`/sites/${site.slug}`}
-                    className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    View Details →
-                  </Link>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+          {/* Zoom too low prompt */}
+          {zoomTooLow && !isSearchMode && (
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] bg-background/90 border rounded-full px-4 py-2 text-sm shadow-sm text-muted-foreground">
+              Zoom in to explore launch sites
+            </div>
+          )}
+        </div>
 
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t">
-          <p className="text-sm text-muted-foreground">
-            Showing {(pagination.page - 1) * pagination.pageSize + 1}–
-            {Math.min(pagination.page * pagination.pageSize, pagination.totalSites)} of{' '}
-            {pagination.totalSites.toLocaleString()} sites
-          </p>
-          <div className="flex gap-2">
-            {pagination.page > 1 && (
-              <Link
-                to={`?${new URLSearchParams({
-                  ...(selectedCountry && { country: selectedCountry }),
-                  ...(searchValue && { search: searchValue }),
-                  page: String(pagination.page - 1),
-                })}`}
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted"
-              >
-                ← Previous
-              </Link>
-            )}
-            <span className="px-3 py-1.5 text-sm text-muted-foreground">
-              Page {pagination.page} of {pagination.totalPages}
+        {/* ── Desktop side panel ── */}
+        <div className="hidden md:flex flex-col w-72 border-l bg-background shrink-0">
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0">
+            <span className="text-sm font-medium">
+              {displaySites.length} site{displaySites.length !== 1 ? 's' : ''}
             </span>
-            {pagination.page < pagination.totalPages && (
-              <Link
-                to={`?${new URLSearchParams({
-                  ...(selectedCountry && { country: selectedCountry }),
-                  ...(searchValue && { search: searchValue }),
-                  page: String(pagination.page + 1),
-                })}`}
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted"
-              >
-                Next →
-              </Link>
+            {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          </div>
+
+          {/* Site list */}
+          <div className="flex-1 overflow-y-auto divide-y">
+            {zoomTooLow && !isSearchMode ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
+                <Mountain className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">Zoom the map in to see launch sites in this area</p>
+              </div>
+            ) : displaySites.length === 0 && !isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
+                <Mountain className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  {isSearchMode ? 'No sites match your search' : 'No sites found in this area'}
+                </p>
+              </div>
+            ) : (
+              displaySites.map((site) => (
+                <SiteListItem
+                  key={site.id}
+                  site={site}
+                  isFavorited={favoriteSiteIds.has(site.id)}
+                />
+              ))
             )}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── Mobile site list below map ── */}
+      <div className="md:hidden">
+        <p className="text-sm text-muted-foreground mb-3">
+          {displaySites.length} site{displaySites.length !== 1 ? 's' : ''} in view
+        </p>
+        {zoomTooLow && !isSearchMode ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Zoom the map in to see launch sites
+          </p>
+        ) : displaySites.length === 0 && !isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            {isSearchMode ? 'No sites match your search' : 'No sites found in this area'}
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {displaySites.map((site) => (
+              <SiteCard
+                key={site.id}
+                site={site}
+                isFavorited={favoriteSiteIds.has(site.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/**
- * Calculate distance between two lat/lng points using Haversine formula
- * Returns distance in kilometers
- */
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
+// ── Compact list item for desktop sidebar ──
+function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: boolean }) {
+  const orientations = getOrientations(site);
+  const activeOrientations = Object.entries(orientations)
+    .filter(([, r]) => r >= 1)
+    .map(([dir]) => dir);
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return (
+    <Link
+      to={`/sites/${site.slug}`}
+      className="flex flex-col gap-1 px-3 py-3 hover:bg-muted/50 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-sm font-medium leading-tight line-clamp-2">{site.name}</span>
+        {isFavorited && (
+          <span className="text-red-500 shrink-0 text-xs">♥</span>
+        )}
+      </div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+        {site.countryCode && <span>{site.countryCode}</span>}
+        {site.altitude && <span>{site.altitude}m</span>}
+        {activeOrientations.length > 0 && (
+          <span className="text-muted-foreground/80">{activeOrientations.join(' ')}</span>
+        )}
+      </div>
+    </Link>
+  );
 }
 
-function toRad(degrees: number): number {
-  return (degrees * Math.PI) / 180;
+// ── Card for mobile grid ──
+function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolean }) {
+  const orientations = getOrientations(site);
+  const activeOrientations = Object.entries(orientations)
+    .filter(([, r]) => r >= 1)
+    .map(([dir]) => dir);
+
+  return (
+    <Link
+      to={`/sites/${site.slug}`}
+      className="border rounded-lg p-4 hover:border-primary/50 transition-colors block"
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="font-semibold text-sm leading-tight">{site.name}</h3>
+        {isFavorited && <span className="text-red-500 text-xs shrink-0">♥</span>}
+      </div>
+      <div className="text-xs text-muted-foreground space-y-0.5">
+        {site.countryCode && <p>{site.countryCode}</p>}
+        {site.altitude && <p>{site.altitude}m elevation</p>}
+        {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
+      </div>
+    </Link>
+  );
 }

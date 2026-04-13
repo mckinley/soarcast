@@ -10,7 +10,6 @@ import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-cl
 import { getIdealWindDirections } from '~/lib/site-utils';
 import {
   searchSites,
-  getSitesByCountry,
   getPgsitesApiKey,
   getSiteById,
   type PgSite,
@@ -19,12 +18,10 @@ import {
 export function meta() {
   return [
     { title: 'Browse Launch Sites | SoarCast' },
-    { name: 'description', content: 'Browse paragliding and hang gliding launch sites.' },
+    { name: 'description', content: 'Discover paragliding and hang gliding launch sites worldwide.' },
   ];
 }
 
-/** Generate a URL-safe slug from a site name and pgsites UUID.
- *  Includes full UUID so the detail page can always resolve it. */
 function generateSlug(name: string, id: string): string {
   const nameSlug = name
     .toLowerCase()
@@ -33,14 +30,13 @@ function generateSlug(name: string, id: string): string {
   return `${nameSlug}--${id}`;
 }
 
-/** Map a PgSite from the API to the BrowseSite shape the client expects. */
 function pgSiteToBrowseSite(site: PgSite): BrowseSite {
   return {
     id: site.id,
     name: site.name,
     slug: generateSlug(site.name, site.id),
     countryCode: site.country_code || null,
-    region: null, // pgsites API doesn't have region
+    region: null,
     latitude: site.latitude,
     longitude: site.longitude,
     altitude: site.altitude,
@@ -64,36 +60,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const apiKey = getPgsitesApiKey(env);
   const url = new URL(request.url);
 
-  const search = url.searchParams.get('search') || '';
-  const country = url.searchParams.get('country') || '';
-  const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
-  const PAGE_SIZE = 100;
-  const offset = (page - 1) * PAGE_SIZE;
+  const search = url.searchParams.get('search') ?? '';
 
-  // Fetch sites from pgsites API with pagination
-  let pgSites: PgSite[] = [];
-  let totalSites = 0;
+  // Only fetch from the API when the user has searched.
+  // Map-based browsing loads sites client-side via /api/sites/near.
+  let sites: BrowseSite[] = [];
   if (search) {
-    pgSites = await searchSites(apiKey, search, PAGE_SIZE);
-    totalSites = pgSites.length; // search doesn't return total
-  } else {
-    const result = await getSitesByCountry(apiKey, country || 'US', PAGE_SIZE, offset);
-    pgSites = result.sites;
-    totalSites = result.total;
+    const pgSites = await searchSites(apiKey, search, 200);
+    sites = pgSites.map(pgSiteToBrowseSite);
   }
-
-  const sites: BrowseSite[] = pgSites.map(pgSiteToBrowseSite);
-  const totalPages = Math.ceil(totalSites / PAGE_SIZE);
-
-  // Popular paragliding countries — sorted by site count
-  const PG_COUNTRIES = [
-    'FR', 'DE', 'CH', 'IT', 'ES', 'US', 'BR', 'AT', 'AU', 'TR', 'PT', 'IN',
-    'NZ', 'CO', 'JP', 'MX', 'CL', 'GR', 'SI', 'HR', 'GB', 'CZ', 'BA', 'NP',
-    'ZA', 'KR', 'TW', 'AR', 'PE', 'EC', 'MA', 'PH', 'ID', 'TH', 'NO',
-  ];
-  const filterOptions = {
-    countries: PG_COUNTRIES,
-  };
 
   // Get user session and favorites
   const session = await getSession(request, env);
@@ -101,7 +76,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const scores: Record<string, number | null> = {};
 
   if (session?.user?.id) {
-    // Get user's favorited sites with their pgsites IDs
     const favs = await db
       .select({
         siteId: userFavoriteSites.siteId,
@@ -117,7 +91,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       localIdToPgsitesId.set(f.siteId, f.pgsitesId);
     }
 
-    // Get today's scores for favorited sites only
     if (favs.length > 0) {
       const today = new Date().toISOString().split('T')[0];
       const localSiteIds = favs.map((f) => f.siteId);
@@ -133,7 +106,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           ),
         );
 
-      // Build a map of local launch_sites for scoring
       const localSites = await db.query.launchSites.findMany({
         where: inArray(launchSites.id, localSiteIds),
       });
@@ -156,7 +128,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           createdAt: localSite.createdAt?.toISOString() || '',
           updatedAt: localSite.updatedAt?.toISOString() || '',
         });
-        // Key scores by pgsites UUID so client can look them up
         scores[pgsitesId] = dayScores.length > 0 ? dayScores[0].overallScore : null;
       }
     }
@@ -164,11 +135,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   return {
     sites,
-    filterOptions,
     scores,
     favoritePgsitesIds,
-    searchParams: { search, country },
-    pagination: { page, totalPages, totalSites, pageSize: PAGE_SIZE },
+    searchParams: { search },
   };
 }
 
@@ -188,12 +157,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   switch (intent) {
     case 'favorite': {
-      // Check if site already exists locally
       let localSite = await db.query.launchSites.findFirst({
         where: eq(launchSites.pgsitesId, pgsitesId),
       });
 
-      // If not, fetch from pgsites API and insert
       if (!localSite) {
         const pgSite = await getSiteById(apiKey, pgsitesId);
         if (!pgSite) {
@@ -246,7 +213,6 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { success: true };
     }
     case 'unfavorite': {
-      // Look up local site by pgsites ID
       const localSite = await db.query.launchSites.findFirst({
         where: eq(launchSites.pgsitesId, pgsitesId),
       });
@@ -270,17 +236,14 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, filterOptions, scores, favoritePgsitesIds, searchParams, pagination } =
-    useLoaderData<typeof loader>();
+  const { sites, scores, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
 
   return (
     <SitesBrowseClient
       initialSites={sites}
-      filterOptions={filterOptions}
       searchParams={searchParams}
       siteScores={scores}
       initialFavoriteIds={favoritePgsitesIds}
-      pagination={pagination}
     />
   );
 }

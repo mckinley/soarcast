@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router';
@@ -7,7 +7,6 @@ import { getOrientations } from '@/lib/site-utils';
 import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icon in Next.js
 const markerIcon = new Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -18,97 +17,113 @@ const markerIcon = new Icon({
   shadowSize: [41, 41],
 });
 
-interface SitesBrowseMapProps {
+export interface SitesBrowseMapProps {
   sites: BrowseSite[];
+  onBoundsChange?: (lat: number, lng: number, radiusKm: number, zoom: number) => void;
+  fitBounds?: boolean;
 }
 
-// Component to handle map bounds updates when sites change
-function MapBoundsUpdater({ sites }: { sites: BrowseSite[] }) {
+/** Fires onBoundsChange on map move and on initial load. */
+function BoundsChangeHandler({
+  onBoundsChange,
+}: {
+  onBoundsChange: (lat: number, lng: number, radiusKm: number, zoom: number) => void;
+}) {
+  const map = useMapEvents({
+    moveend: emit,
+    zoomend: emit,
+  });
+
+  function emit() {
+    const center = map.getCenter();
+    const ne = map.getBounds().getNorthEast();
+    const radiusKm = Math.ceil(center.distanceTo(ne) / 1000);
+    onBoundsChange(center.lat, center.lng, radiusKm, map.getZoom());
+  }
+
+  // Fire once after the map is ready so the initial view loads sites.
+  useEffect(() => {
+    const timer = setTimeout(emit, 150);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
+/** Fits the map to show all markers whenever `sites` changes (search results). */
+function FitBoundsOnChange({ sites }: { sites: BrowseSite[] }) {
   const map = useMap();
 
   useEffect(() => {
     if (sites.length > 0) {
-      const bounds = sites.map(
-        (site) => [site.latitude, site.longitude] as [number, number],
+      map.fitBounds(
+        sites.map((s) => [s.latitude, s.longitude] as [number, number]),
+        { padding: [40, 40], maxZoom: 12 },
       );
-
-      // Fit map to show all markers
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     }
   }, [sites, map]);
 
   return null;
 }
 
-export function SitesBrowseMap({ sites }: SitesBrowseMapProps) {
-  // Calculate center from sites (Washington State default if no sites)
-  const center: [number, number] =
-    sites.length > 0
-      ? [
-          sites.reduce((sum, s) => sum + s.latitude, 0) / sites.length,
-          sites.reduce((sum, s) => sum + s.longitude, 0) / sites.length,
-        ]
-      : [47.5, -120.5]; // Washington State center
-
+export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: SitesBrowseMapProps) {
   return (
-    <div className="h-[500px] rounded-md overflow-hidden border">
-      <MapContainer
-        center={center}
-        zoom={sites.length > 0 ? 7 : 7}
-        scrollWheelZoom={true}
-        className="h-full w-full"
+    <MapContainer
+      center={[20, 10]}
+      zoom={3}
+      scrollWheelZoom={true}
+      className="h-full w-full"
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+
+      {onBoundsChange && <BoundsChangeHandler onBoundsChange={onBoundsChange} />}
+      {fitBounds && <FitBoundsOnChange sites={sites} />}
+
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={60}
+        spiderfyOnMaxZoom={true}
+        showCoverageOnHover={false}
+        zoomToBoundsOnClick={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {sites.map((site) => {
+          const orientations = getOrientations(site);
+          const activeOrientations = Object.entries(orientations)
+            .filter(([, r]) => r >= 1)
+            .map(([dir]) => dir);
 
-        <MapBoundsUpdater sites={sites} />
-
-        <MarkerClusterGroup
-          chunkedLoading
-          maxClusterRadius={60}
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick={true}
-        >
-          {sites.map((site) => {
-            const position: [number, number] = [
-              site.latitude,
-              site.longitude,
-            ];
-
-            return (
-              <Marker key={site.id} position={position} icon={markerIcon}>
-                <Popup>
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">{site.name}</h3>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      {site.altitude && <p>Elevation: {site.altitude}m</p>}
-                      {site.region && <p>Region: {site.region}</p>}
-                      {(() => {
-                        const orientations = getOrientations(site);
-                        const activeOrientations = Object.entries(orientations)
-                          .filter(([, rating]) => rating >= 1)
-                          .map(([dir]) => dir);
-                        return activeOrientations.length > 0 ? (
-                          <p>Orientations: {activeOrientations.join(', ')}</p>
-                        ) : null;
-                      })()}
-                    </div>
-                    <Link
-                      to={`/sites/${site.slug}`}
-                      className="inline-block text-sm text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      View Details →
-                    </Link>
+          return (
+            <Marker
+              key={site.id}
+              position={[site.latitude, site.longitude]}
+              icon={markerIcon}
+            >
+              <Popup>
+                <div className="space-y-1.5 min-w-[160px]">
+                  <p className="font-semibold leading-tight">{site.name}</p>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    {site.altitude && <p>{site.altitude}m elevation</p>}
+                    {site.countryCode && <p>{site.countryCode}</p>}
+                    {activeOrientations.length > 0 && (
+                      <p>Wind: {activeOrientations.join(', ')}</p>
+                    )}
                   </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
-      </MapContainer>
-    </div>
+                  <Link
+                    to={`/sites/${site.slug}`}
+                    className="inline-block text-xs text-blue-600 hover:underline dark:text-blue-400 pt-1"
+                  >
+                    View site →
+                  </Link>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MarkerClusterGroup>
+    </MapContainer>
   );
 }
