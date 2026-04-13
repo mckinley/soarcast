@@ -1,5 +1,4 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import type { BrowseSite } from '@/components/sites-browse-client';
 import type { SitesBrowseMapProps } from '@/components/sites-browse-map';
 
 const SitesBrowseMap = lazy(() =>

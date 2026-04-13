@@ -46,8 +46,7 @@ function BoundsChangeHandler({
   useEffect(() => {
     const timer = setTimeout(emit, 150);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [map]);
 
   return null;
 }
