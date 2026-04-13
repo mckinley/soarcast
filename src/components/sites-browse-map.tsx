@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { Icon } from 'leaflet';
+import { Icon, DivIcon, point } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import type { MarkerCluster } from 'leaflet';
 import { Link } from 'react-router';
 import type { BrowseSite } from '@/components/sites-browse-client';
 import { getOrientations } from '@/lib/site-utils';
@@ -67,6 +68,26 @@ function FitBoundsOnChange({ sites }: { sites: BrowseSite[] }) {
   return null;
 }
 
+function createClusterIcon(cluster: MarkerCluster) {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 34 : count < 100 ? 40 : 46;
+  const bg = count < 10 ? '#3b82f6' : count < 100 ? '#2563eb' : '#1d4ed8';
+
+  return new DivIcon({
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${bg};border:3px solid white;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-weight:700;font-size:${count < 100 ? 13 : 11}px;
+      font-family:system-ui,sans-serif;
+    ">${count}</div>`,
+    className: '',
+    iconSize: point(size, size),
+    iconAnchor: point(size / 2, size / 2),
+  });
+}
+
 export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: SitesBrowseMapProps) {
   return (
     <MapContainer
@@ -89,6 +110,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
         spiderfyOnMaxZoom={true}
         showCoverageOnHover={false}
         zoomToBoundsOnClick={true}
+        iconCreateFunction={createClusterIcon}
       >
         {sites.map((site) => {
           const orientations = getOrientations(site);

@@ -48,7 +48,7 @@ interface SitesBrowseClientProps {
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const MIN_ZOOM_FOR_FETCH = 5;
+const MIN_ZOOM_FOR_FETCH = 3;
 
 export function SitesBrowseClient({
   initialSites,
