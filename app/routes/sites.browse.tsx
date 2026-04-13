@@ -10,10 +10,17 @@ import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-cl
 import { getIdealWindDirections } from '~/lib/site-utils';
 import {
   searchSites,
+  nearbySites,
   getPgsitesApiKey,
   getSiteById,
   type PgSite,
 } from '~/lib/pgsites-client';
+
+// Default map center — Tiger Mountain, WA. Pre-loaded server-side so the
+// map is populated the moment the page renders (no client-side fetch delay).
+const DEFAULT_LAT = 47.44;
+const DEFAULT_LNG = -121.97;
+const DEFAULT_RADIUS_KM = 1300;
 
 export function meta() {
   return [
@@ -62,12 +69,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const search = url.searchParams.get('search') ?? '';
 
-  // Only fetch from the API when the user has searched.
-  // Map-based browsing loads sites client-side via /api/sites/near.
+  // Fetch sites server-side so the map is populated on first paint.
+  // Search → use the search API. Default → pre-load the Tiger Mountain area
+  // so the user sees sites immediately without waiting for client-side JS.
   let sites: BrowseSite[] = [];
+  let sitesMode: 'search' | 'preloaded' | 'empty' = 'empty';
+
   if (search) {
     const pgSites = await searchSites(apiKey, search, 200);
     sites = pgSites.map(pgSiteToBrowseSite);
+    sitesMode = 'search';
+  } else {
+    try {
+      const pgSites = await nearbySites(apiKey, DEFAULT_LAT, DEFAULT_LNG, DEFAULT_RADIUS_KM, 500);
+      sites = pgSites.map(pgSiteToBrowseSite);
+      sitesMode = 'preloaded';
+    } catch {
+      // If pgsites is unavailable, the map will still load via client-side fetch
+      sitesMode = 'empty';
+    }
   }
 
   // Get user session and favorites
@@ -135,6 +155,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   return {
     sites,
+    sitesMode,
     scores,
     favoritePgsitesIds,
     searchParams: { search },
@@ -236,11 +257,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, scores, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
+  const { sites, sitesMode, scores, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
 
   return (
     <SitesBrowseClient
       initialSites={sites}
+      sitesMode={sitesMode}
       searchParams={searchParams}
       siteScores={scores}
       initialFavoriteIds={favoritePgsitesIds}

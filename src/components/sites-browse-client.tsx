@@ -40,8 +40,9 @@ export interface BrowseSite {
 }
 
 interface SitesBrowseClientProps {
-  /** Sites from server-side search. Empty when browsing by map. */
   initialSites: BrowseSite[];
+  /** 'search' = fit map to results; 'preloaded' = default area, no fitBounds; 'empty' = wait for map */
+  sitesMode: 'search' | 'preloaded' | 'empty';
   searchParams: { search?: string };
   siteScores: Record<string, number | null>;
   initialFavoriteIds?: string[];
@@ -51,6 +52,7 @@ const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
 export function SitesBrowseClient({
   initialSites,
+  sitesMode,
   searchParams,
   initialFavoriteIds = [],
 }: SitesBrowseClientProps) {
@@ -58,17 +60,18 @@ export function SitesBrowseClient({
   const [urlSearchParams] = useSearchParams();
   const [, startTransition] = useTransition();
 
-  // When the user has searched, show those results; otherwise show map-fetched sites.
-  const isSearchMode = initialSites.length > 0;
+  const isSearchMode = sitesMode === 'search';
 
   const [searchValue, setSearchValue] = useState(searchParams.search ?? '');
   const [selectedOrientations, setSelectedOrientations] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Map-driven state — start loading=true so the panel doesn't flash "no sites"
-  // before the first bounds-change fetch fires.
-  const [mapSites, setMapSites] = useState<BrowseSite[]>([]);
-  const [isLoading, setIsLoading] = useState(!isSearchMode);
+  // Preloaded sites arrive from the server — use them immediately, no loading state.
+  // Map pans will replace them with fresh near-API results.
+  const [mapSites, setMapSites] = useState<BrowseSite[]>(
+    sitesMode === 'preloaded' ? initialSites : [],
+  );
+  const [isLoading, setIsLoading] = useState(sitesMode === 'empty');
 
   const favoriteSiteIds = useMemo(() => new Set(initialFavoriteIds), [initialFavoriteIds]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,8 +89,17 @@ export function SitesBrowseClient({
     });
   }, [rawSites, selectedOrientations]);
 
+  const hasPreloadedRef = useRef(sitesMode === 'preloaded');
+
   const handleBoundsChange = useCallback(
     (lat: number, lng: number, radiusKm: number) => {
+      // Skip the very first bounds-change if we already have server-preloaded sites —
+      // the map is showing the same area, so a fetch would just return identical data.
+      if (hasPreloadedRef.current) {
+        hasPreloadedRef.current = false;
+        return;
+      }
+
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         setIsLoading(true);
@@ -108,7 +120,7 @@ export function SitesBrowseClient({
         } finally {
           setIsLoading(false);
         }
-      }, 600);
+      }, 250);
     },
     [],
   );

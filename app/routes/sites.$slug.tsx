@@ -167,10 +167,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const apiKey = getPgsitesApiKey(env);
   const { slug } = params;
 
-  // 1. Try local launch_sites first (fast, for cached/favorited sites)
-  const localSite = await db.query.launchSites.findFirst({
-    where: eq(launchSites.slug, slug!),
-  });
+  // 1. Kick off session + local DB lookup in parallel — neither depends on the other.
+  const [localSite, session] = await Promise.all([
+    db.query.launchSites.findFirst({ where: eq(launchSites.slug, slug!) }),
+    getSession(request, env),
+  ]);
 
   let site: DetailSite;
   let localSiteId: string | null = null;
@@ -207,8 +208,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     site = pgSiteToDetailSite(pgSite, slug!);
   }
 
-  // Check if user has favorited this site
-  const session = await getSession(request, env);
+  // 2. Resolve favorites (needs session + site identity resolved above)
   let isFavorited = false;
   let customMaxWind: number | null = null;
 
@@ -255,8 +255,19 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     setWeatherDb(db);
     setProfileDb(db);
 
-    const forecastResult = await getForecast(forecastSiteId, site.latitude, site.longitude, forecastSiteType);
-    forecast = forecastResult.forecast;
+    // 3. Fire both Open-Meteo calls in parallel — previously serial, saves ~600-800 ms.
+    const [forecastResult, profileResult] = await Promise.allSettled([
+      getForecast(forecastSiteId, site.latitude, site.longitude, forecastSiteType),
+      getAtmosphericProfile(site.latitude, site.longitude, 7),
+    ]);
+
+    if (forecastResult.status === 'rejected') {
+      forecastError = forecastResult.reason instanceof Error
+        ? forecastResult.reason.message
+        : 'Failed to fetch forecast';
+    } else {
+      forecast = forecastResult.value.forecast;
+    }
 
     if (forecast) {
       const siteForScoring = {
@@ -271,12 +282,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         updatedAt: site.updatedAt,
       };
 
-      try {
-        const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
-        scores = calculateDailyScoresFromProfile(profileResult.profile, forecast, siteForScoring);
-      } catch {
-        scores = calculateDailyScores(forecast, siteForScoring);
-      }
+      scores = profileResult.status === 'fulfilled'
+        ? calculateDailyScoresFromProfile(profileResult.value.profile, forecast, siteForScoring)
+        : calculateDailyScores(forecast, siteForScoring);
     }
   } catch (e) {
     forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
