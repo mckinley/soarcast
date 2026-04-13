@@ -1,7 +1,6 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { Icon, DivIcon, point } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import type { MarkerCluster } from 'leaflet';
 import { Link } from 'react-router';
 import type { BrowseSite } from '@/components/sites-browse-client';
 import { getOrientations } from '@/lib/site-utils';
@@ -67,7 +66,7 @@ function FitBoundsOnChange({ sites }: { sites: BrowseSite[] }) {
   return null;
 }
 
-function createClusterIcon(cluster: MarkerCluster) {
+function createClusterIcon(cluster: { getChildCount(): number }) {
   const count = cluster.getChildCount();
   const size = count < 10 ? 34 : count < 100 ? 40 : 46;
   const bg = count < 10 ? '#3b82f6' : count < 100 ? '#2563eb' : '#1d4ed8';
