@@ -19,7 +19,7 @@ const markerIcon = new Icon({
 
 export interface SitesBrowseMapProps {
   sites: BrowseSite[];
-  onBoundsChange?: (lat: number, lng: number, radiusKm: number, zoom: number) => void;
+  onBoundsChange?: (lat: number, lng: number, radiusKm: number) => void;
   fitBounds?: boolean;
 }
 
@@ -27,7 +27,7 @@ export interface SitesBrowseMapProps {
 function BoundsChangeHandler({
   onBoundsChange,
 }: {
-  onBoundsChange: (lat: number, lng: number, radiusKm: number, zoom: number) => void;
+  onBoundsChange: (lat: number, lng: number, radiusKm: number) => void;
 }) {
   const map = useMapEvents({
     moveend: emit,
@@ -38,7 +38,7 @@ function BoundsChangeHandler({
     const center = map.getCenter();
     const ne = map.getBounds().getNorthEast();
     const radiusKm = Math.ceil(center.distanceTo(ne) / 1000);
-    onBoundsChange(center.lat, center.lng, radiusKm, map.getZoom());
+    onBoundsChange(center.lat, center.lng, radiusKm);
   }
 
   // Fire once after the map is ready so the initial view loads sites.
@@ -91,6 +91,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
     <MapContainer
       center={[47.44, -121.97]}
       zoom={5}
+      minZoom={4}
       scrollWheelZoom={true}
       className="h-full w-full"
     >

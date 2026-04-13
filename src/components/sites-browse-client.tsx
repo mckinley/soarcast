@@ -48,7 +48,6 @@ interface SitesBrowseClientProps {
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const MIN_ZOOM_FOR_FETCH = 3;
 
 export function SitesBrowseClient({
   initialSites,
@@ -70,7 +69,6 @@ export function SitesBrowseClient({
   // before the first bounds-change fetch fires.
   const [mapSites, setMapSites] = useState<BrowseSite[]>([]);
   const [isLoading, setIsLoading] = useState(!isSearchMode);
-  const [zoomTooLow, setZoomTooLow] = useState(false);
 
   const favoriteSiteIds = useMemo(() => new Set(initialFavoriteIds), [initialFavoriteIds]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -89,15 +87,7 @@ export function SitesBrowseClient({
   }, [rawSites, selectedOrientations]);
 
   const handleBoundsChange = useCallback(
-    (lat: number, lng: number, radiusKm: number, zoom: number) => {
-      // Don't fetch when zoomed way out — too many sites / no useful radius
-      if (zoom < MIN_ZOOM_FOR_FETCH) {
-        setZoomTooLow(true);
-        setMapSites([]);
-        return;
-      }
-      setZoomTooLow(false);
-
+    (lat: number, lng: number, radiusKm: number) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         setIsLoading(true);
@@ -106,7 +96,7 @@ export function SitesBrowseClient({
             lat: lat.toFixed(5),
             lng: lng.toFixed(5),
             radius: Math.min(radiusKm, 3000).toString(),
-            limit: '500',
+            limit: '1000',
           });
           const res = await fetch(`/api/sites/near?${params}`);
           if (res.ok) {
@@ -265,12 +255,6 @@ export function SitesBrowseClient({
             </div>
           )}
 
-          {/* Zoom too low prompt */}
-          {zoomTooLow && !isSearchMode && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] bg-background/90 border rounded-full px-4 py-2 text-sm shadow-sm text-muted-foreground">
-              Zoom in to explore launch sites
-            </div>
-          )}
         </div>
 
         {/* ── Desktop side panel ── */}
