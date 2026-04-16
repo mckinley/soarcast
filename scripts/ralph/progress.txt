@@ -119,6 +119,8 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
 - source_id → pgsites_id (UUID from pgsites API, was lat_lng string)
 - source: "paraglidingearth" → "pgsites"
 - Timestamps changing from milliseconds to seconds (match syncing-pilots and pgsites conventions)
+- pgsites slug format: `slugify(name)-uuid_prefix` (first 8 chars of pgsites UUID) — used in browse, detail, API routes
+- To resolve a pgsites site from slug: parse name + UUID prefix, searchSites(name) then match by s.id.startsWith(prefix)
 - pgsites API at pgsites.mckinleyaviation.com — auth via X-API-Key header, env var PGSITES_API_KEY
 - pgsites API returns snake_case fields matching these column names exactly
 - idealWindDirections can be computed at query time from wind_n/ne/e columns: rating=2 means ideal
@@ -178,4 +180,59 @@ Started: Sun Mar  8 21:06:25 +07 2026 on branch: main
   - getIdealWindDirections/getOrientations in site-utils.ts are the canonical way to derive wind info from wind columns
   - customSites table still uses text lat/lng and elevation — only launchSites was changed
   - Pre-existing test failure in wind-barb-utils.test.ts still present (calm wind color)
+---
+
+## 2026-04-12 - soarcast-bvd - Refactor sites.browse.tsx to fetch sites from pgsites API instead of local DB
+- Replaced local DB query with pgsites API calls (searchSites, getSitesByCountry)
+- Defined BrowseSite interface in sites-browse-client.tsx (decoupled from LaunchSite schema type)
+- Created pgSiteToBrowseSite mapping and generateSlug function for URL-safe slugs
+- Favorites: join userFavoriteSites with launchSites to get pgsitesId, scores keyed by pgsites UUID
+- Action: favorite now upserts PgSite into local launch_sites before creating favorite record
+- Action: unfavorite looks up local site by pgsitesId column
+- Removed region/siteType filters (not available from pgsites API), kept country + search + orientations
+- Updated map components (sites-browse-map.tsx, sites-browse-map-wrapper.tsx) to use BrowseSite type
+- Files changed: app/routes/sites.browse.tsx, src/components/sites-browse-client.tsx, src/components/sites-browse-map.tsx, src/components/sites-browse-map-wrapper.tsx
+- **Learnings for future iterations:**
+  - pgsites API doesn't have region or siteType — only country_code and search are server-side filterable
+  - Slug format for pgsites sites: slugify(name)-uuid_prefix (first 8 chars of pgsites UUID)
+  - When favoriting a pgsites site not yet in local DB, must insert into launch_sites first (FK constraint)
+  - Scores must be keyed by pgsites UUID (not local ID) so the client can match them to API sites
+  - BrowseSite is the canonical type for browse page — avoids tight coupling to Drizzle LaunchSite schema
+---
+
+## 2026-04-12 - soarcast-8yk - Refactor sites.$slug.tsx to fetch from pgsites API with local cache fallback
+- Added DetailSite interface decoupled from Drizzle LaunchSite schema
+- Local DB lookup first (fast path for favorited/cached sites with forecasts)
+- Fallback: parse slug to extract name query + UUID prefix, search pgsites API, match by prefix
+- Forecasts/scores only load for local sites; non-local sites show "Favorite to see forecasts"
+- Action: favorite/unfavorite now uses pgsitesId (upserts into launch_sites on first favorite)
+- FavoriteButton passes hidden pgsitesId field instead of relying on slug/local ID
+- Files changed: app/routes/sites.$slug.tsx
+- **Learnings for future iterations:**
+  - parseSlug extracts name (hyphens→spaces) and UUID prefix from last segment after final hyphen
+  - searchSites + UUID prefix matching is robust for resolving pgsites sites from slugs
+  - The action no longer needs `params` since it uses pgsitesId from form data
+  - DetailSite type matches the shape consumed by OrientationBadges, WindDirectionBadges, etc.
+---
+
+## 2026-04-12 - soarcast-9wm - Update onboarding popular sites to fetch from pgsites API
+- Changed dashboard loader to fetch popular sites from getSitesByCountry(apiKey, 'US', 5) instead of local DB
+- Added fallback to local DB query if pgsites API fails
+- Slug generated inline using same pattern: slugify(name)-uuid_prefix
+- Files changed: app/routes/_auth.dashboard.tsx
+---
+
+## 2026-04-12 - soarcast-cn2 - Update api.sites to proxy pgsites API
+- Replaced local DB query with getSitesByCountry() from pgsites client
+- Added country, limit, offset query params
+- Response mapped to compatible shape (id, name, slug, lat, lng, elevation, region, countryCode)
+- Added Cache-Control: public, max-age=3600 header
+- Files changed: app/routes/api.sites.tsx
+---
+
+## 2026-04-12 - soarcast-d6z - Update api.sites.$slug.profile to fallback to pgsites API for coords
+- Local DB lookup first (fast path for cached sites)
+- Fallback: parse slug, search pgsites API by name + UUID prefix match
+- Uses lat/lng from whichever source for fetchAtmosphericProfile()
+- Files changed: app/routes/api.sites.$slug.profile.tsx
 ---
