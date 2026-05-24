@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
+import { VectorBasemap } from '@/components/vector-basemap';
 import { Icon } from 'leaflet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -174,10 +175,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
           className="h-full w-full"
           key={`${position[0]}-${position[1]}`} // Force re-center when position changes
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <VectorBasemap />
           <LocationMarker position={position} onLocationSelect={handleLocationSelect} />
         </MapContainer>
       </div>

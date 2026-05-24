@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { VectorBasemap } from '@/components/vector-basemap';
 import { Icon, DivIcon, point } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router';
@@ -95,10 +96,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
       scrollWheelZoom={true}
       className="h-full w-full"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <VectorBasemap />
 
       {onBoundsChange && <BoundsChangeHandler onBoundsChange={onBoundsChange} />}
       {fitBounds && <FitBoundsOnChange sites={sites} />}
