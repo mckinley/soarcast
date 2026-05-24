@@ -171,6 +171,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
         <MapContainer
           center={position}
           zoom={10}
+          maxZoom={18}
           scrollWheelZoom={true}
           className="h-full w-full"
           key={`${position[0]}-${position[1]}`} // Force re-center when position changes

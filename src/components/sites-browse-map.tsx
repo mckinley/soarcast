@@ -93,6 +93,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
       center={[47.44, -121.97]}
       zoom={5}
       minZoom={4}
+      maxZoom={18}
       scrollWheelZoom={true}
       className="h-full w-full"
     >

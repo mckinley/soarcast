@@ -26,7 +26,7 @@ export function MapDisplay({ latitude, longitude }: MapDisplayProps) {
 
   return (
     <div className="h-[300px] rounded-md overflow-hidden border">
-      <MapContainer center={position} zoom={12} scrollWheelZoom={false} className="h-full w-full">
+      <MapContainer center={position} zoom={12} maxZoom={18} scrollWheelZoom={false} className="h-full w-full">
         <VectorBasemap />
         <Marker position={position} icon={markerIcon} />
       </MapContainer>
