@@ -10,24 +10,15 @@ import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/sco
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
+import { SiteNotes } from '@/components/site-notes';
 import { Button } from '@/components/ui/button';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { Card } from '@/components/ui/card';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { OrientationBadges } from '@/components/orientation-badges';
 import { WindDirectionBadges } from '@/components/wind-direction-badges';
 import { ElevationDisplay } from '@/components/elevation-display';
-import {
-  searchSites,
-  getSiteById,
-  getPgsitesApiKey,
-  type PgSite,
-} from '~/lib/pgsites-client';
+import { searchSites, getSiteById, getPgsitesApiKey, type PgSite } from '~/lib/pgsites-client';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -111,8 +102,12 @@ function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
     landingDescription: null,
     pgeLink: site.pge_link || null,
     source: 'pgsites',
-    createdAt: site.created_at ? new Date(site.created_at * 1000).toISOString() : new Date().toISOString(),
-    updatedAt: site.updated_at ? new Date(site.updated_at * 1000).toISOString() : new Date().toISOString(),
+    createdAt: site.created_at
+      ? new Date(site.created_at * 1000).toISOString()
+      : new Date().toISOString(),
+    updatedAt: site.updated_at
+      ? new Date(site.updated_at * 1000).toISOString()
+      : new Date().toISOString(),
   };
 }
 
@@ -262,9 +257,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     ]);
 
     if (forecastResult.status === 'rejected') {
-      forecastError = forecastResult.reason instanceof Error
-        ? forecastResult.reason.message
-        : 'Failed to fetch forecast';
+      forecastError =
+        forecastResult.reason instanceof Error
+          ? forecastResult.reason.message
+          : 'Failed to fetch forecast';
     } else {
       forecast = forecastResult.value.forecast;
     }
@@ -282,9 +278,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         updatedAt: site.updatedAt,
       };
 
-      scores = profileResult.status === 'fulfilled'
-        ? calculateDailyScoresFromProfile(profileResult.value.profile, forecast, siteForScoring)
-        : calculateDailyScores(forecast, siteForScoring);
+      scores =
+        profileResult.status === 'fulfilled'
+          ? calculateDailyScoresFromProfile(profileResult.value.profile, forecast, siteForScoring)
+          : calculateDailyScores(forecast, siteForScoring);
     }
   } catch (e) {
     forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
@@ -443,8 +440,16 @@ function FavoriteButton({
 }
 
 export default function SiteDetailPage() {
-  const { site, pgsitesId, isFavorited, customMaxWind, isAuthenticated, forecast, scores, forecastError } =
-    useLoaderData<typeof loader>();
+  const {
+    site,
+    pgsitesId,
+    isFavorited,
+    customMaxWind,
+    isAuthenticated,
+    forecast,
+    scores,
+    forecastError,
+  } = useLoaderData<typeof loader>();
 
   return (
     <div className="space-y-6">
@@ -470,7 +475,8 @@ export default function SiteDetailPage() {
         <h1 className="text-3xl font-bold">{site.name}</h1>
         {(site.region || site.countryCode) && (
           <p className="text-lg text-muted-foreground mt-1">
-            {site.region ? `${site.region}, ` : ''}{site.countryCode || ''}
+            {site.region ? `${site.region}, ` : ''}
+            {site.countryCode || ''}
           </p>
         )}
       </div>
@@ -503,105 +509,95 @@ export default function SiteDetailPage() {
         </div>
       )}
 
-      {/* Location & Details accordion */}
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="details">
-          <AccordionTrigger className="text-lg font-semibold">
-            Location &amp; Details
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-6">
-              <div className="space-y-3 text-sm">
-                {site.altitude && (
-                  <div>
-                    <ElevationDisplay elevationMeters={site.altitude} label="Takeoff" />
-                  </div>
-                )}
-                {site.landingAltitude && (
-                  <div>
-                    <ElevationDisplay elevationMeters={site.landingAltitude} label="Landing" />
-                  </div>
-                )}
-                {(site.isParagliding || site.isHanggliding) && (
-                  <div>
-                    <span className="font-medium">Flying Types:</span>{' '}
-                    <span className="text-muted-foreground">
-                      {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
-                        .filter(Boolean)
-                        .join(', ')}
-                    </span>
-                  </div>
-                )}
-                {(() => {
-                  const orientations = getOrientations(site);
-                  return Object.values(orientations).some((r: number) => r >= 1) ? (
-                    <div>
-                      <div className="font-medium mb-2">Orientations:</div>
-                      <OrientationBadges orientations={orientations} />
-                    </div>
-                  ) : null;
-                })()}
-                {(() => {
-                  const idealDirs = getIdealWindDirections(site);
-                  return idealDirs.length > 0 ? (
-                    <div>
-                      <div className="font-medium mb-2">Ideal Wind Directions:</div>
-                      <WindDirectionBadges directions={idealDirs} />
-                    </div>
-                  ) : null;
-                })()}
+      {/* Location & Details — always visible */}
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-lg font-semibold mb-4">Location &amp; Details</h2>
+        <div className="space-y-6">
+          <div className="space-y-3 text-sm">
+            {site.altitude && (
+              <div>
+                <ElevationDisplay elevationMeters={site.altitude} label="Takeoff" />
+              </div>
+            )}
+            {site.landingAltitude && (
+              <div>
+                <ElevationDisplay elevationMeters={site.landingAltitude} label="Landing" />
+              </div>
+            )}
+            {(site.isParagliding || site.isHanggliding) && (
+              <div>
+                <span className="font-medium">Flying Types:</span>{' '}
+                <span className="text-muted-foreground">
+                  {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+            {(() => {
+              const orientations = getOrientations(site);
+              return Object.values(orientations).some((r: number) => r >= 1) ? (
                 <div>
-                  <span className="font-medium">Max Wind Speed:</span>{' '}
-                  {customMaxWind ? (
-                    <span className="text-muted-foreground">
-                      {customMaxWind} km/h <span className="text-xs">(your limit)</span>
-                      {site.maxWindSpeed && (
-                        <span className="text-xs ml-1 opacity-60">
-                          · site default: {site.maxWindSpeed} km/h
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
+                  <div className="font-medium mb-2">Orientations:</div>
+                  <OrientationBadges orientations={orientations} />
+                </div>
+              ) : null;
+            })()}
+            {(() => {
+              const idealDirs = getIdealWindDirections(site);
+              return idealDirs.length > 0 ? (
+                <div>
+                  <div className="font-medium mb-2">Ideal Wind Directions:</div>
+                  <WindDirectionBadges directions={idealDirs} />
+                </div>
+              ) : null;
+            })()}
+            <div>
+              <span className="font-medium">Max Wind Speed:</span>{' '}
+              {customMaxWind ? (
+                <span className="text-muted-foreground">
+                  {customMaxWind} km/h <span className="text-xs">(your limit)</span>
+                  {site.maxWindSpeed && (
+                    <span className="text-xs ml-1 opacity-60">
+                      · site default: {site.maxWindSpeed} km/h
                     </span>
                   )}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°
-                </div>
-              </div>
-
-              {site.description && (
-                <div>
-                  <h3 className="font-semibold mb-2">Site Description</h3>
-                  <p className="text-sm text-muted-foreground">{site.description}</p>
-                </div>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
+                </span>
               )}
-
-              {site.landingLatitude && site.landingLongitude && site.landingDescription && (
-                <div>
-                  <h3 className="font-semibold mb-2">Landing Information</h3>
-                  <p className="text-sm text-muted-foreground">{site.landingDescription}</p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Location Map</h3>
-                <MapDisplayWrapper
-                  latitude={site.latitude}
-                  longitude={site.longitude}
-                />
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Data source:{' '}
-                {site.source === 'pgsites' ? 'ParaglidingEarth.com' : site.source}
-              </p>
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+            <div className="text-xs text-muted-foreground">
+              Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°
+            </div>
+          </div>
+
+          {site.description && (
+            <div>
+              <h3 className="font-semibold mb-2">Site Description</h3>
+              <SiteNotes text={site.description} className="text-sm text-muted-foreground" />
+            </div>
+          )}
+
+          {site.landingLatitude && site.landingLongitude && site.landingDescription && (
+            <div>
+              <h3 className="font-semibold mb-2">Landing Information</h3>
+              <SiteNotes text={site.landingDescription} className="text-sm text-muted-foreground" />
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-sm font-medium mb-2">Location Map</h3>
+            <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Data source: {site.source === 'pgsites' ? 'ParaglidingEarth.com' : site.source}
+          </p>
+        </div>
+      </Card>
     </div>
   );
 }

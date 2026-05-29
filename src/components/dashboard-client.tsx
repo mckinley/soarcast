@@ -1,13 +1,16 @@
-import { useState } from 'react';
 import { useFetcher, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
-import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import { SiteCard } from '@/components/dashboard/site-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
-import type { DayScore, Site, Forecast, Settings } from '@/types';
+import type { DayScore, Settings } from '@/types';
 import { RefreshCw, LayoutGrid, Table } from 'lucide-react';
+
+/** Build the detail-page URL for a site (launch sites use their slug). */
+function siteHref(siteType: string, slug: string | undefined, siteId: string): string {
+  return siteType === 'launch' && slug ? `/sites/${slug}` : `/sites/custom/${siteId}`;
+}
 
 interface DashboardClientProps {
   data: SiteForecastData[];
@@ -18,20 +21,9 @@ interface DashboardClientProps {
 export function DashboardClient({ data, settings, isAuthenticated }: DashboardClientProps) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== 'idle';
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
-  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
-  const [selectedForecast, setSelectedForecast] = useState<Forecast | null>(null);
 
   const handleRefresh = () => {
     fetcher.submit({ intent: 'refreshForecasts' }, { method: 'POST' });
-  };
-
-  const handleCellClick = (score: DayScore, site: Site, forecast: Forecast) => {
-    setSelectedScore(score);
-    setSelectedSite(site);
-    setSelectedForecast(forecast);
-    setDialogOpen(true);
   };
 
   // Empty state when authenticated user has no sites
@@ -168,7 +160,7 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
         <div>
           <h1 className="text-3xl font-bold">7-Day Flying Forecast</h1>
           <p className="text-muted-foreground mt-1">
-            Click any card to see detailed windgram and hourly data
+            Select a site to see its full windgram and hourly data
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={isPending} size="lg">
@@ -219,36 +211,35 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
                 </tr>
               </thead>
               <tbody>
-                {data.map(({ site, forecast, scores }) => (
-                  <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
-                    <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
-                      <div>
-                        <div className="font-semibold">{site.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {site.elevation}m • {site.maxWindSpeed}km/h max
-                        </div>
-                      </div>
-                    </td>
-                    {dates.map((date, dateIndex) => {
-                      const score = scores.find((s) => s.date === date) || null;
-                      const showNotification = shouldShowNotification(score, site.id, dateIndex);
-                      return (
-                        <td key={date} className="py-2 px-2">
-                          <ScoreCell
-                            score={score}
-                            showNotification={showNotification}
-                            wStar={score?.wStar}
-                            onClick={
-                              score && forecast
-                                ? () => handleCellClick(score, site, forecast)
-                                : undefined
-                            }
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {data.map(({ site, scores, siteType, slug }) => {
+                  const href = siteHref(siteType, slug, site.id);
+                  return (
+                    <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
+                      <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
+                        <Link to={href} className="block hover:text-primary">
+                          <div className="font-semibold">{site.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {site.elevation}m • {site.maxWindSpeed}km/h max
+                          </div>
+                        </Link>
+                      </td>
+                      {dates.map((date, dateIndex) => {
+                        const score = scores.find((s) => s.date === date) || null;
+                        const showNotification = shouldShowNotification(score, site.id, dateIndex);
+                        return (
+                          <td key={date} className="py-2 px-2">
+                            <ScoreCell
+                              score={score}
+                              showNotification={showNotification}
+                              wStar={score?.wStar}
+                              href={score ? href : undefined}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -270,15 +261,6 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
           </ul>
         </div>
       )}
-
-      {/* Score Detail Dialog */}
-      <ScoreDetailDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        score={selectedScore}
-        site={selectedSite}
-        forecast={selectedForecast}
-      />
     </div>
   );
 }

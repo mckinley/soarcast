@@ -294,7 +294,7 @@ function calculateAverage(values: number[]): number {
  * Properly handles the circular nature of angles (0° = 360°)
  * Uses vector averaging: mean of sin/cos components converted back to angle
  */
-function calculateCircularMean(directions: number[]): number {
+export function calculateCircularMean(directions: number[]): number {
   if (directions.length === 0) return 0;
 
   // Convert degrees to radians and calculate mean of sin/cos components

@@ -1,5 +1,6 @@
 'use client';
 
+import { Link } from 'react-router';
 import type { DayScore } from '@/types';
 import { Bell } from 'lucide-react';
 
@@ -7,7 +8,8 @@ interface ScoreCellProps {
   score: DayScore | null;
   showNotification?: boolean;
   wStar?: number | null;
-  onClick?: () => void;
+  /** When provided, the cell links to this site's detail page. */
+  href?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ function getScoreColorClass(score: number): string {
   return 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30';
 }
 
-export function ScoreCell({ score, showNotification = false, wStar, onClick }: ScoreCellProps) {
+export function ScoreCell({ score, showNotification = false, wStar, href }: ScoreCellProps) {
   if (!score) {
     return (
       <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
@@ -32,11 +34,10 @@ export function ScoreCell({ score, showNotification = false, wStar, onClick }: S
     );
   }
 
-  return (
-    <button
-      onClick={onClick}
-      className={`relative flex h-[72px] w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
-    >
+  const className = `relative flex h-[72px] w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`;
+
+  const content = (
+    <>
       {showNotification && (
         <div className="absolute top-1 right-1">
           <Bell className="h-3.5 w-3.5 text-primary fill-primary animate-pulse" />
@@ -49,6 +50,16 @@ export function ScoreCell({ score, showNotification = false, wStar, onClick }: S
       {wStar != null && wStar > 0 && score.overallScore >= 51 && (
         <div className="text-[9px] text-muted-foreground">W* {wStar.toFixed(1)}</div>
       )}
-    </button>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }

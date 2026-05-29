@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WindIndicator } from '@/components/wind-indicator';
 import { WindgramSection } from '@/components/windgram-section';
+import { calculateCircularMean } from '@/lib/scoring';
 import { CloudLightning, TriangleAlert, Snowflake, Wind as WindIcon } from 'lucide-react';
 import type { Site, Forecast, DayScore } from '@/types';
 
@@ -162,11 +163,11 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                         dayHourly.reduce((sum, h) => sum + h.windSpeed, 0) / dayHourly.length,
                       )
                     : 0;
+                // Circular mean so directions straddling north (e.g. 350° & 10°)
+                // average correctly, matching the scoring engine.
                 const avgWindDirection =
                   dayHourly.length > 0
-                    ? Math.round(
-                        dayHourly.reduce((sum, h) => sum + h.windDirection, 0) / dayHourly.length,
-                      )
+                    ? Math.round(calculateCircularMean(dayHourly.map((h) => h.windDirection)))
                     : 0;
                 const avgCape =
                   dayHourly.length > 0
