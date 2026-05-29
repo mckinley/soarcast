@@ -162,7 +162,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
 
     case 'updateDigestTime': {
-      const time = formData.get('time') as string;
+      const time = formData.get('digestTime') as string;
       if (!/^\d{2}:\d{2}$/.test(time)) return { error: 'Invalid time format' };
 
       await db
@@ -177,7 +177,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
     case 'updateSiteMinRating': {
       const siteId = formData.get('siteId') as string;
-      const minRating = (formData.get('minRating') as string) || undefined;
+      const minRating = (formData.get('rating') as string) || undefined;
 
       const [current] = await db
         .select()

@@ -115,7 +115,9 @@ export default function CustomSiteDetailPage() {
       {forecastError ? (
         <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
           <p className="font-medium">Error loading forecast</p>
-          <p className="text-sm">{forecastError}</p>
+          <p className="text-sm">
+            We couldn&apos;t load the forecast right now. Please try again in a little while.
+          </p>
         </div>
       ) : forecast && scores ? (
         <SiteDetailClient site={site} forecast={forecast} scores={scores} />

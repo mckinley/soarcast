@@ -91,39 +91,36 @@ export function SitesBrowseClient({
 
   const hasPreloadedRef = useRef(sitesMode === 'preloaded');
 
-  const handleBoundsChange = useCallback(
-    (lat: number, lng: number, radiusKm: number) => {
-      // Skip the very first bounds-change if we already have server-preloaded sites —
-      // the map is showing the same area, so a fetch would just return identical data.
-      if (hasPreloadedRef.current) {
-        hasPreloadedRef.current = false;
-        return;
-      }
+  const handleBoundsChange = useCallback((lat: number, lng: number, radiusKm: number) => {
+    // Skip the very first bounds-change if we already have server-preloaded sites —
+    // the map is showing the same area, so a fetch would just return identical data.
+    if (hasPreloadedRef.current) {
+      hasPreloadedRef.current = false;
+      return;
+    }
 
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        setIsLoading(true);
-        try {
-          const params = new URLSearchParams({
-            lat: lat.toFixed(5),
-            lng: lng.toFixed(5),
-            radius: Math.min(radiusKm, 3000).toString(),
-            limit: '1000',
-          });
-          const res = await fetch(`/api/sites/near?${params}`);
-          if (res.ok) {
-            const data = (await res.json()) as { sites: BrowseSite[] };
-            setMapSites(data.sites);
-          }
-        } catch {
-          // silently swallow — map just won't update
-        } finally {
-          setIsLoading(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          lat: lat.toFixed(5),
+          lng: lng.toFixed(5),
+          radius: Math.min(radiusKm, 3000).toString(),
+          limit: '1000',
+        });
+        const res = await fetch(`/api/sites/near?${params}`);
+        if (res.ok) {
+          const data = (await res.json()) as { sites: BrowseSite[] };
+          setMapSites(data.sites);
         }
-      }, 250);
-    },
-    [],
-  );
+      } catch {
+        // silently swallow — map just won't update
+      } finally {
+        setIsLoading(false);
+      }
+    }, 250);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +202,17 @@ export function SitesBrowseClient({
                       key={o}
                       variant={selectedOrientations.includes(o) ? 'default' : 'outline'}
                       className="cursor-pointer select-none"
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selectedOrientations.includes(o)}
+                      aria-label={`Filter by ${o} wind direction`}
                       onClick={() => toggleOrientation(o)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleOrientation(o);
+                        }
+                      }}
                     >
                       {o}
                     </Badge>
@@ -236,21 +243,37 @@ export function SitesBrowseClient({
           {isSearchMode && (
             <Badge variant="secondary" className="gap-1">
               Search: {searchParams.search}
-              <X className="h-3 w-3 cursor-pointer" onClick={clearSearch} />
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={clearSearch}
+                className="inline-flex cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </Badge>
           )}
           {selectedOrientations.map((o) => (
             <Badge key={o} variant="secondary" className="gap-1">
               {o}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => toggleOrientation(o)} />
+              <button
+                type="button"
+                aria-label={`Remove ${o} filter`}
+                onClick={() => toggleOrientation(o)}
+                className="inline-flex cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </Badge>
           ))}
         </div>
       )}
 
       {/* ── Main: map + site list ── */}
-      <div className="flex gap-0 border rounded-lg overflow-hidden" style={{ height: '72vh', minHeight: '400px' }}>
-
+      <div
+        className="flex gap-0 border rounded-lg overflow-hidden"
+        style={{ height: '72vh', minHeight: '400px' }}
+      >
         {/* Map */}
         <div className="flex-1 relative min-w-0">
           <SitesBrowseMapWrapper
@@ -266,7 +289,6 @@ export function SitesBrowseClient({
               Loading sites…
             </div>
           )}
-
         </div>
 
         {/* ── Desktop side panel ── */}
@@ -314,7 +336,9 @@ export function SitesBrowseClient({
       {/* ── Mobile site list below map ── */}
       <div className="md:hidden">
         <p className="text-sm text-muted-foreground mb-3">
-          {isLoading ? 'Loading sites…' : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''} in view`}
+          {isLoading
+            ? 'Loading sites…'
+            : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''} in view`}
         </p>
         {displaySites.length === 0 && !isLoading ? (
           <p className="text-sm text-muted-foreground text-center py-8">
@@ -323,11 +347,7 @@ export function SitesBrowseClient({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {displaySites.map((site) => (
-              <SiteCard
-                key={site.id}
-                site={site}
-                isFavorited={favoriteSiteIds.has(site.id)}
-              />
+              <SiteCard key={site.id} site={site} isFavorited={favoriteSiteIds.has(site.id)} />
             ))}
           </div>
         )}
@@ -350,9 +370,7 @@ function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: bo
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-tight line-clamp-2">{site.name}</span>
-        {isFavorited && (
-          <span className="text-red-500 shrink-0 text-xs">♥</span>
-        )}
+        {isFavorited && <span className="text-red-500 shrink-0 text-xs">♥</span>}
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
         {site.countryCode && <span>{site.countryCode}</span>}

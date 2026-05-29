@@ -25,7 +25,10 @@ const DEFAULT_RADIUS_KM = 1300;
 export function meta() {
   return [
     { title: 'Browse Launch Sites | SoarCast' },
-    { name: 'description', content: 'Discover paragliding and hang gliding launch sites worldwide.' },
+    {
+      name: 'description',
+      content: 'Discover paragliding and hang gliding launch sites worldwide.',
+    },
   ];
 }
 
@@ -224,11 +227,16 @@ export async function action({ request, context }: Route.ActionArgs) {
       }
 
       if (localSite) {
-        await db.insert(userFavoriteSites).values({
-          userId: session.user.id,
-          siteId: localSite.id,
-          notify: false,
-        });
+        // onConflictDoNothing: re-favoriting an already-favorited site must not
+        // violate the unique(userId, siteId) constraint and 500.
+        await db
+          .insert(userFavoriteSites)
+          .values({
+            userId: session.user.id,
+            siteId: localSite.id,
+            notify: false,
+          })
+          .onConflictDoNothing();
       }
 
       return { success: true };
@@ -257,7 +265,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, sitesMode, scores, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
+  const { sites, sitesMode, scores, favoritePgsitesIds, searchParams } =
+    useLoaderData<typeof loader>();
 
   return (
     <SitesBrowseClient

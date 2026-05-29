@@ -313,87 +313,98 @@ export async function action({ request, context }: Route.ActionArgs) {
   const intent = formData.get('intent');
   const pgsitesId = formData.get('pgsitesId') as string;
 
-  switch (intent) {
-    case 'favorite': {
-      // Check if site already exists locally
-      let localSite = await db.query.launchSites.findFirst({
-        where: eq(launchSites.pgsitesId, pgsitesId),
-      });
+  try {
+    switch (intent) {
+      case 'favorite': {
+        // Check if site already exists locally
+        let localSite = await db.query.launchSites.findFirst({
+          where: eq(launchSites.pgsitesId, pgsitesId),
+        });
 
-      // If not, fetch from pgsites API and insert
-      if (!localSite) {
-        const pgSite = await getSiteById(apiKey, pgsitesId);
-        if (!pgSite) {
-          return Response.json({ error: 'Site not found' }, { status: 404 });
+        // If not, fetch from pgsites API and insert
+        if (!localSite) {
+          const pgSite = await getSiteById(apiKey, pgsitesId);
+          if (!pgSite) {
+            return Response.json({ error: 'Site not found' }, { status: 404 });
+          }
+
+          const slug = generateSlug(pgSite.name, pgSite.id);
+          const id = crypto.randomUUID();
+
+          await db.insert(launchSites).values({
+            id,
+            name: pgSite.name,
+            slug,
+            countryCode: pgSite.country_code,
+            latitude: pgSite.latitude,
+            longitude: pgSite.longitude,
+            altitude: pgSite.altitude,
+            landingAltitude: pgSite.landing_altitude,
+            landingLatitude: pgSite.landing_latitude,
+            landingLongitude: pgSite.landing_longitude,
+            windN: pgSite.wind_n,
+            windNe: pgSite.wind_ne,
+            windE: pgSite.wind_e,
+            windSe: pgSite.wind_se,
+            windS: pgSite.wind_s,
+            windSw: pgSite.wind_sw,
+            windW: pgSite.wind_w,
+            windNw: pgSite.wind_nw,
+            isParagliding: !!pgSite.is_paragliding,
+            isHanggliding: !!pgSite.is_hanggliding,
+            source: 'pgsites',
+            pgsitesId: pgSite.id,
+            description: pgSite.description,
+            pgeLink: pgSite.pge_link,
+          });
+
+          localSite = await db.query.launchSites.findFirst({
+            where: eq(launchSites.id, id),
+          });
         }
 
-        const slug = generateSlug(pgSite.name, pgSite.id);
-        const id = crypto.randomUUID();
+        if (localSite) {
+          // onConflictDoNothing: re-favoriting an already-favorited site (e.g.
+          // from stale optimistic UI) must not violate the unique(userId, siteId)
+          // constraint and 500.
+          await db
+            .insert(userFavoriteSites)
+            .values({
+              userId: session.user.id,
+              siteId: localSite.id,
+              notify: false,
+            })
+            .onConflictDoNothing();
+        }
 
-        await db.insert(launchSites).values({
-          id,
-          name: pgSite.name,
-          slug,
-          countryCode: pgSite.country_code,
-          latitude: pgSite.latitude,
-          longitude: pgSite.longitude,
-          altitude: pgSite.altitude,
-          landingAltitude: pgSite.landing_altitude,
-          landingLatitude: pgSite.landing_latitude,
-          landingLongitude: pgSite.landing_longitude,
-          windN: pgSite.wind_n,
-          windNe: pgSite.wind_ne,
-          windE: pgSite.wind_e,
-          windSe: pgSite.wind_se,
-          windS: pgSite.wind_s,
-          windSw: pgSite.wind_sw,
-          windW: pgSite.wind_w,
-          windNw: pgSite.wind_nw,
-          isParagliding: !!pgSite.is_paragliding,
-          isHanggliding: !!pgSite.is_hanggliding,
-          source: 'pgsites',
-          pgsitesId: pgSite.id,
-          description: pgSite.description,
-          pgeLink: pgSite.pge_link,
-        });
-
-        localSite = await db.query.launchSites.findFirst({
-          where: eq(launchSites.id, id),
-        });
+        return { success: true };
       }
 
-      if (localSite) {
-        await db.insert(userFavoriteSites).values({
-          userId: session.user.id,
-          siteId: localSite.id,
-          notify: false,
+      case 'unfavorite': {
+        const localSite = await db.query.launchSites.findFirst({
+          where: eq(launchSites.pgsitesId, pgsitesId),
         });
+
+        if (localSite) {
+          await db
+            .delete(userFavoriteSites)
+            .where(
+              and(
+                eq(userFavoriteSites.userId, session.user.id),
+                eq(userFavoriteSites.siteId, localSite.id),
+              ),
+            );
+        }
+
+        return { success: true };
       }
 
-      return { success: true };
+      default:
+        return { error: 'Unknown action' };
     }
-
-    case 'unfavorite': {
-      const localSite = await db.query.launchSites.findFirst({
-        where: eq(launchSites.pgsitesId, pgsitesId),
-      });
-
-      if (localSite) {
-        await db
-          .delete(userFavoriteSites)
-          .where(
-            and(
-              eq(userFavoriteSites.userId, session.user.id),
-              eq(userFavoriteSites.siteId, localSite.id),
-            ),
-          );
-      }
-
-      return { success: true };
-    }
-
-    default:
-      return { error: 'Unknown action' };
+  } catch (e) {
+    console.error('Site favorite action failed:', e);
+    return { error: 'Could not update favorite. Please try again.' };
   }
 }
 
@@ -410,6 +421,7 @@ function FavoriteButton({
   const optimisticFavorited = fetcher.formData
     ? fetcher.formData.get('intent') === 'favorite'
     : initialIsFavorited;
+  const favoriteError = (fetcher.data as { error?: string } | undefined)?.error;
 
   if (!isAuthenticated) {
     return (
@@ -423,19 +435,26 @@ function FavoriteButton({
   }
 
   return (
-    <fetcher.Form method="post">
-      <input type="hidden" name="intent" value={optimisticFavorited ? 'unfavorite' : 'favorite'} />
-      <input type="hidden" name="pgsitesId" value={pgsitesId} />
-      <Button
-        type="submit"
-        variant={optimisticFavorited ? 'default' : 'outline'}
-        size="sm"
-        disabled={fetcher.state !== 'idle'}
-      >
-        <Heart className={`mr-2 h-4 w-4 ${optimisticFavorited ? 'fill-current' : ''}`} />
-        {optimisticFavorited ? 'Favorited' : 'Add to Favorites'}
-      </Button>
-    </fetcher.Form>
+    <div className="flex flex-col items-end gap-1">
+      <fetcher.Form method="post">
+        <input
+          type="hidden"
+          name="intent"
+          value={optimisticFavorited ? 'unfavorite' : 'favorite'}
+        />
+        <input type="hidden" name="pgsitesId" value={pgsitesId} />
+        <Button
+          type="submit"
+          variant={optimisticFavorited ? 'default' : 'outline'}
+          size="sm"
+          disabled={fetcher.state !== 'idle'}
+        >
+          <Heart className={`mr-2 h-4 w-4 ${optimisticFavorited ? 'fill-current' : ''}`} />
+          {optimisticFavorited ? 'Favorited' : 'Add to Favorites'}
+        </Button>
+      </fetcher.Form>
+      {favoriteError && <p className="text-xs text-red-500">{favoriteError}</p>}
+    </div>
   );
 }
 
@@ -485,7 +504,9 @@ export default function SiteDetailPage() {
       {forecastError ? (
         <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
           <p className="font-medium">Error loading forecast</p>
-          <p className="text-sm">{forecastError}</p>
+          <p className="text-sm">
+            We couldn&apos;t load the forecast right now. Please try again in a little while.
+          </p>
         </div>
       ) : forecast && scores ? (
         <SiteDetailClient
