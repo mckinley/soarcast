@@ -7,9 +7,6 @@ export default auth((req) => {
   // Check if user is authenticated
   const isAuthenticated = !!req.auth;
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/sites', '/settings'];
-
   // Protected API routes (mutation endpoints)
   const protectedApiRoutes = [
     '/api/sites',
@@ -17,10 +14,13 @@ export default auth((req) => {
     '/api/notifications',
   ];
 
-  // Check if current path matches protected routes
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  // The sites management list and settings require authentication. Individual
+  // site detail pages (/sites/<id>) stay public so demo sites are viewable;
+  // they only ever expose the visitor's own sites or the public demo sites.
+  const isProtectedRoute =
+    pathname === '/sites' ||
+    pathname === '/sites/' ||
+    pathname.startsWith('/settings');
 
   const isProtectedApi = protectedApiRoutes.some((route) =>
     pathname.startsWith(route)

@@ -1,13 +1,14 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import type { DayScore } from '@/types';
 import { Bell } from 'lucide-react';
 
 interface ScoreCellProps {
   score: DayScore | null;
   showNotification?: boolean;
-  onClick?: () => void;
+  /** When provided, the cell links to this site's detail page. */
+  href?: string;
 }
 
 /**
@@ -23,7 +24,7 @@ function getScoreColorClass(score: number): string {
   return 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30';
 }
 
-export function ScoreCell({ score, showNotification = false, onClick }: ScoreCellProps) {
+export function ScoreCell({ score, showNotification = false, href }: ScoreCellProps) {
   if (!score) {
     return (
       <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
@@ -32,11 +33,8 @@ export function ScoreCell({ score, showNotification = false, onClick }: ScoreCel
     );
   }
 
-  return (
-    <button
-      onClick={onClick}
-      className={`relative flex h-16 w-full flex-col items-center justify-center gap-1 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(score.overallScore)}`}
-    >
+  const content = (
+    <>
       {showNotification && (
         <div className="absolute top-1 right-1">
           <Bell className="h-3.5 w-3.5 text-primary fill-primary animate-pulse" />
@@ -46,6 +44,20 @@ export function ScoreCell({ score, showNotification = false, onClick }: ScoreCel
       <div className="text-[10px] font-medium uppercase tracking-wide opacity-80">
         {score.label}
       </div>
-    </button>
+    </>
   );
+
+  const className = `relative flex h-16 w-full flex-col items-center justify-center gap-1 rounded border-2 border-transparent transition-all hover:border-primary/50 ${getScoreColorClass(
+    score.overallScore
+  )}`;
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }

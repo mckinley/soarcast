@@ -144,11 +144,15 @@ export async function POST(request: NextRequest) {
                       payload
                     );
                     totalNotificationsSent++;
-                  } catch (error: any) {
+                  } catch (error) {
                     console.error(`Failed to send notification to ${subscription.endpoint}:`, error);
 
                     // If subscription is invalid (410 Gone), delete it
-                    if (error.statusCode === 410) {
+                    const statusCode =
+                      typeof error === 'object' && error !== null && 'statusCode' in error
+                        ? (error as { statusCode?: number }).statusCode
+                        : undefined;
+                    if (statusCode === 410) {
                       await db
                         .delete(pushSubscriptions)
                         .where(eq(pushSubscriptions.endpoint, subscription.endpoint));

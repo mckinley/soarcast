@@ -1,5 +1,5 @@
 import { getSites, addSite, updateSite, deleteSite } from './actions';
-import { SiteFormDialog } from '@/components/site-form-dialog';
+import { SiteFormDialog, type SiteFormData } from '@/components/site-form-dialog';
 import { SiteCard } from '@/components/site-card';
 import { Button } from '@/components/ui/button';
 import type { Metadata } from 'next';
@@ -13,12 +13,12 @@ export default async function SitesPage() {
   const sites = await getSites();
 
   // Wrapper functions that will be passed to client components
-  const handleAdd = async (data: any) => {
+  const handleAdd = async (data: SiteFormData) => {
     'use server';
     await addSite(data);
   };
 
-  const handleUpdate = async (id: string, data: any) => {
+  const handleUpdate = async (id: string, data: SiteFormData) => {
     'use server';
     await updateSite(id, data);
   };

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getSites } from '../actions';
+import { getSiteById } from '../../actions';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import { SiteDetailClient } from '@/components/site-detail-client';
@@ -18,8 +18,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const sites = await getSites();
-  const site = sites.find((s) => s.id === id);
+  const site = await getSiteById(id);
 
   if (!site) {
     return {
@@ -40,8 +39,7 @@ export default async function SiteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const sites = await getSites();
-  const site = sites.find((s) => s.id === id);
+  const site = await getSiteById(id);
 
   if (!site) {
     notFound();
@@ -65,10 +63,10 @@ export default async function SiteDetailPage({
     <div className="space-y-6">
       {/* Header with back navigation */}
       <div>
-        <Link href="/sites">
+        <Link href="/">
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sites
+            Back to Dashboard
           </Button>
         </Link>
         <h1 className="text-3xl font-bold">{site.name}</h1>

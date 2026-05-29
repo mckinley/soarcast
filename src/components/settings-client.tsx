@@ -128,9 +128,11 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       }
 
       setPushEnabled(true);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error enabling push notifications:', error);
-      setPushError(error.message || 'Failed to enable push notifications');
+      setPushError(
+        error instanceof Error ? error.message : 'Failed to enable push notifications'
+      );
     } finally {
       setPushLoading(false);
     }
@@ -164,9 +166,11 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
       }
 
       setPushEnabled(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error disabling push notifications:', error);
-      setPushError(error.message || 'Failed to disable push notifications');
+      setPushError(
+        error instanceof Error ? error.message : 'Failed to disable push notifications'
+      );
     } finally {
       setPushLoading(false);
     }
@@ -252,7 +256,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
           {pushEnabled && (
             <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <p>
-                ✓ Push notifications are enabled. You'll be notified when any of your sites have
+                ✓ Push notifications are enabled. You&apos;ll be notified when any of your sites have
                 conditions that meet your minimum score threshold.
               </p>
             </div>
@@ -288,7 +292,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
               className="max-w-xs"
             />
             <p className="text-sm text-muted-foreground">
-              You'll be notified when a day's XC score meets or exceeds this threshold.
+              You&apos;ll be notified when a day&apos;s XC score meets or exceeds this threshold.
             </p>
           </div>
 
@@ -375,7 +379,7 @@ export function SettingsClient({ initialSettings, sites }: SettingsClientProps) 
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
-                Notifications are checked twice daily (6 AM and 6 PM UTC). You'll receive a push
+                Notifications are checked twice daily (6 AM and 6 PM UTC). You&apos;ll receive a push
                 notification for each site where the forecast meets your minimum score threshold
                 within your notification window.
               </p>

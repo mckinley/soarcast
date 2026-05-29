@@ -58,6 +58,24 @@ const DEMO_SITES: Site[] = [
 ];
 
 /**
+ * Look up a single site for the detail view.
+ * Authenticated users can view their own sites; everyone can view demo sites.
+ * Returns null if the site is not found / not accessible.
+ */
+export async function getSiteById(id: string): Promise<Site | null> {
+  const session = await auth();
+
+  if (session?.user?.id) {
+    const userSites = await getSites();
+    const owned = userSites.find((s) => s.id === id);
+    if (owned) return owned;
+  }
+
+  // Fall back to demo sites (publicly viewable)
+  return DEMO_SITES.find((s) => s.id === id) ?? null;
+}
+
+/**
  * Get forecast data for all sites with scoring
  * Authenticated users see their own sites
  * Unauthenticated users see demo sites

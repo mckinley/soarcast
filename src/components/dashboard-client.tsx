@@ -3,9 +3,8 @@
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScoreCell } from '@/components/score-cell';
-import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import type { SiteForecastData } from '@/app/actions';
-import type { DayScore, Site, Forecast, Settings } from '@/types';
+import type { DayScore, Settings } from '@/types';
 import { RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { formatForecastDate } from '@/lib/utils';
@@ -24,10 +23,6 @@ export function DashboardClient({
   isAuthenticated,
 }: DashboardClientProps) {
   const [isPending, startTransition] = useTransition();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
-  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
-  const [selectedForecast, setSelectedForecast] = useState<Forecast | null>(null);
   const [refreshStatus, setRefreshStatus] = useState<
     { type: 'success' | 'error'; message: string } | null
   >(null);
@@ -41,13 +36,6 @@ export function DashboardClient({
         message: result.message,
       });
     });
-  };
-
-  const handleCellClick = (score: DayScore, site: Site, forecast: Forecast) => {
-    setSelectedScore(score);
-    setSelectedSite(site);
-    setSelectedForecast(forecast);
-    setDialogOpen(true);
   };
 
   // Empty state when authenticated user has no sites
@@ -96,8 +84,8 @@ export function DashboardClient({
         <div className="p-6 border border-primary/30 bg-primary/5 rounded-lg">
           <h2 className="text-xl font-semibold mb-2">Welcome to SoarCast</h2>
           <p className="text-muted-foreground mb-4">
-            You're viewing demo sites with live weather data. Sign in to add your own flying sites
-            and customize your XC soaring forecasts.
+            You&apos;re viewing demo sites with live weather data. Sign in to add your own flying
+            sites and customize your XC soaring forecasts.
           </p>
           <Link href="/auth/signin">
             <Button size="lg">Sign In to Add Your Sites</Button>
@@ -110,7 +98,7 @@ export function DashboardClient({
         <div>
           <h1 className="text-3xl font-bold">7-Day XC Forecast</h1>
           <p className="text-muted-foreground mt-1">
-            Click any score to see detailed breakdown and hourly data
+            Select a site or score to open its full forecast and hourly details
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={isPending} size="lg">
@@ -157,15 +145,15 @@ export function DashboardClient({
             </tr>
           </thead>
           <tbody>
-            {data.map(({ site, forecast, scores, error }) => (
+            {data.map(({ site, scores }) => (
               <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
                 <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
-                  <div>
+                  <Link href={`/sites/${site.id}`} className="block hover:text-primary">
                     <div className="font-semibold">{site.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {site.elevation}m • {site.maxWindSpeed}km/h max
                     </div>
-                  </div>
+                  </Link>
                 </td>
                 {dates.map((date, dateIndex) => {
                   const score = scores.find((s) => s.date === date) || null;
@@ -175,11 +163,7 @@ export function DashboardClient({
                       <ScoreCell
                         score={score}
                         showNotification={showNotification}
-                        onClick={
-                          score && forecast
-                            ? () => handleCellClick(score, site, forecast)
-                            : undefined
-                        }
+                        href={score ? `/sites/${site.id}` : undefined}
                       />
                     </td>
                   );
@@ -205,15 +189,6 @@ export function DashboardClient({
           </ul>
         </div>
       )}
-
-      {/* Score Detail Dialog */}
-      <ScoreDetailDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        score={selectedScore}
-        site={selectedSite}
-        forecast={selectedForecast}
-      />
     </div>
   );
 }

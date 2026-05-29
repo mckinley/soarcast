@@ -11,14 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { SiteFormDialog } from '@/components/site-form-dialog';
+import { SiteFormDialog, type SiteFormData } from '@/components/site-form-dialog';
 import { SiteNotes } from '@/components/site-notes';
 import { formatWindDirection } from '@/lib/utils';
 import type { Site } from '@/types';
 
 interface SiteCardProps {
   site: Site;
-  onUpdate: (id: string, data: any) => Promise<void>;
+  onUpdate: (id: string, data: SiteFormData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
