@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { SiteFormDialog } from '@/components/site-form-dialog';
+import { SiteNotes } from '@/components/site-notes';
+import { formatWindDirection } from '@/lib/utils';
 import type { Site } from '@/types';
 
 interface SiteCardProps {
@@ -37,7 +39,7 @@ export function SiteCard({ site, onUpdate, onDelete }: SiteCardProps) {
   };
 
   const windDirText = site.idealWindDirections.length
-    ? site.idealWindDirections.map((d) => `${d}°`).join(', ')
+    ? site.idealWindDirections.map((d) => formatWindDirection(d)).join(', ')
     : 'Not specified';
 
   return (
@@ -60,9 +62,10 @@ export function SiteCard({ site, onUpdate, onDelete }: SiteCardProps) {
         <div className="text-sm">
           <span className="font-medium">Ideal Wind:</span> {windDirText}
         </div>
-        {site.notes && (
-          <div className="text-sm text-muted-foreground pt-2 border-t">{site.notes}</div>
-        )}
+        <SiteNotes
+          notes={site.notes}
+          className="text-sm text-muted-foreground pt-2 border-t"
+        />
       </CardContent>
       <CardFooter className="flex gap-2">
         <Link href={`/sites/${site.id}`}>

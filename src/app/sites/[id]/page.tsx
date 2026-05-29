@@ -5,9 +5,12 @@ import { getForecast } from '@/lib/weather';
 import { calculateDailyScores } from '@/lib/scoring';
 import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
+import { SiteNotes } from '@/components/site-notes';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { formatWindDirection } from '@/lib/utils';
+import { htmlToPlainText } from '@/lib/notes';
 
 export async function generateMetadata({
   params,
@@ -24,9 +27,10 @@ export async function generateMetadata({
     };
   }
 
+  const notesText = htmlToPlainText(site.notes);
   return {
     title: site.name,
-    description: `7-day weather forecast and XC soaring scores for ${site.name}. ${site.notes || 'Track flying conditions with detailed hourly data.'}`,
+    description: `7-day weather forecast and XC soaring scores for ${site.name}. ${notesText || 'Track flying conditions with detailed hourly data.'}`,
   };
 }
 
@@ -76,11 +80,11 @@ export default async function SiteDetailPage({
           {site.idealWindDirections.length > 0 && (
             <p>
               Ideal Wind Directions:{' '}
-              {site.idealWindDirections.map((d) => `${d}°`).join(', ')}
+              {site.idealWindDirections.map((d) => formatWindDirection(d)).join(', ')}
             </p>
           )}
           <p>Max Wind Speed: {site.maxWindSpeed} km/h</p>
-          {site.notes && <p className="italic">{site.notes}</p>}
+          <SiteNotes notes={site.notes} className="italic" />
         </div>
 
         {/* Site location map */}

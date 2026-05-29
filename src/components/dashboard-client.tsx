@@ -6,8 +6,9 @@ import { ScoreCell } from '@/components/score-cell';
 import { ScoreDetailDialog } from '@/components/score-detail-dialog';
 import type { SiteForecastData } from '@/app/actions';
 import type { DayScore, Site, Forecast, Settings } from '@/types';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { formatForecastDate } from '@/lib/utils';
 
 interface DashboardClientProps {
   data: SiteForecastData[];
@@ -27,15 +28,18 @@ export function DashboardClient({
   const [selectedScore, setSelectedScore] = useState<DayScore | null>(null);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [selectedForecast, setSelectedForecast] = useState<Forecast | null>(null);
+  const [refreshStatus, setRefreshStatus] = useState<
+    { type: 'success' | 'error'; message: string } | null
+  >(null);
 
   const handleRefresh = () => {
+    setRefreshStatus(null);
     startTransition(async () => {
       const result = await refreshAction();
-      if (result.success) {
-        console.log(result.message);
-      } else {
-        console.error(result.message);
-      }
+      setRefreshStatus({
+        type: result.success ? 'success' : 'error',
+        message: result.message,
+      });
     });
   };
 
@@ -69,22 +73,6 @@ export function DashboardClient({
     date.setDate(today.getDate() + i);
     dates.push(date.toISOString().split('T')[0] || '');
   }
-
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T12:00:00'); // Add time to avoid timezone issues
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    const todayStr = today.toISOString().split('T')[0];
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-    if (dateStr === todayStr) return 'Today';
-    if (dateStr === tomorrowStr) return 'Tomorrow';
-
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
 
   // Determine if a notification indicator should be shown for a given score/site/date
   const shouldShowNotification = (score: DayScore | null, siteId: string, dayIndex: number): boolean => {
@@ -131,6 +119,25 @@ export function DashboardClient({
         </Button>
       </div>
 
+      {/* Refresh status feedback */}
+      {refreshStatus && (
+        <div
+          role="status"
+          className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${
+            refreshStatus.type === 'success'
+              ? 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400'
+              : 'border-destructive/50 bg-destructive/10 text-destructive'
+          }`}
+        >
+          {refreshStatus.type === 'success' ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 shrink-0" />
+          )}
+          <span>{refreshStatus.message}</span>
+        </div>
+      )}
+
       {/* Forecast Grid */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
@@ -141,7 +148,7 @@ export function DashboardClient({
               </th>
               {dates.map((date) => (
                 <th key={date} className="py-3 px-2 text-center font-semibold min-w-[100px]">
-                  <div className="text-sm">{formatDate(date)}</div>
+                  <div className="text-sm">{formatForecastDate(date)}</div>
                   <div className="text-xs text-muted-foreground font-normal">
                     {date.substring(5)}
                   </div>

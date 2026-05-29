@@ -4,6 +4,7 @@ import { users, sites, pushSubscriptions, settings as settingsTable } from '@/db
 import { eq } from 'drizzle-orm';
 import { getForecast } from '@/lib/weather';
 import { calculateDailyScores, scoreToLabel } from '@/lib/scoring';
+import { formatForecastDate } from '@/lib/utils';
 import webpush from 'web-push';
 
 // Configure web-push with VAPID keys
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
                 // Send push notification to all user's subscriptions
                 const payload = JSON.stringify({
                   title: `${scoreLabel} Flying Day: ${site.name}`,
-                  body: `${dateStr}: Score ${Math.round(dayScore.overallScore)}/100`,
+                  body: `${formatForecastDate(dateStr)}: Score ${Math.round(dayScore.overallScore)}/100`,
                   url: `/sites/${site.id}`,
                   siteId: site.id,
                   tag: `site-${site.id}-${dateStr}`,

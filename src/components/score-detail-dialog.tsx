@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { formatForecastDate } from '@/lib/utils';
 import type { DayScore, Site, Forecast } from '@/types';
 
 interface ScoreDetailDialogProps {
@@ -96,7 +97,7 @@ export function ScoreDetailDialog({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {site.name} - {score.date}
+            {site.name} - {formatForecastDate(score.date)}
           </DialogTitle>
         </DialogHeader>
 

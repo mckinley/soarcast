@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { WindIndicator } from '@/components/wind-indicator';
+import { calculateCircularMean } from '@/lib/scoring';
+import { formatForecastDate, degreesToCompass } from '@/lib/utils';
 import type { Site, Forecast, DayScore } from '@/types';
 
 interface SiteDetailClientProps {
@@ -21,24 +23,6 @@ function getScoreColorClass(score: number): string {
   if (score <= 70) return 'bg-yellow-500';
   if (score <= 85) return 'bg-lime-500';
   return 'bg-green-500';
-}
-
-/**
- * Format date string for display
- */
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00'); // Avoid timezone shift
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (date.toDateString() === today.toDateString()) {
-    return 'Today';
-  } else if (date.toDateString() === tomorrow.toDateString()) {
-    return 'Tomorrow';
-  } else {
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  }
 }
 
 /**
@@ -115,11 +99,11 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                     dayHourly.reduce((sum, h) => sum + h.windSpeed, 0) / dayHourly.length
                   )
                 : 0;
+            // Use circular mean so directions straddling north (e.g. 350° & 10°)
+            // average correctly, matching the scoring engine.
             const avgWindDirection =
               dayHourly.length > 0
-                ? Math.round(
-                    dayHourly.reduce((sum, h) => sum + h.windDirection, 0) / dayHourly.length
-                  )
+                ? Math.round(calculateCircularMean(dayHourly.map((h) => h.windDirection)))
                 : 0;
             const avgCape =
               dayHourly.length > 0
@@ -165,7 +149,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                 <div className="p-4 space-y-3">
                   {/* Date and score badge */}
                   <div className="flex items-center justify-between">
-                    <div className="font-medium">{formatDate(score.date)}</div>
+                    <div className="font-medium">{formatForecastDate(score.date)}</div>
                     <Badge className={getScoreColorClass(score.overallScore)}>
                       {score.overallScore} - {score.label}
                     </Badge>
@@ -176,7 +160,9 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                     <span className="text-muted-foreground">Wind:</span>
                     <div className="flex items-center gap-2">
                       <WindIndicator direction={avgWindDirection} size={16} />
-                      <span className="font-medium">{avgWindSpeed} km/h</span>
+                      <span className="font-medium">
+                        {degreesToCompass(avgWindDirection)} {avgWindSpeed} km/h
+                      </span>
                     </div>
                   </div>
 
@@ -228,7 +214,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
       {selectedDate && selectedScore && hourlyData.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold mb-4">
-            Hourly Details - {formatDate(selectedDate)}
+            Hourly Details - {formatForecastDate(selectedDate)}
           </h2>
           <Card>
             <div className="p-6">
