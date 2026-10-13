@@ -34,7 +34,6 @@ export function createAuth(env: Env) {
       'http://localhost:5173',
       'http://localhost:3000',
       'https://soarcast.mckinleydigital.com',
-      'https://soarcast.mckinley-digital-account.workers.dev',
     ],
   });
 }
