@@ -17,7 +17,7 @@ Stack: React Router v7 + Cloudflare Workers + Turso/libSQL (Drizzle ORM) + Bette
 - **Scoring:** XC soaring score algorithm (`src/lib/scoring.ts`)
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
 - **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR)
-- **Email:** Resend API (`src/emails/morning-digest.tsx`)
+- **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
 - **Push notifications:** web-push + VAPID keys (`app/routes/api.notifications.*`)
 
 ## CF Workers Patterns
@@ -59,5 +59,6 @@ BETTER_AUTH_SECRET
 AUTH_GITHUB_ID / AUTH_GITHUB_SECRET
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 CRON_SECRET
-RESEND_API_KEY (optional)
 ```
+
+Email needs no secret: the `EMAIL` binding in `wrangler.toml` sends through Cloudflare Email Sending, and `mckinleyaviation.com` must be onboarded there.

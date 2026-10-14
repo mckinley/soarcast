@@ -15,3 +15,8 @@ BETTER_AUTH_URL = "https://soarcast.mckinleyaviation.com"
 [[routes]]
 pattern = "soarcast.mckinleyaviation.com"
 custom_domain = true
+
+# Cloudflare Email Sending (morning digest). Only the SoarCast address may send.
+[[send_email]]
+name = "EMAIL"
+allowed_sender_addresses = ["soarcast@mckinleyaviation.com"]
