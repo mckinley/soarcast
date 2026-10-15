@@ -11,9 +11,7 @@ import type { DayAnalysis } from '~/lib/notifications';
 import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
 import webpush from 'web-push';
-import { Resend } from 'resend';
-import { render } from '@react-email/components';
-import { MorningDigestEmail } from '~/emails/morning-digest';
+import { describeEmailError, sendMorningDigestEmail } from '~/emails/send';
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const env = context.cloudflare.env as Env;
@@ -36,12 +34,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
 
     webpush.setVapidDetails(
-      'mailto:notifications@soarcast.app',
+      'mailto:soarcast@mckinleyaviation.com',
       env.VAPID_PUBLIC_KEY,
       env.VAPID_PRIVATE_KEY,
     );
-
-    const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
     const allUsers = await db.select().from(users);
     let totalNotificationsSent = 0;
@@ -197,8 +193,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
                 }
               }
 
-              // Send email digest
-              if (resend && user.email) {
+              // Send email digest (Cloudflare Email Sending; skipped if the binding is absent)
+              if (env.EMAIL && user.email) {
                 try {
                   const dateLabel = new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', {
                     weekday: 'long',
@@ -255,19 +251,16 @@ export async function action({ request, context }: ActionFunctionArgs) {
                     },
                   );
 
-                  const html = await render(
-                    MorningDigestEmail({ date: dateLabel, sites: emailSites }),
-                  );
-
-                  await resend.emails.send({
-                    from: 'SoarCast <digest@soarcast.app>',
+                  await sendMorningDigestEmail(env.EMAIL, {
                     to: user.email,
-                    subject: `Your SoarCast Morning Digest - ${dateLabel}`,
-                    html,
+                    date: dateLabel,
+                    sites: emailSites,
                   });
                   totalNotificationsSent++;
                 } catch (emailError) {
-                  console.error(`Failed to send email digest to ${user.email}:`, emailError);
+                  console.error(
+                    `Failed to send email digest to ${user.email}: ${describeEmailError(emailError)}`,
+                  );
                   totalErrors++;
                 }
               }

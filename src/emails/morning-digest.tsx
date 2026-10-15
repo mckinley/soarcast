@@ -40,7 +40,7 @@ const labelColors: Record<string, string> = {
 export function MorningDigestEmail({
   date,
   sites,
-  appUrl = 'https://soarcast.app',
+  appUrl = 'https://soarcast.mckinleyaviation.com',
 }: MorningDigestEmailProps) {
   return (
     <Html>
