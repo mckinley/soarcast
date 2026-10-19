@@ -2,12 +2,9 @@ import { useLoaderData } from 'react-router';
 import type { Route } from './+types/sites.browse';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
-import { launchSites, userFavoriteSites, atmosphericProfilesCache } from '~/db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
-import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
-import { profileLocationKey, type AtmosphericProfile } from '~/lib/weather-profile';
+import { launchSites, userFavoriteSites } from '~/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-client';
-import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import {
   searchSites,
   nearbySites,
@@ -89,83 +86,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Get user session and favorites
   const session = await getSession(request, env);
   const favoritePgsitesIds: string[] = [];
-  const scores: Record<string, number | null> = {};
 
   if (session?.user?.id) {
     const favs = await db
-      .select({
-        siteId: userFavoriteSites.siteId,
-        pgsitesId: launchSites.pgsitesId,
-      })
+      .select({ pgsitesId: launchSites.pgsitesId })
       .from(userFavoriteSites)
       .innerJoin(launchSites, eq(userFavoriteSites.siteId, launchSites.id))
       .where(eq(userFavoriteSites.userId, session.user.id));
 
-    const localIdToPgsitesId = new Map<string, string>();
-    for (const f of favs) {
-      favoritePgsitesIds.push(f.pgsitesId);
-      localIdToPgsitesId.set(f.siteId, f.pgsitesId);
-    }
-
-    if (favs.length > 0) {
-      // Score favorites from atmospheric profiles already cached today; the
-      // map never fetches forecasts itself.
-      const today = new Date().toISOString().split('T')[0];
-      const localSiteIds = favs.map((f) => f.siteId);
-
-      const localSites = await db.query.launchSites.findMany({
-        where: inArray(launchSites.id, localSiteIds),
-      });
-      const keyToSites = new Map<string, typeof localSites>();
-      for (const s of localSites) {
-        const key = profileLocationKey(s.latitude, s.longitude);
-        keyToSites.set(key, [...(keyToSites.get(key) ?? []), s]);
-      }
-
-      const cached = await db
-        .select({
-          locationKey: atmosphericProfilesCache.locationKey,
-          data: atmosphericProfilesCache.data,
-        })
-        .from(atmosphericProfilesCache)
-        .where(
-          and(
-            inArray(atmosphericProfilesCache.locationKey, [...keyToSites.keys()]),
-            eq(atmosphericProfilesCache.fetchDate, today),
-          ),
-        );
-
-      for (const row of cached) {
-        const profile = row.data as AtmosphericProfile;
-        if (!profile.sunriseByDay) continue; // cached before the engine's fields existed
-        for (const localSite of keyToSites.get(row.locationKey) ?? []) {
-          const pgsitesId = localIdToPgsitesId.get(localSite.id);
-          if (!pgsitesId) continue;
-          const dayScores = evaluateDays(
-            profile,
-            launchProfileFromSite({
-              id: localSite.id,
-              name: localSite.name,
-              latitude: localSite.latitude,
-              longitude: localSite.longitude,
-              elevation: localSite.altitude || 0,
-              idealWindDirections: getIdealWindDirections(localSite),
-              okWindDirections: getOkWindDirections(localSite),
-              maxWindSpeed: localSite.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-              createdAt: '',
-              updatedAt: '',
-            }),
-          );
-          scores[pgsitesId] = dayScores.length > 0 ? dayScores[0].overallScore : null;
-        }
-      }
-    }
+    for (const f of favs) favoritePgsitesIds.push(f.pgsitesId);
   }
 
   return {
     sites,
     sitesMode,
-    scores,
     favoritePgsitesIds,
     searchParams: { search },
   };
@@ -271,15 +205,13 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, sitesMode, scores, favoritePgsitesIds, searchParams } =
-    useLoaderData<typeof loader>();
+  const { sites, sitesMode, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
 
   return (
     <SitesBrowseClient
       initialSites={sites}
       sitesMode={sitesMode}
       searchParams={searchParams}
-      siteScores={scores}
       initialFavoriteIds={favoritePgsitesIds}
     />
   );

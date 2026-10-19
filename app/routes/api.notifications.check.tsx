@@ -250,7 +250,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
                     detail:
                       analysis.verdict === 'no'
                         ? analysis.limitingFactor
-                        : analysis.highlights.join(', ') || null,
+                        : analysis.highlights
+                            .map((h, i) => (i > 0 ? h[0].toLowerCase() + h.slice(1) : h))
+                            .join(', ') || null,
                     concern:
                       analysis.verdict === 'go'
                         ? analysis.hazard

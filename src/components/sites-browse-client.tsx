@@ -44,7 +44,6 @@ interface SitesBrowseClientProps {
   /** 'search' = fit map to results; 'preloaded' = default area, no fitBounds; 'empty' = wait for map */
   sitesMode: 'search' | 'preloaded' | 'empty';
   searchParams: { search?: string };
-  siteScores: Record<string, number | null>;
   initialFavoriteIds?: string[];
 }
 

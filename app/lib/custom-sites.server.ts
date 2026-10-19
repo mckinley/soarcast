@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { customSites, forecastsCache, type CustomSite } from '~/db/schema';
+import { customSites, type CustomSite } from '~/db/schema';
 import type { Db } from './db.server';
 import { fetchElevations } from '~/lib/terrain';
 import type { CustomSiteInput } from '~/lib/custom-sites';
@@ -40,13 +40,6 @@ export function customSiteValues(input: CustomSiteInput, elevation: number) {
     okWindDirections: input.okDirections,
     notes: input.notes,
   };
-}
-
-/** Forecasts are cached per site; drop them when the site moves or goes. */
-export function deleteCachedForecasts(db: Db, siteId: string) {
-  return db
-    .delete(forecastsCache)
-    .where(and(eq(forecastsCache.siteId, siteId), eq(forecastsCache.siteType, 'custom')));
 }
 
 export const ELEVATION_LOOKUP_ERROR =

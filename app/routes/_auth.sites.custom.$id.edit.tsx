@@ -5,7 +5,6 @@ import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
 import {
   customSiteValues,
-  deleteCachedForecasts,
   ELEVATION_LOOKUP_ERROR,
   findOwnedCustomSite,
   resolveElevation,
@@ -55,7 +54,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
   const form = await request.formData();
   if (form.get('intent') === 'delete') {
-    await db.batch([db.delete(customSites).where(owned), deleteCachedForecasts(db, row.id)]);
+    await db.delete(customSites).where(owned);
     return redirect('/dashboard');
   }
 
@@ -71,12 +70,10 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   }
 
   const values = customSiteValues(input, elevation);
-  const moved = values.latitude !== row.latitude || values.longitude !== row.longitude;
   await db
     .update(customSites)
     .set({ ...values, updatedAt: new Date() })
     .where(owned);
-  if (moved) await deleteCachedForecasts(db, row.id);
   return redirect(`/sites/custom/${row.id}`);
 }
 
