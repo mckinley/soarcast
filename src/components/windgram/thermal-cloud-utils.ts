@@ -1,9 +1,6 @@
 // Utilities for rendering thermal and cloud indicators on windgrams
 
 import type { AtmosphericHour } from '@/lib/weather-profile';
-import { calculateThermalVelocity } from '@/lib/weather-profile';
-// Re-export calculateThermalVelocity from its canonical location
-export { calculateThermalVelocity };
 
 /**
  * Thermal strength categories based on thermal velocity (W*)
@@ -71,10 +68,9 @@ export function drawThermalIndicator(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  cape: number | null,
+  wStar: number | null,
   isDark: boolean,
 ): void {
-  const wStar = calculateThermalVelocity(cape);
   const { color } = getThermalStrengthFromVelocity(wStar);
   const displayValue = formatThermalVelocity(wStar);
 

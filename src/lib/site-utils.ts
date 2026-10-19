@@ -142,6 +142,26 @@ export function getIdealWindDirections(site: {
 }
 
 /**
+ * Directions (degrees) rated 1, "possible", in the wind columns: the launch
+ * works in them, but not ideally.
+ */
+export function getOkWindDirections(site: {
+  windN: number;
+  windNe: number;
+  windE: number;
+  windSe: number;
+  windS: number;
+  windSw: number;
+  windW: number;
+  windNw: number;
+}): number[] {
+  return Object.entries(WIND_DIRECTION_DEGREES)
+    .filter(([key]) => site[key as keyof typeof site] === 1)
+    .map(([, degrees]) => degrees)
+    .sort((a, b) => a - b);
+}
+
+/**
  * Build an orientations record from wind columns (for UI display).
  * Returns { N: 2, NE: 1, ... } mapping.
  */
@@ -165,4 +185,16 @@ export function getOrientations(site: {
     W: site.windW,
     NW: site.windNw,
   };
+}
+
+/**
+ * Circular mean of wind directions in degrees, so 350° and 10° average to
+ * 0°, not 180°.
+ */
+export function calculateCircularMean(directions: number[]): number {
+  if (directions.length === 0) return 0;
+  const sin = directions.reduce((sum, dir) => sum + Math.sin((dir * Math.PI) / 180), 0);
+  const cos = directions.reduce((sum, dir) => sum + Math.cos((dir * Math.PI) / 180), 0);
+  const mean = (Math.atan2(sin, cos) * 180) / Math.PI;
+  return mean < 0 ? mean + 360 : mean;
 }

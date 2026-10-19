@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateLapseRate,
-  estimateCloudBase,
+  estimateCloudBaseFromDewpoint,
   calculateThermalIndex,
   estimateTopOfLift,
+  calculateWStar,
 } from '../weather-profile';
 
 describe('calculateLapseRate', () => {
@@ -38,32 +39,35 @@ describe('calculateLapseRate', () => {
   });
 });
 
-describe('estimateCloudBase', () => {
-  it('should estimate cloud base for moderate humidity', () => {
-    // 20°C, 70% RH
-    const cloudBase = estimateCloudBase(20, 70);
-
-    // With 20°C and 70% RH, dewpoint ≈ 14.4°C, spread ≈ 5.6°C
-    // Cloud base ≈ (5.6 / 2.5) * 1000 ft ≈ 2240 ft ≈ 683m
-    expect(cloudBase).toBeGreaterThan(500);
-    expect(cloudBase).toBeLessThan(1000);
+describe('estimateCloudBaseFromDewpoint', () => {
+  it('rises about 125 m per °C of temperature-dewpoint spread', () => {
+    expect(estimateCloudBaseFromDewpoint(20, 12)).toBe(1000);
   });
 
-  it('should estimate lower cloud base for high humidity', () => {
-    // 15°C, 85% RH - clouds likely lower
-    const cloudBase = estimateCloudBase(15, 85);
-    expect(cloudBase).toBeGreaterThan(0);
-    expect(cloudBase).toBeLessThan(500);
+  it('is at the ground when the air is saturated', () => {
+    expect(estimateCloudBaseFromDewpoint(8, 8)).toBe(0);
   });
 
-  it('should return 0 for very high humidity (fog/low cloud)', () => {
-    const cloudBase = estimateCloudBase(10, 96);
-    expect(cloudBase).toBe(0);
+  it('never goes below the ground', () => {
+    expect(estimateCloudBaseFromDewpoint(8, 9)).toBe(0);
+  });
+});
+
+describe('calculateWStar', () => {
+  it('gives a typical 2-3 m/s for a deep sunny boundary layer', () => {
+    const wStar = calculateWStar(2000, 800, 20);
+    expect(wStar).toBeGreaterThan(2);
+    expect(wStar).toBeLessThan(3);
   });
 
-  it('should return null for low humidity (no clouds likely)', () => {
-    const cloudBase = estimateCloudBase(25, 35);
-    expect(cloudBase).toBeNull();
+  it('is weaker for a shallow boundary layer', () => {
+    expect(calculateWStar(500, 800, 20)!).toBeLessThan(calculateWStar(2000, 800, 20)!);
+  });
+
+  it('is null with no sun or no boundary layer', () => {
+    expect(calculateWStar(1500, 0, 15)).toBeNull();
+    expect(calculateWStar(0, 800, 15)).toBeNull();
+    expect(calculateWStar(null, 800, 15)).toBeNull();
   });
 });
 
@@ -151,35 +155,22 @@ describe('calculateThermalIndex', () => {
 });
 
 describe('estimateTopOfLift', () => {
-  it('should estimate top of lift from boundary layer height and CAPE', () => {
-    // BLH 2000m, moderate CAPE
-    const topOfLift = estimateTopOfLift(2000, 500);
-
-    // Expected: 2000 + (500/100 * 100) = 2500m
-    expect(topOfLift).toBe(2500);
+  it('is the boundary layer top above the ground when there is no cloud', () => {
+    expect(estimateTopOfLift(2000, null, 300)).toBe(2300);
   });
 
-  it('should cap CAPE boost at 2000m', () => {
-    // BLH 1000m, very high CAPE
-    const topOfLift = estimateTopOfLift(1000, 5000);
-
-    // Expected: 1000 + 2000 (capped) = 3000m
-    expect(topOfLift).toBe(3000);
+  it('is capped at cloud base when cumulus forms below the boundary layer top', () => {
+    expect(estimateTopOfLift(2000, 1400, 300)).toBe(1700);
   });
 
-  it('should return null when BLH is null', () => {
-    const topOfLift = estimateTopOfLift(null, 1000);
-    expect(topOfLift).toBeNull();
+  it('ignores a cloud base above the boundary layer top', () => {
+    expect(estimateTopOfLift(1200, 2500, 0)).toBe(1200);
   });
 
-  it('should return null when BLH is zero or negative', () => {
-    expect(estimateTopOfLift(0, 1000)).toBeNull();
-    expect(estimateTopOfLift(-100, 1000)).toBeNull();
-  });
-
-  it('should handle zero CAPE', () => {
-    const topOfLift = estimateTopOfLift(1500, 0);
-    expect(topOfLift).toBe(1500); // Just BLH, no boost
+  it('should return null when BLH is null, zero or negative', () => {
+    expect(estimateTopOfLift(null, 1000, 0)).toBeNull();
+    expect(estimateTopOfLift(0, 1000, 0)).toBeNull();
+    expect(estimateTopOfLift(-100, 1000, 0)).toBeNull();
   });
 });
 
@@ -188,8 +179,8 @@ describe('atmospheric profile integration', () => {
     // Test that derived parameters make physical sense together
     const lapseRate = calculateLapseRate(15, 5, 1500, 3000);
     const thermalIndex = calculateThermalIndex(lapseRate!, 800, -15, 18);
-    const cloudBase = estimateCloudBase(20, 65);
-    const topOfLift = estimateTopOfLift(2200, 800);
+    const cloudBase = estimateCloudBaseFromDewpoint(20, 13);
+    const topOfLift = estimateTopOfLift(2200, cloudBase, 0);
 
     // All should be valid
     expect(lapseRate).not.toBeNull();
@@ -197,8 +188,8 @@ describe('atmospheric profile integration', () => {
     expect(cloudBase).not.toBeNull();
     expect(topOfLift).not.toBeNull();
 
-    // Cloud base should be below top of lift
-    expect(cloudBase!).toBeLessThan(topOfLift!);
+    // Cloud base caps the top of lift
+    expect(cloudBase).toBeLessThanOrEqual(topOfLift!);
 
     // Reasonable ranges
     expect(lapseRate).toBeGreaterThan(0);

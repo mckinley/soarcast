@@ -2,12 +2,12 @@ import { useLoaderData } from 'react-router';
 import type { Route } from './+types/sites.browse';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
-import { launchSites, userFavoriteSites, forecastsCache } from '~/db/schema';
+import { launchSites, userFavoriteSites, atmosphericProfilesCache } from '~/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { calculateDailyScores } from '~/lib/scoring';
-import type { Forecast } from '~/types';
+import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
+import { profileLocationKey, type AtmosphericProfile } from '~/lib/weather-profile';
 import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-client';
-import { getIdealWindDirections } from '~/lib/site-utils';
+import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import {
   searchSites,
   nearbySites,
@@ -115,43 +115,56 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     }
 
     if (favs.length > 0) {
+      // Score favorites from atmospheric profiles already cached today; the
+      // map never fetches forecasts itself.
       const today = new Date().toISOString().split('T')[0];
       const localSiteIds = favs.map((f) => f.siteId);
-
-      const cached = await db
-        .select({ siteId: forecastsCache.siteId, data: forecastsCache.data })
-        .from(forecastsCache)
-        .where(
-          and(
-            inArray(forecastsCache.siteId, localSiteIds),
-            eq(forecastsCache.siteType, 'launch'),
-            eq(forecastsCache.fetchDate, today),
-          ),
-        );
 
       const localSites = await db.query.launchSites.findMany({
         where: inArray(launchSites.id, localSiteIds),
       });
-      const localSiteMap = new Map(localSites.map((s) => [s.id, s]));
+      const keyToSites = new Map<string, typeof localSites>();
+      for (const s of localSites) {
+        const key = profileLocationKey(s.latitude, s.longitude);
+        keyToSites.set(key, [...(keyToSites.get(key) ?? []), s]);
+      }
+
+      const cached = await db
+        .select({
+          locationKey: atmosphericProfilesCache.locationKey,
+          data: atmosphericProfilesCache.data,
+        })
+        .from(atmosphericProfilesCache)
+        .where(
+          and(
+            inArray(atmosphericProfilesCache.locationKey, [...keyToSites.keys()]),
+            eq(atmosphericProfilesCache.fetchDate, today),
+          ),
+        );
 
       for (const row of cached) {
-        const forecast = row.data as Forecast;
-        const localSite = localSiteMap.get(row.siteId);
-        const pgsitesId = localIdToPgsitesId.get(row.siteId);
-        if (!localSite || !pgsitesId) continue;
-
-        const dayScores = calculateDailyScores(forecast, {
-          id: localSite.id,
-          name: localSite.name,
-          latitude: localSite.latitude,
-          longitude: localSite.longitude,
-          elevation: localSite.altitude || 0,
-          idealWindDirections: getIdealWindDirections(localSite),
-          maxWindSpeed: localSite.maxWindSpeed || 40,
-          createdAt: localSite.createdAt?.toISOString() || '',
-          updatedAt: localSite.updatedAt?.toISOString() || '',
-        });
-        scores[pgsitesId] = dayScores.length > 0 ? dayScores[0].overallScore : null;
+        const profile = row.data as AtmosphericProfile;
+        if (!profile.sunriseByDay) continue; // cached before the engine's fields existed
+        for (const localSite of keyToSites.get(row.locationKey) ?? []) {
+          const pgsitesId = localIdToPgsitesId.get(localSite.id);
+          if (!pgsitesId) continue;
+          const dayScores = evaluateDays(
+            profile,
+            launchProfileFromSite({
+              id: localSite.id,
+              name: localSite.name,
+              latitude: localSite.latitude,
+              longitude: localSite.longitude,
+              elevation: localSite.altitude || 0,
+              idealWindDirections: getIdealWindDirections(localSite),
+              okWindDirections: getOkWindDirections(localSite),
+              maxWindSpeed: localSite.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
+              createdAt: '',
+              updatedAt: '',
+            }),
+          );
+          scores[pgsitesId] = dayScores.length > 0 ? dayScores[0].overallScore : null;
+        }
       }
     }
   }

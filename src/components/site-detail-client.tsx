@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WindIndicator } from '@/components/wind-indicator';
 import { WindgramSection } from '@/components/windgram-section';
-import { calculateCircularMean } from '@/lib/scoring';
+import { calculateCircularMean } from '@/lib/site-utils';
+import { verdictSummary } from '@/lib/forecast-engine';
 import { CloudLightning, TriangleAlert, Snowflake, Wind as WindIcon } from 'lucide-react';
 import type { Site, Forecast, DayScore } from '@/types';
 
@@ -118,14 +119,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
             >
               {todayScore.label}
             </Badge>
-            <p className="text-sm text-muted-foreground flex-1">
-              {todayScore.label === 'Epic' && 'Exceptional flying conditions expected today.'}
-              {todayScore.label === 'Great' && 'Excellent flying conditions expected today.'}
-              {todayScore.label === 'Good' && 'Good flying conditions expected today.'}
-              {todayScore.label === 'Fair' &&
-                'Marginal flying conditions. Check details carefully.'}
-              {todayScore.label === 'Poor' && 'Poor flying conditions. Not recommended today.'}
-            </p>
+            <p className="text-sm text-muted-foreground flex-1">{verdictSummary(todayScore)}</p>
           </div>
         </Card>
       )}
@@ -164,7 +158,7 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                       )
                     : 0;
                 // Circular mean so directions straddling north (e.g. 350° & 10°)
-                // average correctly, matching the scoring engine.
+                // average correctly.
                 const avgWindDirection =
                   dayHourly.length > 0
                     ? Math.round(calculateCircularMean(dayHourly.map((h) => h.windDirection)))
@@ -217,6 +211,19 @@ export function SiteDetailClient({ site, forecast, scores }: SiteDetailClientPro
                         <Badge className={getScoreColorClass(score.overallScore)}>
                           {score.overallScore} - {score.label}
                         </Badge>
+                      </div>
+
+                      <div className="text-sm">
+                        {score.flyableWindow ? (
+                          <span>
+                            {score.verdict === 'go' ? 'Flyable' : 'Marginal'}{' '}
+                            <span className="font-medium">{score.flyableWindow}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {score.limitingFactor ?? 'Not flyable'}
+                          </span>
+                        )}
                       </div>
 
                       {/* Hazard badges */}

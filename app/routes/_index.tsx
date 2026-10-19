@@ -79,8 +79,8 @@ export default function LandingPage() {
             {[
               {
                 icon: TrendingUp,
-                title: 'XC Scoring',
-                desc: '0-100 flyability scores based on 7 atmospheric factors',
+                title: 'Go or No-Go',
+                desc: 'A verdict for each launch, its flyable hours, and what limits the rest',
               },
               {
                 icon: Wind,

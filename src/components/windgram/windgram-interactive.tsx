@@ -143,6 +143,7 @@ export function WindgramInteractive({
             dayScore={selectedDayScore}
             atmosphericData={selectedDayData}
             date={days[selectedDayIndex].dateString}
+            launchElevation={launchElevation}
           />
         </div>
       )}

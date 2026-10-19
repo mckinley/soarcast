@@ -1,46 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  calculateThermalVelocity,
-  getThermalStrengthFromVelocity,
-  formatThermalVelocity,
-} from './thermal-cloud-utils';
-
-describe('calculateThermalVelocity', () => {
-  it('should calculate W* from CAPE using simplified formula', () => {
-    // Example: 1000 J/kg CAPE
-    // W* = 0.12 * sqrt(1000) ≈ 0.12 * 31.62 ≈ 3.79 m/s
-    const wStar = calculateThermalVelocity(1000);
-    expect(wStar).not.toBeNull();
-    expect(wStar).toBeCloseTo(3.79, 1);
-  });
-
-  it('should return null for zero or negative CAPE', () => {
-    expect(calculateThermalVelocity(0)).toBeNull();
-    expect(calculateThermalVelocity(-100)).toBeNull();
-  });
-
-  it('should return null for null CAPE', () => {
-    expect(calculateThermalVelocity(null)).toBeNull();
-  });
-
-  it('should calculate realistic W* values for different CAPE levels', () => {
-    // Weak thermals: 100 J/kg CAPE
-    const weak = calculateThermalVelocity(100);
-    expect(weak).not.toBeNull();
-    expect(weak!).toBeLessThan(2); // Should be ~1.2 m/s
-
-    // Moderate thermals: 500 J/kg CAPE
-    const moderate = calculateThermalVelocity(500);
-    expect(moderate).not.toBeNull();
-    expect(moderate!).toBeGreaterThan(2);
-    expect(moderate!).toBeLessThan(3.5); // Should be ~2.7 m/s
-
-    // Strong thermals: 2000 J/kg CAPE
-    const strong = calculateThermalVelocity(2000);
-    expect(strong).not.toBeNull();
-    expect(strong!).toBeGreaterThan(5); // Should be ~5.4 m/s
-  });
-});
+import { getThermalStrengthFromVelocity, formatThermalVelocity } from './thermal-cloud-utils';
 
 describe('getThermalStrengthFromVelocity', () => {
   it('should categorize no thermals (W* < 0.5 m/s)', () => {
