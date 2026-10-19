@@ -126,22 +126,19 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   switch (intent) {
     case 'updateSettings': {
-      const minScoreThreshold = parseInt(formData.get('minScoreThreshold') as string) || 70;
-      const daysAhead = parseInt(formData.get('daysAhead') as string) || 2;
+      // Each control saves only its own field; a missing one must not reset the other
+      const threshold = parseInt(formData.get('minScoreThreshold') as string);
+      const days = parseInt(formData.get('daysAhead') as string);
+      const changes = {
+        ...(threshold >= 0 && threshold <= 100 && { minScoreThreshold: threshold }),
+        ...(days >= 1 && days <= 7 && { daysAhead: days }),
+        updatedAt: new Date(),
+      };
 
       await db
         .insert(settings)
-        .values({
-          userId,
-          minScoreThreshold,
-          daysAhead,
-          siteNotifications: {},
-          updatedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: settings.userId,
-          set: { minScoreThreshold, daysAhead, updatedAt: new Date() },
-        });
+        .values({ userId, ...changes })
+        .onConflictDoUpdate({ target: settings.userId, set: changes });
       return { success: true };
     }
 
@@ -262,9 +259,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 
     case 'completeOnboarding': {
       await db
-        .update(settings)
-        .set({ onboardingCompleted: true, updatedAt: new Date() })
-        .where(eq(settings.userId, userId));
+        .insert(settings)
+        .values({ userId, onboardingCompleted: true })
+        .onConflictDoUpdate({
+          target: settings.userId,
+          set: { onboardingCompleted: true, updatedAt: new Date() },
+        });
       return { success: true };
     }
 

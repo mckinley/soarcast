@@ -1,17 +1,17 @@
-import { useLoaderData, useFetcher, Link } from 'react-router';
+import { useLoaderData, useFetcher, Link, redirect } from 'react-router';
 import type { Route } from './+types/sites.$slug';
 import type { DayScore } from '~/types';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
-import { launchSites, userFavoriteSites } from '~/db/schema';
+import { customSites, launchSites, userFavoriteSites } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
-import { getForecast, setWeatherDb } from '~/lib/weather';
 import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
-import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
-import { SiteDetailClient } from '@/components/site-detail-client';
+import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
+import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { SiteNotes } from '@/components/site-notes';
+import { SiteSourceCredit } from '@/components/data-credits';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Heart } from 'lucide-react';
@@ -19,7 +19,13 @@ import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { OrientationBadges } from '@/components/orientation-badges';
 import { WindDirectionBadges } from '@/components/wind-direction-badges';
 import { ElevationDisplay } from '@/components/elevation-display';
-import { searchSites, getSiteById, getPgsitesApiKey, type PgSite } from '~/lib/pgsites-client';
+import {
+  searchSites,
+  getSiteById,
+  getPgsitesApiKey,
+  pgsitesSlug,
+  type PgSite,
+} from '~/lib/pgsites-client';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -53,15 +59,7 @@ interface DetailSite {
   updatedAt: string;
 }
 
-/** Generate a URL-safe slug from a site name and pgsites UUID.
- *  Uses -- separator so the UUID can be reliably extracted. */
-function generateSlug(name: string, id: string): string {
-  const nameSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${nameSlug}--${id}`;
-}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Extract the pgsites UUID from a slug. Supports both formats:
  *  - New: "site-name--uuid-here" (double-dash separator)
@@ -176,6 +174,16 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     site = localSiteToDetailSite(localSite);
     localSiteId = localSite.id;
   } else {
+    // Alerts sent before they linked by slug point at /sites/<id>
+    if (UUID.test(slug!)) {
+      const [byId, custom] = await Promise.all([
+        db.query.launchSites.findFirst({ where: eq(launchSites.id, slug!) }),
+        db.query.customSites.findFirst({ where: eq(customSites.id, slug!) }),
+      ]);
+      if (byId) throw redirect(`/sites/${byId.slug}`);
+      if (custom) throw redirect(`/sites/custom/${custom.id}`);
+    }
+
     // 2. Not found locally — extract pgsites UUID from slug and do direct API lookup
     const pgsitesId = extractPgsitesId(slug!);
     let pgSite: PgSite | null = null;
@@ -238,40 +246,17 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     }
   }
 
-  // Fetch forecast and scoring data for ALL sites (local or pgsites API)
-  // Use local site ID if available (favorited/cached), otherwise use pgsites UUID
-  const forecastSiteId = localSiteId || site.id;
-  // All pgsites sites are launch sites — use 'launch' as the cache discriminator
-  const forecastSiteType: 'launch' | 'custom' | 'legacy' = 'launch';
-  let forecast = null;
+  // Day verdicts for every site, local or pgsites-only
   let scores: DayScore[] | null = null;
-  let forecastError = null;
-
+  let today: string | null = null;
+  let forecastError = false;
   try {
-    setWeatherDb(db);
     setProfileDb(db);
-
-    // 3. Fire both Open-Meteo calls in parallel — previously serial, saves ~600-800 ms.
-    const [forecastResult, profileResult] = await Promise.allSettled([
-      getForecast(forecastSiteId, site.latitude, site.longitude, forecastSiteType),
-      getAtmosphericProfile(site.latitude, site.longitude, 7),
-    ]);
-
-    if (forecastResult.status === 'rejected') {
-      forecastError =
-        forecastResult.reason instanceof Error
-          ? forecastResult.reason.message
-          : 'Failed to fetch forecast';
-    } else {
-      forecast = forecastResult.value.forecast;
-    }
-
-    // Without a profile there are no verdicts, but the forecast still shows
-    if (profileResult.status === 'rejected') {
-      scores = [];
-    } else {
-      const siteForScoring = {
-        id: forecastSiteId,
+    const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
+    scores = evaluateDays(
+      profile,
+      launchProfileFromSite({
+        id: localSiteId || site.id,
         name: site.name,
         latitude: site.latitude,
         longitude: site.longitude,
@@ -281,12 +266,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
         createdAt: site.createdAt,
         updatedAt: site.updatedAt,
-      };
-
-      scores = evaluateDays(profileResult.value.profile, launchProfileFromSite(siteForScoring));
-    }
+      }),
+    );
+    today = profileToday(profile);
   } catch (e) {
-    forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
+    console.error(`Forecast for ${site.name} failed:`, e);
+    forecastError = true;
   }
 
   return {
@@ -295,8 +280,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     isFavorited,
     customMaxWind,
     isAuthenticated: !!session?.user?.id,
-    forecast,
     scores,
+    today,
     forecastError,
   };
 }
@@ -330,7 +315,7 @@ export async function action({ request, context }: Route.ActionArgs) {
             return Response.json({ error: 'Site not found' }, { status: 404 });
           }
 
-          const slug = generateSlug(pgSite.name, pgSite.id);
+          const slug = pgsitesSlug(pgSite.name, pgSite.id);
           const id = crypto.randomUUID();
 
           await db.insert(launchSites).values({
@@ -467,8 +452,8 @@ export default function SiteDetailPage() {
     isFavorited,
     customMaxWind,
     isAuthenticated,
-    forecast,
     scores,
+    today,
     forecastError,
   } = useLoaderData<typeof loader>();
 
@@ -503,14 +488,9 @@ export default function SiteDetailPage() {
       </div>
 
       {/* Forecast section with windgram and scoring */}
-      {forecastError ? (
-        <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
-          <p className="font-medium">Error loading forecast</p>
-          <p className="text-sm">
-            We couldn&apos;t load the forecast right now. Please try again in a little while.
-          </p>
-        </div>
-      ) : forecast && scores ? (
+      {forecastError || !scores || !today ? (
+        <ForecastUnavailable />
+      ) : (
         <SiteDetailClient
           site={{
             id: site.id,
@@ -524,13 +504,9 @@ export default function SiteDetailPage() {
             createdAt: site.createdAt,
             updatedAt: site.updatedAt,
           }}
-          forecast={forecast}
           scores={scores}
+          today={today}
         />
-      ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">No forecast data available</p>
-        </div>
       )}
 
       {/* Location & Details — always visible */}
@@ -619,9 +595,7 @@ export default function SiteDetailPage() {
             <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Data source: {site.source === 'pgsites' ? 'ParaglidingEarth.com' : site.source}
-          </p>
+          <SiteSourceCredit pgeLink={site.pgeLink} />
         </div>
       </Card>
     </div>

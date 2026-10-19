@@ -15,6 +15,14 @@ const CACHE_DURATION_HOURS = 3;
 
 // Pressure levels to fetch (hPa)
 const PRESSURE_LEVELS = [1000, 950, 900, 850, 800, 700, 600, 500] as const;
+
+/**
+ * Every profile is fetched and cached for this many days, whatever the
+ * caller asks for: Open-Meteo charges a 7-day call the same as a 1-day one,
+ * and one cache row per place then serves every page.
+ */
+export const PROFILE_DAYS = 7;
+const RETRY_DELAY_MS = 1500;
 type PressureLevelValue = (typeof PRESSURE_LEVELS)[number];
 
 /**
@@ -458,7 +466,13 @@ export async function fetchAtmosphericProfile(
   const url = `${OPEN_METEO_BASE_URL}?${params.toString()}`;
 
   try {
-    const response = await fetch(url);
+    let response = await fetch(url);
+    // Open-Meteo answers 429 when its free per-minute limit is hit, and
+    // shared IPs (Workers, CI) hit it in bursts: wait a moment and retry once.
+    if (response.status === 429 || response.status >= 500) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      response = await fetch(url);
+    }
 
     if (!response.ok) {
       // Open-Meteo explains a rejected request in the body: {"error":true,"reason":"..."}
@@ -610,19 +624,80 @@ export interface AtmosphericProfileResult {
   error?: string;
 }
 
-/**
- * Gets cached atmospheric profile or fetches fresh data if cache is stale/missing
- * Falls back to stale cache if API fails (graceful degradation)
- * @param latitude - Location latitude
- * @param longitude - Location longitude
- * @param days - Number of forecast days (default 2)
- * @returns Atmospheric profile result with cache metadata
- */
 /** Cache key for a location: coordinates rounded to 2 decimals (~1 km). */
 export function profileLocationKey(latitude: number, longitude: number): string {
   return `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
 }
 
+/** The forecast days a profile covers, in order (local dates at the place). */
+export function profileDates(profile: AtmosphericProfile): string[] {
+  return [...new Set(profile.hours.map((h) => h.time.slice(0, 10)))];
+}
+
+/** Today's date (YYYY-MM-DD) where the profile is, from its time zone. */
+export function profileToday(profile: AtmosphericProfile, now: Date = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: profile.timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * The profile from the place's today onward, at most `days` days: a profile
+ * cached late yesterday still starts with yesterday.
+ */
+export function trimProfileDays(
+  profile: AtmosphericProfile,
+  days: number,
+  now: Date = new Date(),
+): AtmosphericProfile {
+  const today = profileToday(profile, now);
+  const dates = profileDates(profile).filter((d) => d >= today);
+  const keep = new Set(dates.slice(0, days));
+  const pick = (byDay?: Record<string, string>) =>
+    byDay ? Object.fromEntries(Object.entries(byDay).filter(([d]) => keep.has(d))) : undefined;
+  return {
+    ...profile,
+    hours: profile.hours.filter((h) => keep.has(h.time.slice(0, 10))),
+    sunriseByDay: pick(profile.sunriseByDay),
+    sunsetByDay: pick(profile.sunsetByDay),
+  };
+}
+
+/**
+ * Whether a cache row can be served without refetching. Profiles cached
+ * before sunrise/sunset were fetched lack fields the forecast engine needs,
+ * and rows from before PROFILE_DAYS can hold a single day. A week fetched
+ * before the place's midnight still serves its remaining days until it
+ * expires: refetching it on every request would burn Open-Meteo's quota
+ * wherever its idea of the local date differs from ours.
+ */
+export function isCachedProfileFresh(
+  row: { data: unknown; expiresAt: Date },
+  days: number,
+  now: Date = new Date(),
+): boolean {
+  const cached = row.data as AtmosphericProfile;
+  return (
+    new Date(row.expiresAt) > now &&
+    !!cached.sunriseByDay &&
+    profileDates(cached).length >= days &&
+    profileDates(trimProfileDays(cached, days, now)).length >= days - 1
+  );
+}
+
+/**
+ * Gets the cached atmospheric profile, or fetches a fresh one when the cache
+ * is stale, missing or shorter than PROFILE_DAYS. Falls back to the stale
+ * cache if Open-Meteo fails.
+ * @param days - Forecast days to return, from the place's today (default 2)
+ */
 export async function getAtmosphericProfile(
   latitude: number,
   longitude: number,
@@ -638,8 +713,8 @@ export async function getAtmosphericProfile(
   const { atmosphericProfilesCache } = await import('@/db/schema');
   const { eq, and } = await import('drizzle-orm');
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const now = new Date();
+  const today = now.toISOString().split('T')[0]; // the cache row's key: the UTC fetch date
 
   // Create cache key from rounded coordinates (2 decimal precision ~1km)
   const cacheKey = profileLocationKey(latitude, longitude);
@@ -656,22 +731,17 @@ export async function getAtmosphericProfile(
     )
     .limit(1);
 
-  // Check if cache exists and is still valid. Profiles cached before
-  // sunrise/sunset were fetched lack fields the forecast engine needs.
-  if (
-    cachedRow &&
-    new Date(cachedRow.expiresAt) > now &&
-    (cachedRow.data as AtmosphericProfile).sunriseByDay
-  ) {
+  const fetchDays = Math.max(days, PROFILE_DAYS);
+  if (cachedRow && isCachedProfileFresh(cachedRow, fetchDays, now)) {
     return {
-      profile: cachedRow.data as AtmosphericProfile,
+      profile: trimProfileDays(cachedRow.data as AtmosphericProfile, days, now),
       isStale: false,
     };
   }
 
   // Try to fetch fresh data
   try {
-    const freshProfile = await fetchAtmosphericProfile(latitude, longitude, days);
+    const freshProfile = await fetchAtmosphericProfile(latitude, longitude, fetchDays);
 
     // Store in cache (upsert pattern). A failed write, such as Turso
     // blocking writes, must not cost the pilot the profile we already have.
@@ -698,7 +768,7 @@ export async function getAtmosphericProfile(
     }
 
     return {
-      profile: freshProfile,
+      profile: trimProfileDays(freshProfile, days, now),
       isStale: false,
     };
   } catch (error) {
@@ -714,7 +784,7 @@ export async function getAtmosphericProfile(
       );
 
       return {
-        profile: cachedRow.data as AtmosphericProfile,
+        profile: trimProfileDays(cachedRow.data as AtmosphericProfile, days, now),
         isStale: true,
         cacheAgeHours,
         error: error instanceof Error ? error.message : 'Failed to fetch fresh data',

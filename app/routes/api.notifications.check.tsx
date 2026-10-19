@@ -12,7 +12,13 @@ import { eq } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
-import { addDays, dueAlertRun, localDate, resolveTimeZone } from '~/lib/alert-schedule';
+import {
+  addDays,
+  DEFAULT_DIGEST_TIME,
+  dueAlertRun,
+  localDate,
+  resolveTimeZone,
+} from '~/lib/alert-schedule';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '~/lib/notifications';
 import type { DayAnalysis } from '~/lib/notifications';
@@ -20,6 +26,22 @@ import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
 import webpush from 'web-push';
 import { sendPush } from '~/lib/push-send';
+
+/** The settings a pilot has before saving any: the schema's column defaults. */
+function defaultSettings(userId: string, now: Date): typeof settingsTable.$inferSelect {
+  return {
+    id: '',
+    userId,
+    minScoreThreshold: 70,
+    daysAhead: 2,
+    siteNotifications: {},
+    morningDigestEnabled: false,
+    morningDigestTime: DEFAULT_DIGEST_TIME,
+    timeZone: null,
+    onboardingCompleted: false,
+    updatedAt: now,
+  };
+}
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const env = context.cloudflare.env as Env;
@@ -58,13 +80,13 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     for (const user of allUsers) {
       try {
-        const [userSettings] = await db
+        const [savedSettings] = await db
           .select()
           .from(settingsTable)
           .where(eq(settingsTable.userId, user.id))
           .limit(1);
-
-        if (!userSettings) continue;
+        // Pilots who signed up before sign-up created a settings row get the defaults
+        const userSettings = savedSettings ?? defaultSettings(user.id, now);
 
         const run =
           forcedRun === 'morning' || forcedRun === 'evening'
@@ -89,6 +111,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
           .select({
             id: launchSites.id,
             name: launchSites.name,
+            slug: launchSites.slug,
             latitude: launchSites.latitude,
             longitude: launchSites.longitude,
             altitude: launchSites.altitude,
@@ -131,6 +154,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
           ...customSitesResult.map(customSiteToSite),
         ];
         if (userSites.length === 0) continue;
+        // Where an alert about each site opens
+        const siteUrls = new Map<string, string>([
+          ...favoriteSitesResult.map((s) => [s.id, `/sites/${s.slug}`] as const),
+          ...customSitesResult.map((s) => [s.id, `/sites/custom/${s.id}`] as const),
+        ]);
 
         // Morning digest
         if (isMorningRun && userSettings.morningDigestEnabled) {
@@ -214,53 +242,22 @@ export async function action({ request, context }: ActionFunctionArgs) {
                     day: 'numeric',
                   });
 
-                  const emailSites = siteAnalyses.map(
-                    ({ site, analysis, profile: siteProfile }) => {
-                      const todayHours = siteProfile.hours.filter((h) =>
-                        h.time.startsWith(todayStr),
-                      );
-                      const peakWStar =
-                        todayHours.reduce((max, h) => {
-                          const ws = h.derived.wStar;
-                          return ws !== null && ws > max ? ws : max;
-                        }, 0) || null;
-
-                      let topConcern: string | null = null;
-                      if (analysis.concerns.length > 0) {
-                        const concern = analysis.concerns[0];
-                        if (
-                          concern.toLowerCase().includes('overdevelopment') ||
-                          concern.toLowerCase().includes('storm')
-                        ) {
-                          topConcern = 'OD Risk';
-                        } else if (concern.toLowerCase().includes('shear')) {
-                          topConcern = 'High wind shear';
-                        } else if (
-                          concern.toLowerCase().includes('upper') ||
-                          concern.toLowerCase().includes('850')
-                        ) {
-                          topConcern = 'Strong upper winds';
-                        } else {
-                          topConcern = concern;
-                        }
-                      }
-
-                      const ceilingMatch = analysis.topOfLift?.match(/(\d[\d,]*)\s*ft/);
-                      const peakCeilingFt = ceilingMatch
-                        ? parseInt(ceilingMatch[1].replace(',', ''))
-                        : null;
-
-                      return {
-                        name: site.name,
-                        score: Math.round(analysis.score),
-                        label: analysis.rating as 'Epic' | 'Great' | 'Good' | 'Fair' | 'Poor',
-                        wStar: peakWStar,
-                        bestWindow: analysis.bestWindow,
-                        topConcern,
-                        peakCeilingFt,
-                      };
-                    },
-                  );
+                  const emailSites = siteAnalyses.map(({ site, analysis }) => ({
+                    name: site.name,
+                    url: siteUrls.get(site.id),
+                    verdict: analysis.verdict,
+                    window: analysis.bestWindow,
+                    detail:
+                      analysis.verdict === 'no'
+                        ? analysis.limitingFactor
+                        : analysis.highlights.join(', ') || null,
+                    concern:
+                      analysis.verdict === 'go'
+                        ? analysis.hazard
+                        : analysis.verdict === 'marginal'
+                          ? analysis.limitingFactor
+                          : null,
+                  }));
 
                   await sendMorningDigestEmail(env.EMAIL, {
                     to: user.email,
@@ -314,7 +311,14 @@ export async function action({ request, context }: ActionFunctionArgs) {
               const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, dateStr);
 
               if (analysis && analysis.score >= siteMinScore) {
-                const payload = JSON.stringify(generateNotification(siteObj, analysis));
+                const payload = JSON.stringify(
+                  generateNotification(
+                    siteObj,
+                    analysis,
+                    siteUrls.get(site.id) ?? '/dashboard',
+                    todayStr,
+                  ),
+                );
 
                 for (const subscription of subscriptions) {
                   try {

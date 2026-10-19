@@ -1,5 +1,6 @@
 import { MapContainer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { VectorBasemap } from '@/components/vector-basemap';
+import { PGE_ATTRIBUTION } from '@/components/data-credits';
 import { Icon, DivIcon, point } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router';
@@ -97,7 +98,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
       scrollWheelZoom={true}
       className="h-full w-full"
     >
-      <VectorBasemap />
+      <VectorBasemap attribution={PGE_ATTRIBUTION} />
 
       {onBoundsChange && <BoundsChangeHandler onBoundsChange={onBoundsChange} />}
       {fitBounds && <FitBoundsOnChange sites={sites} />}

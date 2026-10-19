@@ -14,33 +14,6 @@ export interface Site {
   updatedAt: string;
 }
 
-export interface Forecast {
-  siteId: string;
-  fetchedAt: string;
-  expiresAt: string;
-  modelElevation: number;
-  sunrise: string;
-  sunset: string;
-  sunriseByDay: Record<string, string>; // date (YYYY-MM-DD) -> ISO time string
-  sunsetByDay: Record<string, string>; // date (YYYY-MM-DD) -> ISO time string
-  hourly: {
-    time: string[];
-    temperature_2m: number[];
-    wind_speed_10m: number[];
-    wind_direction_10m: number[];
-    wind_gusts_10m: number[];
-    cloud_cover: number[];
-    cape: number[];
-    precipitation_probability: number[];
-    pressure_msl: number[];
-    // Upper-air parameters for XC assessment
-    boundary_layer_height: (number | null)[];
-    wind_speed_850hPa: (number | null)[];
-    wind_direction_850hPa: (number | null)[];
-    convective_inhibition: (number | null)[];
-  };
-}
-
 export interface DayScore {
   date: string; // YYYY-MM-DD
   overallScore: number; // 0-100; under 31 means no flyable window
@@ -50,6 +23,8 @@ export interface DayScore {
   flyableWindow: string | null; // e.g. "11:00-16:00"
   /** The main thing holding the day back, in plain words */
   limitingFactor: string | null;
+  /** The launch check behind limitingFactor: 'wind', 'rain', 'direction', ... */
+  limitingGate?: string | null;
   /** Every failed or marginal launch check with its time span, worst first */
   reasons: string[];
   wStar?: number | null; // Peak W* in m/s during the window
@@ -74,16 +49,4 @@ export interface Settings {
     digestTime: string; // HH:MM format, default '08:00'
   };
   updatedAt: string;
-}
-
-export interface SitesData {
-  sites: Site[];
-}
-
-export interface ForecastsData {
-  forecasts: Record<string, Forecast>; // key: `${siteId}_${date}`
-}
-
-export interface SettingsData {
-  settings: Settings;
 }

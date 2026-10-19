@@ -23,7 +23,14 @@ const ATTRIBUTION =
  * Drop-in replacement for <TileLayer> as the first child of a <MapContainer>
  * (renders below marker/cluster layers).
  */
-export function VectorBasemap({ style = MAPS_BASEMAP_STYLE }: { style?: string }) {
+export function VectorBasemap({
+  style = MAPS_BASEMAP_STYLE,
+  attribution,
+}: {
+  style?: string;
+  /** Credit for data drawn on top, shown before the basemap's own */
+  attribution?: string;
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -31,12 +38,15 @@ export function VectorBasemap({ style = MAPS_BASEMAP_STYLE }: { style?: string }
       L as unknown as {
         maplibreGL(opts: { style: string; attribution?: string }): L.Layer;
       }
-    ).maplibreGL({ style, attribution: ATTRIBUTION });
+    ).maplibreGL({
+      style,
+      attribution: attribution ? `${attribution} · ${ATTRIBUTION}` : ATTRIBUTION,
+    });
     layer.addTo(map);
     return () => {
       map.removeLayer(layer);
     };
-  }, [map, style]);
+  }, [map, style, attribution]);
 
   return null;
 }

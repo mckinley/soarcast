@@ -1,5 +1,6 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
@@ -12,6 +13,7 @@ import { getSession } from './lib/auth.server';
 import { ThemeProvider } from '~/components/theme-provider';
 import { TooltipProvider } from '~/components/ui/tooltip';
 import { AppShell } from '~/components/app-shell';
+import { buttonVariants } from '~/components/ui/button';
 import './globals.css';
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -60,29 +62,44 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = 'Oops!';
-  let details = 'An unexpected error occurred.';
+  let message = 'Something went wrong';
+  let details = 'SoarCast hit an unexpected error. Try again, or head back to your sites.';
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? '404' : 'Error';
-    details = error.status === 404 ? 'Page not found.' : error.statusText || details;
-  } else if (error && error instanceof Error) {
+    message = error.status === 404 ? 'Page not found' : 'Something went wrong';
+    details =
+      error.status === 404
+        ? "That page doesn't exist, or the site has moved."
+        : error.statusText || details;
+  } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">{message}</h1>
-        <p className="mt-2 text-muted-foreground">{details}</p>
-        {stack && (
-          <pre className="mt-4 max-w-xl overflow-auto rounded bg-muted p-4 text-left text-xs">
-            {stack}
-          </pre>
-        )}
-      </div>
-    </main>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <TooltipProvider>
+        <AppShell>
+          <div className="flex flex-col items-center py-16 text-center">
+            <h1 className="text-3xl font-bold">{message}</h1>
+            <p className="mt-2 max-w-md text-muted-foreground">{details}</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link to="/dashboard" className={buttonVariants()}>
+                Your sites
+              </Link>
+              <Link to="/sites/browse" className={buttonVariants({ variant: 'outline' })}>
+                Browse sites
+              </Link>
+            </div>
+            {stack && (
+              <pre className="mt-6 max-w-full overflow-auto rounded bg-muted p-4 text-left text-xs">
+                {stack}
+              </pre>
+            )}
+          </div>
+        </AppShell>
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }

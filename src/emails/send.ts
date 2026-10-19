@@ -1,5 +1,5 @@
 import { render, toPlainText } from '@react-email/components';
-import { MorningDigestEmail, type SiteDigestItem } from './morning-digest';
+import { MorningDigestEmail, digestHeadline, type SiteDigestItem } from './morning-digest';
 
 /**
  * Every SoarCast email comes from this address. Its domain must be onboarded on
@@ -30,7 +30,7 @@ export async function sendMorningDigestEmail(
   return mailer.send({
     from: EMAIL_FROM,
     to,
-    subject: `Your SoarCast Morning Digest - ${date}`,
+    subject: `${digestHeadline(sites)} · SoarCast`,
     html,
     text: toPlainText(html),
   });

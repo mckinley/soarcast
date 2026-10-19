@@ -4,10 +4,9 @@ import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
 import { findOwnedCustomSite } from '~/app/lib/custom-sites.server';
 import { customSiteToSite } from '~/lib/custom-sites';
-import { getForecast, setWeatherDb } from '~/lib/weather';
 import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
-import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
-import { SiteDetailClient } from '@/components/site-detail-client';
+import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
+import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { DirectionLegend, LaunchDirectionPicker } from '@/components/launch-direction-picker';
@@ -37,43 +36,24 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
   const site = customSiteToSite(customSite);
 
-  let forecast = null;
   let scores: DayScore[] | null = null;
-  let forecastError = null;
-
+  let today: string | null = null;
+  let forecastError = false;
   try {
-    setWeatherDb(db);
     setProfileDb(db);
-
-    const [forecastResult, profileResult] = await Promise.allSettled([
-      getForecast(site.id, site.latitude, site.longitude, 'custom'),
-      getAtmosphericProfile(site.latitude, site.longitude, 7),
-    ]);
-
-    if (forecastResult.status === 'rejected') {
-      forecastError =
-        forecastResult.reason instanceof Error
-          ? forecastResult.reason.message
-          : 'Failed to fetch forecast';
-    } else {
-      forecast = forecastResult.value.forecast;
-    }
-
-    // Without a profile there are no verdicts, but the forecast still shows
-    if (profileResult.status === 'rejected') {
-      scores = [];
-    } else {
-      scores = evaluateDays(profileResult.value.profile, launchProfileFromSite(site));
-    }
+    const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
+    scores = evaluateDays(profile, launchProfileFromSite(site));
+    today = profileToday(profile);
   } catch (e) {
-    forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
+    console.error(`Forecast for ${site.name} failed:`, e);
+    forecastError = true;
   }
 
-  return { site, forecast, scores, forecastError };
+  return { site, scores, today, forecastError };
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, forecast, scores, forecastError } = useLoaderData<typeof loader>();
+  const { site, scores, today, forecastError } = useLoaderData<typeof loader>();
 
   return (
     <div className="space-y-6">
@@ -105,19 +85,10 @@ export default function CustomSiteDetailPage() {
       </div>
 
       {/* Forecast section with windgram and scoring */}
-      {forecastError ? (
-        <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
-          <p className="font-medium">Error loading forecast</p>
-          <p className="text-sm">
-            We couldn&apos;t load the forecast right now. Please try again in a little while.
-          </p>
-        </div>
-      ) : forecast && scores ? (
-        <SiteDetailClient site={site} forecast={forecast} scores={scores} />
+      {forecastError || !scores || !today ? (
+        <ForecastUnavailable />
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">No forecast data available</p>
-        </div>
+        <SiteDetailClient site={site} scores={scores} today={today} />
       )}
 
       {/* Location & Details — always visible */}

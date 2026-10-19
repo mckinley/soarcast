@@ -217,6 +217,16 @@ describe('evaluateDays', () => {
     expect(day.limitingFactor).toMatch(/^Outside 14:00-21:00: Wind 35 km\/h \(limit 25\)/);
   });
 
+  it('gives each separate span of a reason its own times', () => {
+    // Wind off the launch in the morning and evening, on it from 11 to 16
+    const day = today(
+      profile((h) => (h < 11 || h >= 16 ? { windDirection: 315, windSpeed: 12 } : {})),
+    );
+    expect(day.flyableWindow).toBe('11:00-16:00');
+    expect(day.reasons[0]).toMatch(/off the launch, 05:00-11:00 and 16:00-21:00$/);
+    expect(day.limitingGate).toBe('direction');
+  });
+
   it('closes the afternoon when thunderstorms are likely', () => {
     const day = today(profile((h) => (h >= 13 ? { liftedIndex: -5, cape: 2000 } : {})));
     expect(day.flyableWindow).toBe('06:00-13:00');
@@ -275,8 +285,6 @@ describe('verdictSummary', () => {
   it('names the limiting factor on a day that is not flyable', () => {
     const day = today(profile(() => ({ windSpeed: 15, windDirection: 45 })));
     // Sunrise is 05:30, so the span starts with the sunrise hour
-    expect(verdictSummary(day)).toBe(
-      'Not flyable. NE wind (45°) on launch, off the launch, 05:00-21:00.',
-    );
+    expect(verdictSummary(day)).toBe('Not flyable. NE wind (45°), off the launch, 05:00-21:00.');
   });
 });

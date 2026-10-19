@@ -3,51 +3,51 @@ import { Link } from 'react-router';
 import type { Site, DayScore } from '@/types';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { WindgramThumbnail } from '@/components/windgram/windgram-thumbnail';
-import { SevenDayBar } from './seven-day-bar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addDays } from '@/lib/alert-schedule';
+import {
+  VERDICT_BADGE,
+  VERDICT_DOT,
+  VERDICT_WORD,
+  dayName,
+  shortDate,
+  shortReason,
+} from '@/lib/verdict-display';
 
 interface SiteCardProps {
   site: Site;
   scores: DayScore[];
+  /** Today's date where the site is (YYYY-MM-DD) */
+  today: string;
   siteType: 'launch' | 'custom';
   slug?: string; // For launch sites
+  error?: string;
   className?: string;
 }
 
 /**
- * Dashboard card for a site showing:
- * - Windgram thumbnail (today's lapse rate visualization)
- * - Flyability rating badge
- * - 7-day mini bar
- * - Site details
+ * Dashboard card for a site: today's verdict and window, a windgram
+ * thumbnail, and the week as a strip of verdicts.
  */
-export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteCardProps) {
+export function SiteCard({
+  site,
+  scores,
+  today,
+  siteType,
+  slug,
+  error,
+  className = '',
+}: SiteCardProps) {
   const [thumbnailData, setThumbnailData] = useState<AtmosphericProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Today's score for flyability badge
-  const today = new Date().toISOString().split('T')[0];
   const todayScore = scores.find((s) => s.date === today);
-
-  // Get badge color based on score label
-  const getBadgeColor = (label: DayScore['label']): string => {
-    switch (label) {
-      case 'Epic':
-        return 'bg-purple-500 text-white';
-      case 'Great':
-        return 'bg-green-500 text-white';
-      case 'Good':
-        return 'bg-blue-500 text-white';
-      case 'Fair':
-        return 'bg-yellow-500 text-gray-900';
-      case 'Poor':
-        return 'bg-gray-400 text-gray-900';
-      default:
-        return 'bg-gray-300 text-gray-900';
-    }
-  };
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(today, i);
+    return { date, score: scores.find((s) => s.date === date) };
+  });
 
   // Lazy load thumbnail data when card becomes visible
   useEffect(() => {
@@ -108,8 +108,8 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
         ref={cardRef}
         className={`border rounded-lg p-4 hover:shadow-lg transition-shadow bg-card ${className}`}
       >
-        {/* Header: Site name and badge */}
-        <div className="flex items-start justify-between mb-3">
+        {/* Header: Site name and today's verdict */}
+        <div className="flex items-start justify-between mb-1">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate">{site.name}</h3>
             <div className="text-xs text-muted-foreground mt-0.5">
@@ -119,12 +119,21 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
           </div>
           {todayScore && (
             <div
-              className={`px-2 py-1 rounded text-xs font-semibold ml-2 whitespace-nowrap ${getBadgeColor(todayScore.label)}`}
+              className={`px-2 py-1 rounded text-xs font-semibold ml-2 whitespace-nowrap ${VERDICT_BADGE[todayScore.verdict]}`}
             >
-              {todayScore.label}
+              {VERDICT_WORD[todayScore.verdict]}
             </div>
           )}
         </div>
+        <p className="mb-3 text-sm text-muted-foreground truncate">
+          {error
+            ? error
+            : todayScore
+              ? todayScore.verdict === 'no'
+                ? `Today: ${todayScore.limitingFactor ?? 'no flyable hours'}`
+                : `Today ${todayScore.flyableWindow}${todayScore.wStar ? `, thermals ${todayScore.wStar.toFixed(1)} m/s` : ''}`
+              : 'No forecast for today'}
+        </p>
 
         {/* Windgram Thumbnail */}
         <div className="mb-3">
@@ -139,10 +148,33 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
           )}
         </div>
 
-        {/* 7-Day Bar */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">7-day outlook:</span>
-          <SevenDayBar scores={scores} />
+        {/* The week */}
+        <div className="grid grid-cols-7 gap-1" aria-label="Next 7 days">
+          {week.map(({ date, score }, i) => (
+            <div
+              key={date}
+              className="flex min-w-0 flex-col items-center gap-1"
+              title={`${dayName(date, today)} ${shortDate(date)}: ${
+                score
+                  ? score.verdict === 'no'
+                    ? (shortReason(score) ?? VERDICT_WORD.no)
+                    : `${VERDICT_WORD[score.verdict]} ${score.flyableWindow}`
+                  : 'no forecast'
+              }`}
+            >
+              <span className="text-[10px] text-muted-foreground">
+                {i === 0
+                  ? 'Today'
+                  : new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      timeZone: 'UTC',
+                    })}
+              </span>
+              <span
+                className={`h-2.5 w-full rounded-full ${score ? VERDICT_DOT[score.verdict] : 'bg-muted'}`}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </Link>

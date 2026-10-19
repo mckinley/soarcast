@@ -105,7 +105,8 @@ export const customSites = sqliteTable('custom_sites', {
     .default(sql`(unixepoch())`),
 });
 
-// Forecasts cache - supports both launch_sites and custom_sites via discriminator
+// Unused since every page reads atmospheric_profiles_cache; kept until a later
+// migration drops it, so code still running during a deploy keeps working.
 export const forecastsCache = sqliteTable(
   'forecasts_cache',
   {

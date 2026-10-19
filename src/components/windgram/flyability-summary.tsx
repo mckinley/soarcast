@@ -6,6 +6,7 @@ import type { DayScore } from '@/types';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { deriveLaunchConditions } from '@/lib/forecast-engine/launch-conditions';
 import { verdictSummary } from '@/lib/forecast-engine';
+import { VERDICT_BADGE, VERDICT_WORD } from '@/lib/verdict-display';
 import { calculateCircularMean } from '@/lib/site-utils';
 
 interface FlyabilitySummaryProps {
@@ -37,30 +38,18 @@ export function FlyabilitySummary({
   }
   const details = describeConditions(atmosphericData, hours, launchElevation);
 
-  const ratingColors: Record<DayScore['label'], string> = {
-    Epic: 'bg-purple-500 text-white',
-    Great: 'bg-green-500 text-white',
-    Good: 'bg-blue-500 text-white',
-    Fair: 'bg-yellow-500 text-gray-900',
-    Poor: 'bg-gray-400 text-gray-900',
-  };
-  const windowLabel = dayScore.verdict === 'go' ? 'Flyable' : 'Marginal';
-
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
             <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${ratingColors[dayScore.label]}`}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_BADGE[dayScore.verdict]}`}
             >
-              {dayScore.label}
+              {VERDICT_WORD[dayScore.verdict]}
             </span>
             {dayScore.flyableWindow && (
-              <span className="text-sm text-muted-foreground">
-                {windowLabel}:{' '}
-                <span className="font-medium text-foreground">{dayScore.flyableWindow}</span>
-              </span>
+              <span className="text-sm font-medium">{dayScore.flyableWindow}</span>
             )}
           </div>
 

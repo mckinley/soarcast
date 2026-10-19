@@ -15,7 +15,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 - **DB:** Cloudflare D1 (`DB` binding, database `soarcast`), Drizzle ORM (`src/db/schema.ts`, Better Auth tables in `src/db/auth-schema.ts`). App tables reference Better Auth's `user.id`.
 - **DB Access:** Via `getDb(env)` from `app/lib/db.server.ts`. D1 has no interactive transactions (use `db.batch`), at most 100 bound parameters per query, and can't bind a `Date` (use Drizzle `timestamp`/`timestamp_ms` columns).
 - **Migrations:** `npx drizzle-kit generate --name <change>` writes `migrations/NNNN_*.sql`; the deploy workflow runs `wrangler d1 migrations apply soarcast --remote` before deploying, so keep migrations additive. Locally: `npx wrangler d1 migrations apply soarcast --local`.
-- **Weather:** Open-Meteo API, free, no key needed (`src/lib/weather.ts`) — call `setWeatherDb(db)` before using
+- **Weather:** Open-Meteo API, free, no key needed. `getAtmosphericProfile` (`src/lib/weather-profile.ts`) is the one forecast fetch: it always fetches and caches 7 days per place (a 7-day call costs Open-Meteo quota the same as 1 day), returns them from the place's local today, and retries once on 429. Call `setProfileDb(db)` before using it. `profileToday(profile)` is the site's local date; never use UTC `toISOString()` for "today".
 - **Rating:** `src/lib/forecast-engine` is the only place a day is rated (gates, window, quality, hazards)
 - **Your own sites:** `custom_sites` are private to their owner: load them with `findOwnedCustomSite` (`app/lib/custom-sites.server.ts`) and turn them into a `Site` with `customSiteToSite` (`src/lib/custom-sites.ts`), so pages and alerts rate them through the same engine. Add/edit pages are `/sites/custom/new` and `/sites/custom/:id/edit`. `/api/terrain` gives the form the launch elevation, a launch direction suggested from the slopes around the pin (`src/lib/terrain.ts`, Open-Meteo elevation API) and listed sites nearby.
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
@@ -30,7 +30,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 - Environment variables come from `context.cloudflare.env` in loaders/actions, NOT `process.env`
 - Database: `const db = getDb(env)` — wraps the D1 binding in Drizzle, cached per isolate
 - Auth: `const session = await requireAuth(request, env)` or `getSession(request, env)`
-- Weather functions need `setWeatherDb(db)` called before use in each loader/action
+- Profile functions need `setProfileDb(db)` called before use in each loader/action
 - Routes at `app/routes/` use RR7 flat file convention
 - API routes are resource routes (no default export, just loader/action)
 - Protected routes are children of `_auth.tsx` layout

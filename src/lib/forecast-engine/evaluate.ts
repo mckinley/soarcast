@@ -8,6 +8,7 @@ import { deriveLaunchConditions, type LaunchConditions } from './launch-conditio
 import {
   evaluateGates,
   worstStatus,
+  type GateName,
   type GateResult,
   type GateStatus,
   type LaunchProfile,
@@ -53,22 +54,37 @@ function formatWindow(hours: HourVerdict[], w: Window | null): string | null {
   return `${pad(hours[w.start].hour)}-${pad(hours[w.end].hour + 1)}`;
 }
 
-function formatHours(hours: number[]): string {
+/** Hours as their contiguous spans: [7, 8, 17, 18] -> "07:00-09:00 and 17:00-19:00". */
+export function formatHours(hours: number[]): string {
   const pad = (n: number) => `${String(n).padStart(2, '0')}:00`;
-  return `${pad(hours[0])}-${pad(hours[hours.length - 1] + 1)}`;
+  const sorted = [...new Set(hours)].sort((a, b) => a - b);
+  const spans: string[] = [];
+  let start = sorted[0];
+  sorted.forEach((h, i) => {
+    if (sorted[i + 1] !== h + 1) {
+      spans.push(`${pad(start)}-${pad(h + 1)}`);
+      start = sorted[i + 1];
+    }
+  });
+  return spans.length > 1
+    ? `${spans.slice(0, -1).join(', ')} and ${spans[spans.length - 1]}`
+    : (spans[0] ?? '');
 }
 
 /**
  * Groups the non-passing gate results of daylight hours into reasons with
  * their time span, most frequent first: "Wind 31 km/h (limit 25), 13:00-17:00".
  */
-function summarizeReasons(hours: HourVerdict[]): string[] {
-  const byGate = new Map<string, { hours: number[]; reasons: string[]; fail: boolean }>();
+function summarizeReasons(hours: HourVerdict[]): Array<{ gate: GateName; text: string }> {
+  const byGate = new Map<
+    GateName,
+    { gate: GateName; hours: number[]; reasons: string[]; fail: boolean }
+  >();
   for (const h of hours) {
     if (h.gates.some((g) => g.gate === 'daylight' && g.status === 'fail')) continue;
     for (const g of h.gates) {
       if (g.status === 'pass' || g.gate === 'daylight') continue;
-      const entry = byGate.get(g.gate) ?? { hours: [], reasons: [], fail: false };
+      const entry = byGate.get(g.gate) ?? { gate: g.gate, hours: [], reasons: [], fail: false };
       entry.hours.push(h.hour);
       entry.reasons.push(g.reason ?? g.gate);
       entry.fail ||= g.status === 'fail';
@@ -80,7 +96,7 @@ function summarizeReasons(hours: HourVerdict[]): string[] {
     .map((e) => {
       // The reason from the middle of the span is the most typical one
       const reason = e.reasons[Math.floor(e.reasons.length / 2)];
-      return `${reason}, ${formatHours(e.hours)}`;
+      return { gate: e.gate, text: `${reason}, ${formatHours(e.hours)}` };
     });
 }
 
@@ -173,7 +189,8 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
         ? Math.round(31 + 0.19 * quality)
         : Math.round(0.3 * quality);
 
-  const reasons = summarizeReasons(hours);
+  const summary = summarizeReasons(hours);
+  const reasons = summary.map((r) => r.text);
   const limitingFactor =
     verdict === 'go'
       ? reasons.length > 0
@@ -188,6 +205,7 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
     verdict,
     flyableWindow: formatWindow(hours, window),
     limitingFactor,
+    limitingGate: summary[0]?.gate ?? null,
     reasons,
     wStar: peakWStar > 0 ? Math.round(peakWStar * 10) / 10 : null,
     bestWindow: formatWindow(hours, window) ?? undefined,

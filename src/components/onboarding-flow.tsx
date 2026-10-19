@@ -65,7 +65,7 @@ export function OnboardingFlow({ popularSites }: OnboardingFlowProps) {
             <>
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Popular Washington sites:
+                  Launches around Seattle:
                 </p>
                 <div className="space-y-1">
                   {popularSites.slice(0, 3).map((site) => (
@@ -78,7 +78,9 @@ export function OnboardingFlow({ popularSites }: OnboardingFlowProps) {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{site.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {site.region} • {site.elevation}m
+                          {[site.region, site.elevation != null && `${site.elevation} m`]
+                            .filter(Boolean)
+                            .join(' • ')}
                         </div>
                       </div>
                       <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -103,8 +105,8 @@ export function OnboardingFlow({ popularSites }: OnboardingFlowProps) {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            After favoriting your first site, it will appear on your dashboard with a 7-day
-            forecast.
+            Favorite a site and it shows up here with the days and hours it&apos;s flyable this
+            week.
           </p>
         </CardContent>
       </Card>

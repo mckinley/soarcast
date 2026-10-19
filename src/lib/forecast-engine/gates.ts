@@ -59,12 +59,12 @@ export function directionGate(c: LaunchConditions, launch: LaunchProfile): GateR
     dirs.some((d) => angleDifference(c.windDirection, d) <= width);
 
   if (near(launch.goodDirections, SECTOR_HALF_WIDTH)) return { gate: 'direction', status: 'pass' };
-  const reason = `${compass(c.windDirection)} wind (${c.windDirection}°) on launch`;
+  const reason = `${compass(c.windDirection)} wind (${c.windDirection}°)`;
   if (
     near(launch.okDirections, SECTOR_HALF_WIDTH) ||
     near(launch.goodDirections, 2 * SECTOR_HALF_WIDTH)
   ) {
-    return { gate: 'direction', status: 'marginal', reason: `${reason}, cross` };
+    return { gate: 'direction', status: 'marginal', reason: `${reason}, cross on launch` };
   }
   return { gate: 'direction', status: 'fail', reason: `${reason}, off the launch` };
 }

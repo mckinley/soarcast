@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useFetcher } from 'react-router';
+import { Link, useSubmit } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,30 @@ function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
+/** Alert levels, as the minimum day score behind them (the engine's label cut-offs). */
+const ALERT_LEVELS = [
+  { value: 31, label: 'Any flyable day' },
+  { value: 51, label: 'Good soaring or better' },
+  { value: 71, label: 'Great soaring or better' },
+  { value: 86, label: 'Epic days only' },
+] as const;
+
+function nearestAlertLevel(threshold: number): number {
+  return ALERT_LEVELS.reduce((best, level) =>
+    Math.abs(level.value - threshold) < Math.abs(best.value - threshold) ? level : best,
+  ).value;
+}
+
 export function SettingsClient({ initialSettings, sites, vapidPublicKey }: SettingsClientProps) {
-  const fetcher = useFetcher();
-  const isPending = fetcher.state !== 'idle';
+  const submit = useSubmit();
+  // Each control saves through its own fetcher, so saving one never cancels
+  // another, and nothing is disabled while a save is in flight.
+  const save = (key: string, data: Record<string, string>) =>
+    submit(data, { method: 'POST', navigate: false, fetcherKey: `settings:${key}` });
   const [settings, setSettings] = useState(initialSettings);
+  const [daysAheadInput, setDaysAheadInput] = useState(
+    String(initialSettings.notifications.daysAhead),
+  );
   const [siteCustomWinds, setSiteCustomWinds] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       sites.filter((s) => s.customMaxWind != null).map((s) => [s.id, String(s.customMaxWind)]),
@@ -74,39 +94,34 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
 
   const handleUpdateThreshold = (value: string) => {
     const threshold = parseInt(value, 10);
-    if (isNaN(threshold) || threshold < 0 || threshold > 100) return;
-
     setSettings({
       ...settings,
       notifications: { ...settings.notifications, minScoreThreshold: threshold },
     });
-    fetcher.submit(
-      { intent: 'updateSettings', minScoreThreshold: String(threshold) },
-      { method: 'POST' },
-    );
+    save('threshold', { intent: 'updateSettings', minScoreThreshold: String(threshold) });
   };
 
-  const handleUpdateDaysAhead = (value: string) => {
-    const days = parseInt(value, 10);
-    if (isNaN(days) || days < 1 || days > 7) return;
-
+  // Saved when the field is left, so typing "2" on the way to "12" saves nothing
+  const commitDaysAhead = () => {
+    const days = parseInt(daysAheadInput, 10);
+    if (isNaN(days) || days < 1 || days > 7) {
+      setDaysAheadInput(String(settings.notifications.daysAhead));
+      return;
+    }
+    if (days === settings.notifications.daysAhead) return;
     setSettings({ ...settings, notifications: { ...settings.notifications, daysAhead: days } });
-    fetcher.submit({ intent: 'updateSettings', daysAhead: String(days) }, { method: 'POST' });
+    save('daysAhead', { intent: 'updateSettings', daysAhead: String(days) });
   };
 
-  const handleUpdateCustomWind = (siteId: string, value: string) => {
-    setSiteCustomWinds((prev) => ({ ...prev, [siteId]: value }));
+  const commitCustomWind = (siteId: string) => {
+    const value = siteCustomWinds[siteId] ?? '';
     const num = parseInt(value, 10);
-    const customMaxWind = value === '' ? null : isNaN(num) ? null : num;
     if (value !== '' && (isNaN(num) || num < 10 || num > 100)) return;
-    fetcher.submit(
-      {
-        intent: 'updateSiteCustomMaxWind',
-        siteId,
-        customMaxWind: customMaxWind == null ? '' : String(customMaxWind),
-      },
-      { method: 'POST' },
-    );
+    save(`wind:${siteId}`, {
+      intent: 'updateSiteCustomMaxWind',
+      siteId,
+      customMaxWind: value === '' ? '' : String(num),
+    });
   };
 
   const handleToggleSiteNotifications = (siteId: string, enabled: boolean) => {
@@ -121,10 +136,11 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
         },
       },
     });
-    fetcher.submit(
-      { intent: 'toggleSiteNotifications', siteId, enabled: String(enabled) },
-      { method: 'POST' },
-    );
+    save(`site:${siteId}`, {
+      intent: 'toggleSiteNotifications',
+      siteId,
+      enabled: String(enabled),
+    });
   };
 
   const handleEnablePushNotifications = async () => {
@@ -250,7 +266,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="mt-2 text-muted-foreground">
-          Configure notification preferences for flying day alerts.
+          When and how SoarCast tells you a site is flyable.
         </p>
       </div>
 
@@ -275,8 +291,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               <Label>Enable Push Notifications</Label>
               <p className="text-sm text-muted-foreground">
                 {pushEnabled
-                  ? 'You will receive notifications at 6 AM and 6 PM UTC daily'
-                  : 'Click enable to start receiving notifications'}
+                  ? 'On for this browser. Alerts come at your digest time and at 6 PM, your time.'
+                  : 'Get a notification on this device when one of your sites looks flyable.'}
               </p>
             </div>
             {pushEnabled ? (
@@ -300,8 +316,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
           {pushEnabled && (
             <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <p>
-                ✓ Push notifications are enabled. You&apos;ll be notified when any of your sites
-                have conditions that meet your minimum score threshold.
+                ✓ Push notifications are on. You&apos;ll be notified when one of your sites is
+                flyable at the level you chose below.
               </p>
             </div>
           )}
@@ -312,31 +328,30 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       <Card>
         <CardHeader>
           <CardTitle>Notification Preferences</CardTitle>
-          <CardDescription>
-            Set thresholds for when you want to be alerted about good flying conditions.
-          </CardDescription>
+          <CardDescription>Which days are worth an alert.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Minimum Score Threshold */}
+          {/* Alert level */}
           <div className="space-y-2">
-            <Label htmlFor="threshold">
-              Minimum Score Threshold
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                (0-100, default: 70)
-              </span>
-            </Label>
-            <Input
-              id="threshold"
-              type="number"
-              min="0"
-              max="100"
-              value={settings.notifications.minScoreThreshold}
-              onChange={(e) => handleUpdateThreshold(e.target.value)}
-              disabled={isPending}
-              className="max-w-xs"
-            />
+            <Label htmlFor="threshold">Alert me about</Label>
+            <Select
+              value={String(nearestAlertLevel(settings.notifications.minScoreThreshold))}
+              onValueChange={handleUpdateThreshold}
+            >
+              <SelectTrigger id="threshold" className="max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALERT_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={String(level.value)}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-sm text-muted-foreground">
-              You&apos;ll be notified when a day&apos;s XC score meets or exceeds this threshold.
+              Flyable means a window of 2+ hours where wind, gusts, direction, rain, storms and
+              cloud all work for the launch. The soaring levels add how strong and high the lift is.
             </p>
           </div>
 
@@ -353,9 +368,11 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               type="number"
               min="1"
               max="7"
-              value={settings.notifications.daysAhead}
-              onChange={(e) => handleUpdateDaysAhead(e.target.value)}
-              disabled={isPending}
+              inputMode="numeric"
+              value={daysAheadInput}
+              onChange={(e) => setDaysAheadInput(e.target.value)}
+              onBlur={commitDaysAhead}
+              onKeyDown={(e) => e.key === 'Enter' && commitDaysAhead()}
               className="max-w-xs"
             />
             <p className="text-sm text-muted-foreground">
@@ -379,7 +396,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
             <div>
               <Label htmlFor="email-digest">Enable Email Digest</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Sent each morning with today&apos;s flyability scores for all your sites.
+                Each morning: which of your sites are flyable today, and when.
               </p>
             </div>
             <Switch
@@ -390,16 +407,12 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                   ...settings,
                   emailDigest: { ...settings.emailDigest, enabled: checked },
                 });
-                fetcher.submit(
-                  {
-                    intent: 'toggleEmailDigest',
-                    enabled: String(checked),
-                    timeZone: browserTimeZone(),
-                  },
-                  { method: 'POST' },
-                );
+                save('digest', {
+                  intent: 'toggleEmailDigest',
+                  enabled: String(checked),
+                  timeZone: browserTimeZone(),
+                });
               }}
-              disabled={isPending}
             />
           </div>
           {settings.emailDigest.enabled && (
@@ -415,12 +428,13 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                     ...settings,
                     emailDigest: { ...settings.emailDigest, digestTime: time },
                   });
-                  fetcher.submit(
-                    { intent: 'updateDigestTime', digestTime: time, timeZone: browserTimeZone() },
-                    { method: 'POST' },
-                  );
+                  if (!/^\d{2}:\d{2}$/.test(time)) return;
+                  save('digestTime', {
+                    intent: 'updateDigestTime',
+                    digestTime: time,
+                    timeZone: browserTimeZone(),
+                  });
                 }}
-                disabled={isPending}
                 className="max-w-[140px]"
               />
               <p className="text-sm text-muted-foreground">
@@ -468,14 +482,13 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                         onCheckedChange={(checked) =>
                           handleToggleSiteNotifications(site.id, checked)
                         }
-                        disabled={isPending}
                       />
                     </div>
                     {isEnabled && (
                       <div className="flex flex-wrap items-center gap-4 pl-8">
                         <div className="flex items-center gap-2">
                           <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                            Min rating:
+                            Alert level:
                           </Label>
                           <Select
                             value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
@@ -492,22 +505,18 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                                   },
                                 },
                               });
-                              fetcher.submit(
-                                {
-                                  intent: 'updateSiteMinRating',
-                                  siteId: site.id,
-                                  rating: rating ?? '',
-                                },
-                                { method: 'POST' },
-                              );
+                              save(`rating:${site.id}`, {
+                                intent: 'updateSiteMinRating',
+                                siteId: site.id,
+                                rating: rating ?? '',
+                              });
                             }}
-                            disabled={isPending}
                           >
                             <SelectTrigger className="w-[120px] h-8">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="any">Any</SelectItem>
+                              <SelectItem value="any">As above</SelectItem>
                               <SelectItem value="Good">Good+</SelectItem>
                               <SelectItem value="Great">Great+</SelectItem>
                               <SelectItem value="Epic">Epic</SelectItem>
@@ -535,9 +544,16 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                                   ? String(site.defaultMaxWind)
                                   : String(DEFAULT_MAX_WIND_KMH)
                               }
+                              inputMode="numeric"
                               value={siteCustomWinds[site.id] ?? ''}
-                              onChange={(e) => handleUpdateCustomWind(site.id, e.target.value)}
-                              disabled={isPending}
+                              onChange={(e) =>
+                                setSiteCustomWinds((prev) => ({
+                                  ...prev,
+                                  [site.id]: e.target.value,
+                                }))
+                              }
+                              onBlur={() => commitCustomWind(site.id)}
+                              onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
                               className="w-[80px] h-8"
                             />
                           </div>
@@ -561,8 +577,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
                 SoarCast checks your sites at your digest time each morning and at 6 PM, in your
-                local time. You&apos;ll get a push notification for each site where the forecast
-                meets your minimum score threshold within your notification window.
+                local time. You&apos;ll get a push notification for each site that is flyable at
+                your alert level within your notification window.
               </p>
             </div>
           </div>

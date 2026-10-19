@@ -1,16 +1,21 @@
-import { useFetcher, Link } from 'react-router';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ScoreCell } from '@/components/score-cell';
+import { VerdictCell } from '@/components/verdict-cell';
 import { SiteCard } from '@/components/dashboard/site-card';
+import { ForecastCredit } from '@/components/data-credits';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
 import type { DayScore, Settings } from '@/types';
-import { RefreshCw, LayoutGrid, Table, MapPinPlus } from 'lucide-react';
+import { addDays } from '@/lib/alert-schedule';
+import { VERDICT_BADGE, VERDICT_WORD, dayName, shortDate } from '@/lib/verdict-display';
+import { LayoutGrid, Table, MapPinPlus } from 'lucide-react';
 
 /** Build the detail-page URL for a site (launch sites use their slug). */
 function siteHref(siteType: string, slug: string | undefined, siteId: string): string {
   return siteType === 'launch' && slug ? `/sites/${slug}` : `/sites/custom/${siteId}`;
 }
+
+const VERDICT_RANK: Record<DayScore['verdict'], number> = { go: 2, marginal: 1, no: 0 };
 
 interface DashboardClientProps {
   data: SiteForecastData[];
@@ -19,13 +24,6 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ data, settings, isAuthenticated }: DashboardClientProps) {
-  const fetcher = useFetcher();
-  const isPending = fetcher.state !== 'idle';
-
-  const handleRefresh = () => {
-    fetcher.submit({ intent: 'refreshForecasts' }, { method: 'POST' });
-  };
-
   // Empty state when authenticated user has no sites
   if (data.length === 0 && isAuthenticated) {
     return (
@@ -50,30 +48,9 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
     );
   }
 
-  // Generate next 7 days
-  const today = new Date();
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date.toISOString().split('T')[0] || '');
-  }
-
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T12:00:00'); // Add time to avoid timezone issues
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    const todayStr = today.toISOString().split('T')[0];
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-    if (dateStr === todayStr) return 'Today';
-    if (dateStr === tomorrowStr) return 'Tomorrow';
-
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
+  // The week, from today where the sites are (the first site with a forecast)
+  const today = (data.find((d) => d.scores.length > 0) ?? data[0]).today;
+  const dates = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
   // Determine if a notification indicator should be shown for a given score/site/date
   const shouldShowNotification = (
@@ -94,20 +71,22 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
     return score.overallScore >= settings.notifications.minScoreThreshold;
   };
 
-  // Find today's best site (highest score)
-  const todayDate = dates[0];
+  // Today's best site: a flyable window first, then soaring quality
   const bestSiteToday =
     data.length >= 2
       ? data.reduce<{
           siteData: SiteForecastData;
           score: DayScore;
-          siteType: string;
-          slug?: string;
         } | null>((best, item) => {
-          const todayScore = item.scores.find((s) => s.date === todayDate);
-          if (!todayScore) return best;
-          if (!best || todayScore.overallScore > best.score.overallScore) {
-            return { siteData: item, score: todayScore, siteType: item.siteType, slug: item.slug };
+          const todayScore = item.scores.find((s) => s.date === item.today);
+          if (!todayScore || todayScore.verdict === 'no') return best;
+          if (
+            !best ||
+            VERDICT_RANK[todayScore.verdict] > VERDICT_RANK[best.score.verdict] ||
+            (todayScore.verdict === best.score.verdict &&
+              todayScore.overallScore > best.score.overallScore)
+          ) {
+            return { siteData: item, score: todayScore };
           }
           return best;
         }, null)
@@ -116,48 +95,35 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
   return (
     <div className="space-y-4">
       {/* Today's Best banner */}
-      {bestSiteToday && bestSiteToday.score.overallScore >= 31 && (
+      {bestSiteToday && (
         <div className="rounded-lg bg-gradient-to-r from-sky-100 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/20 p-4 border border-sky-200 dark:border-sky-800">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400">
               Today&apos;s Best
             </span>
             <Link
-              to={
-                bestSiteToday.siteType === 'launch' && bestSiteToday.slug
-                  ? `/sites/${bestSiteToday.slug}`
-                  : `/sites/custom/${bestSiteToday.siteData.site.id}`
-              }
+              to={siteHref(
+                bestSiteToday.siteData.siteType,
+                bestSiteToday.siteData.slug,
+                bestSiteToday.siteData.site.id,
+              )}
               className="font-semibold text-foreground hover:underline"
             >
               {bestSiteToday.siteData.site.name}
             </Link>
             <span
-              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                bestSiteToday.score.overallScore >= 86
-                  ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                  : bestSiteToday.score.overallScore >= 71
-                    ? 'bg-lime-500/20 text-lime-700 dark:text-lime-400'
-                    : bestSiteToday.score.overallScore >= 51
-                      ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
-                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-400'
-              }`}
+              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${VERDICT_BADGE[bestSiteToday.score.verdict]}`}
             >
-              {bestSiteToday.score.overallScore} {bestSiteToday.score.label}
+              {VERDICT_WORD[bestSiteToday.score.verdict]} {bestSiteToday.score.flyableWindow}
             </span>
             {bestSiteToday.score.wStar != null && bestSiteToday.score.wStar > 0 && (
               <span className="text-xs text-muted-foreground">
-                W* {bestSiteToday.score.wStar.toFixed(1)} m/s
-              </span>
-            )}
-            {bestSiteToday.score.bestWindow && (
-              <span className="text-xs text-muted-foreground">
-                {bestSiteToday.score.bestWindow}
+                Thermals {bestSiteToday.score.wStar.toFixed(1)} m/s
               </span>
             )}
             {bestSiteToday.score.odRisk && bestSiteToday.score.odRisk !== 'none' && (
               <span className="text-xs text-orange-600 dark:text-orange-400">
-                OD: {bestSiteToday.score.odRisk}
+                Overdevelopment: {bestSiteToday.score.odRisk}
               </span>
             )}
           </div>
@@ -167,23 +133,17 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">7-Day Flying Forecast</h1>
+          <h1 className="text-3xl font-bold">Your week</h1>
           <p className="text-muted-foreground mt-1">
-            Select a site to see its full windgram and hourly data
+            When each of your sites is flyable. Open a site for its windgram.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="lg" asChild>
-            <Link to="/sites/custom/new">
-              <MapPinPlus className="mr-2 h-4 w-4" />
-              Add your own site
-            </Link>
-          </Button>
-          <Button onClick={handleRefresh} disabled={isPending} size="lg">
-            <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
-            {isPending ? 'Refreshing...' : 'Refresh All'}
-          </Button>
-        </div>
+        <Button variant="outline" size="lg" asChild>
+          <Link to="/sites/custom/new">
+            <MapPinPlus className="mr-2 h-4 w-4" />
+            Add your own site
+          </Link>
+        </Button>
       </div>
 
       {/* Tabbed View: Cards (default) vs Table */}
@@ -202,8 +162,16 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
         {/* Card View */}
         <TabsContent value="cards" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.map(({ site, scores, siteType, slug }) => (
-              <SiteCard key={site.id} site={site} scores={scores} siteType={siteType} slug={slug} />
+            {data.map(({ site, scores, today, siteType, slug, error }) => (
+              <SiteCard
+                key={site.id}
+                site={site}
+                scores={scores}
+                today={today}
+                siteType={siteType}
+                slug={slug}
+                error={error}
+              />
             ))}
           </div>
         </TabsContent>
@@ -218,17 +186,17 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
                     Site
                   </th>
                   {dates.map((date) => (
-                    <th key={date} className="py-3 px-2 text-center font-semibold min-w-[100px]">
-                      <div className="text-sm">{formatDate(date)}</div>
+                    <th key={date} className="py-3 px-1 text-center font-semibold min-w-[76px]">
+                      <div className="text-sm">{dayName(date, today)}</div>
                       <div className="text-xs text-muted-foreground font-normal">
-                        {date.substring(5)}
+                        {shortDate(date)}
                       </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {data.map(({ site, scores, siteType, slug }) => {
+                {data.map(({ site, scores, siteType, slug, error }) => {
                   const href = siteHref(siteType, slug, site.id);
                   return (
                     <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
@@ -236,7 +204,7 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
                         <Link to={href} className="block hover:text-primary">
                           <div className="font-semibold">{site.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {site.elevation}m • {site.maxWindSpeed}km/h max
+                            {error ?? `${site.elevation}m • ${site.maxWindSpeed}km/h max`}
                           </div>
                         </Link>
                       </td>
@@ -244,11 +212,10 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
                         const score = scores.find((s) => s.date === date) || null;
                         const showNotification = shouldShowNotification(score, site.id, dateIndex);
                         return (
-                          <td key={date} className="py-2 px-2">
-                            <ScoreCell
+                          <td key={date} className="py-2 px-1">
+                            <VerdictCell
                               score={score}
                               showNotification={showNotification}
-                              wStar={score?.wStar}
                               href={score ? href : undefined}
                             />
                           </td>
@@ -263,21 +230,7 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
         </TabsContent>
       </Tabs>
 
-      {/* Error Messages */}
-      {data.some((d) => d.error) && (
-        <div className="mt-4 p-4 border border-destructive/50 bg-destructive/10 rounded-lg">
-          <h3 className="font-semibold text-destructive mb-2">Errors fetching forecasts:</h3>
-          <ul className="space-y-1 text-sm">
-            {data
-              .filter((d) => d.error)
-              .map((d) => (
-                <li key={d.site.id} className="text-destructive">
-                  <span className="font-medium">{d.site.name}:</span> {d.error}
-                </li>
-              ))}
-          </ul>
-        </div>
-      )}
+      <ForecastCredit />
     </div>
   );
 }

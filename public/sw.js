@@ -1,9 +1,12 @@
 // Service Worker for SoarCast
 // Handles push notifications and PWA functionality
-// Strategy: network-first for HTML/pages, cache-first for hashed static assets only
+// Strategy: network-first for pages and forecasts (a cached copy only when
+// offline), cache-first for hashed static assets only
 
 const CACHE_NAME = 'soarcast-v4';
-const API_CACHE_NAME = 'soarcast-api-v2';
+// v3: the cache is a fallback for offline use only; dropping v2 discards
+// forecasts that were served stale first.
+const API_CACHE_NAME = 'soarcast-api-v3';
 
 // Only cache truly static assets (icons, fonts — things that never change)
 const STATIC_ASSETS = ['/icon-192.svg', '/icon-512.svg', '/manifest.json'];
@@ -43,25 +46,20 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // API: stale-while-revalidate for weather/sites
-  const isApiRequest =
-    url.pathname.startsWith('/api/weather/profile') || url.pathname.startsWith('/api/sites');
-
-  if (isApiRequest) {
+  // Forecasts: network-first, so a pilot never sees yesterday's forecast
+  // while online; the last good copy is kept for when there's no signal.
+  if (url.pathname.startsWith('/api/weather/profile')) {
     event.respondWith(
-      caches.open(API_CACHE_NAME).then((cache) => {
-        return cache.match(event.request).then((cachedResponse) => {
-          const fetchPromise = fetch(event.request)
-            .then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
-                cache.put(event.request, networkResponse.clone());
-              }
-              return networkResponse;
-            })
-            .catch(() => cachedResponse);
-          return cachedResponse || fetchPromise;
-        });
-      }),
+      caches.open(API_CACHE_NAME).then((cache) =>
+        fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => cache.match(event.request).then((cached) => cached || Response.error())),
+      ),
     );
     return;
   }

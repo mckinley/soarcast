@@ -2,22 +2,28 @@
 // verdicts so alerts say the same thing as the dashboard and site pages.
 
 import type { AtmosphericProfile } from './weather-profile';
-import type { Site } from '@/types';
-import { evaluateDays, launchProfileFromSite } from './forecast-engine';
+import type { DayScore, Site } from '@/types';
+import { evaluateDays, launchProfileFromSite, verdictSummary } from './forecast-engine';
+import { addDays } from './alert-schedule';
 
-/**
- * Analyzes a single day's atmospheric conditions and generates a plain-language notification
- */
+/** One day at one site, as alerts describe it. */
 export interface DayAnalysis {
   date: string; // YYYY-MM-DD
-  rating: 'Poor' | 'Fair' | 'Good' | 'Great' | 'Epic';
-  score: number; // 0-100
+  verdict: DayScore['verdict'];
+  /** Quality label and score: only for alert thresholds, never shown */
+  rating: DayScore['label'];
+  score: number;
   bestWindow: string | null; // flyable window, e.g. "11:00-16:00"
+  limitingFactor: string | null;
   concerns: string[]; // e.g., ["Wind 31 km/h (limit 25), 13:00-17:00"]
+  /** A hazard inside the flyable window: overdevelopment or strong shear */
+  hazard: string | null;
   highlights: string[]; // e.g., ["Thermals to about 2.4 m/s"]
-  thermalStrength: string | null; // e.g., "moderate" | "strong" | "weak"
-  cloudBase: string | null; // e.g., "~5000ft AGL"
-  topOfLift: string | null; // e.g., "~8000ft MSL"
+  wStar: number | null;
+  /** Top of lift above launch, feet */
+  liftAboveLaunchFt: number | null;
+  /** Plain-language verdict, as the site page words it */
+  summary: string;
 }
 
 /**
@@ -34,13 +40,6 @@ export interface RichNotification {
 
 const FEET_PER_METER = 3.28084;
 
-function classifyThermalStrength(wStar: number | null | undefined): string | null {
-  if (wStar == null || wStar <= 0) return null;
-  if (wStar < 1) return 'weak';
-  if (wStar < 2) return 'moderate';
-  return 'strong';
-}
-
 /**
  * Summarizes one day at a site for an alert, from the forecast engine's verdict.
  */
@@ -52,182 +51,133 @@ export function analyzeFlyingDay(
   const day = evaluateDays(profile, launchProfileFromSite(site)).find((d) => d.date === targetDate);
   if (!day) return null;
 
+  const liftAboveLaunchFt =
+    day.topOfLiftAboveLaunch && day.topOfLiftAboveLaunch > 0
+      ? Math.round(day.topOfLiftAboveLaunch * FEET_PER_METER)
+      : null;
   const highlights: string[] = [];
   if (day.wStar) highlights.push(`Thermals to about ${day.wStar.toFixed(1)} m/s`);
-  if (day.topOfLiftAboveLaunch && day.topOfLiftAboveLaunch > 0) {
-    highlights.push(
-      `Lift to ~${Math.round(day.topOfLiftAboveLaunch * FEET_PER_METER).toLocaleString('en-US')}ft above launch`,
-    );
+  if (liftAboveLaunchFt) {
+    highlights.push(`Lift to ~${liftAboveLaunchFt.toLocaleString('en-US')}ft above launch`);
   }
 
-  const concerns = [...day.reasons];
-  if (day.odRisk === 'high' || day.odRisk === 'moderate') {
-    concerns.unshift(`Overdevelopment risk (${day.odRisk})`);
-  }
-  if (day.windShear === 'high') concerns.push('High wind shear');
+  const hazard =
+    day.odRisk === 'high' || day.odRisk === 'moderate'
+      ? `Overdevelopment risk (${day.odRisk})`
+      : day.windShear === 'high'
+        ? 'High wind shear'
+        : null;
+  const concerns = hazard ? [hazard, ...day.reasons] : [...day.reasons];
 
   return {
     date: targetDate,
+    verdict: day.verdict,
     rating: day.label,
     score: day.overallScore,
     bestWindow: day.flyableWindow,
+    limitingFactor: day.limitingFactor,
     concerns,
+    hazard,
     highlights,
-    thermalStrength: classifyThermalStrength(day.wStar),
-    cloudBase: null,
-    topOfLift: day.peakCeilingMsl
-      ? `~${Math.round(day.peakCeilingMsl * FEET_PER_METER).toLocaleString('en-US')}ft MSL`
-      : null,
+    wStar: day.wStar ?? null,
+    liftAboveLaunchFt,
+    summary: verdictSummary(day),
   };
 }
 
 /**
- * Generates a plain-language notification from day analysis
+ * The push alert for a flyable day at one site.
+ * @param url - the site's page, e.g. /sites/tiger-mountain--<uuid>
+ * @param today - the pilot's local date (YYYY-MM-DD), so "today" and "tomorrow" are theirs
  */
-export function generateNotification(site: Site, analysis: DayAnalysis): RichNotification {
-  const { rating, date, bestWindow, highlights, concerns } = analysis;
+export function generateNotification(
+  site: Site,
+  analysis: DayAnalysis,
+  url: string,
+  today: string,
+): RichNotification {
+  const { date, bestWindow, highlights, concerns, verdict } = analysis;
+  const when = formatDateLabel(date, today);
+  const word = verdict === 'go' ? 'Flyable' : verdict === 'marginal' ? 'Marginal' : 'Not flyable';
 
-  // Format date as "tomorrow" or "Wednesday"
-  const dateLabel = formatDateLabel(date);
-
-  // Build title
-  const title = `${rating} Flying Day: ${site.name}`;
-
-  // Build body with key information
   const parts: string[] = [];
-
-  // Add date and rating
-  parts.push(`${site.name} looks ${rating} ${dateLabel}!`);
-
-  // Add best window if available
-  if (bestWindow) {
-    parts.push(`Flyable ${bestWindow}.`);
-  }
-
-  // Add top highlights (max 2)
-  const topHighlights = highlights.slice(0, 2);
-  if (topHighlights.length > 0) {
-    parts.push(topHighlights.join(', ') + '.');
-  }
-
-  // Add key concerns (max 1)
-  if (concerns.length > 0) {
-    parts.push(`⚠️ ${concerns[0]}.`);
-  }
-
-  // Add cloud base if available
-  if (analysis.cloudBase) {
-    parts.push(`Cloud base ${analysis.cloudBase}.`);
-  }
-
-  const body = parts.join(' ');
+  if (highlights.length > 0) parts.push(`${highlights.slice(0, 2).join(', ')}.`);
+  const watch = verdict === 'go' ? analysis.hazard : concerns[0];
+  if (watch) parts.push(`Watch for: ${watch}.`);
 
   return {
-    title,
-    body,
-    url: `/sites/${site.id}`,
+    title: `${site.name}: ${word} ${when}${bestWindow ? ` ${bestWindow}` : ''}`,
+    body: parts.join(' ') || analysis.summary,
+    url,
     siteId: site.id,
     tag: `site-${site.id}-${date}`,
     analysis,
   };
 }
 
-/**
- * Formats date as "tomorrow", "today", or day name
- */
-function formatDateLabel(dateStr: string): string {
-  const target = new Date(dateStr + 'T12:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const targetTime = target.getTime();
-  const todayTime = today.getTime();
-  const tomorrowTime = tomorrow.getTime();
-
-  if (targetTime === todayTime) {
-    return 'today';
-  } else if (targetTime === tomorrowTime) {
-    return 'tomorrow';
-  } else {
-    // Return day name (e.g., "Wednesday")
-    return target.toLocaleDateString('en-US', { weekday: 'long' });
-  }
+/** "today", "tomorrow" or a weekday, for `dateStr` relative to the pilot's `today`. */
+export function formatDateLabel(dateStr: string, today: string): string {
+  if (dateStr === today) return 'today';
+  if (dateStr === addDays(today, 1)) return 'tomorrow';
+  return new Date(`${dateStr}T12:00:00Z`).toLocaleDateString('en-US', {
+    weekday: 'long',
+    timeZone: 'UTC',
+  });
 }
 
 /**
- * Generates a morning digest notification summarizing all favorited sites
+ * The morning push: which of the pilot's sites are flyable today, best first.
  */
 export function generateMorningDigest(
   analyses: Array<{ site: Site; analysis: DayAnalysis }>,
   targetDate: string,
 ): RichNotification {
-  // Filter to sites with Good or better rating
-  const goodSites = analyses.filter((a) => ['Good', 'Great', 'Epic'].includes(a.analysis.rating));
+  const flyable = analyses
+    .filter((a) => a.analysis.verdict === 'go')
+    .sort((a, b) => b.analysis.score - a.analysis.score);
+  const marginal = analyses.filter((a) => a.analysis.verdict === 'marginal');
 
-  // Sort by score (best first)
-  goodSites.sort((a, b) => b.analysis.score - a.analysis.score);
-
-  const dateLabel = formatDateLabel(targetDate);
-
-  if (goodSites.length === 0) {
+  if (flyable.length === 0) {
     return {
-      title: 'Daily Flying Forecast',
-      body: `No great flying conditions ${dateLabel}. Check individual sites for details.`,
+      title: 'Not flyable today',
+      body:
+        marginal.length > 0
+          ? `Marginal at ${marginal
+              .slice(0, 3)
+              .map((m) => m.site.name)
+              .join(', ')}. ${marginal[0].analysis.limitingFactor ?? ''}`.trim()
+          : `None of your ${analyses.length} sites has a flyable window.`,
       url: '/dashboard',
       siteId: 'digest',
       tag: `digest-${targetDate}`,
-      analysis: {
-        date: targetDate,
-        rating: 'Poor',
-        score: 0,
-        bestWindow: null,
-        concerns: [],
-        highlights: [],
-        thermalStrength: null,
-        cloudBase: null,
-        topOfLift: null,
-      },
+      analysis: (marginal[0] ?? analyses[0]).analysis,
     };
   }
 
-  // Build summary
-  const topSite = goodSites[0];
-  const title =
-    goodSites.length === 1
-      ? `${topSite.analysis.rating} Flying ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}`
-      : `${goodSites.length} Sites Look Good ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}`;
-
-  const parts: string[] = [];
-
-  // Add top site summary
-  parts.push(`${topSite.site.name}: ${topSite.analysis.rating} (${topSite.analysis.score}/100).`);
-
-  if (topSite.analysis.bestWindow) {
-    parts.push(`Flyable ${topSite.analysis.bestWindow}.`);
+  const top = flyable[0];
+  const parts = [
+    `${top.site.name} ${top.analysis.bestWindow}${
+      top.analysis.highlights[0] ? `, ${top.analysis.highlights[0].toLowerCase()}` : ''
+    }.`,
+  ];
+  if (flyable.length > 1) {
+    parts.push(
+      `Also flyable: ${flyable
+        .slice(1, 4)
+        .map((s) => `${s.site.name} ${s.analysis.bestWindow}`)
+        .join(', ')}.`,
+    );
   }
-
-  // Add top highlights from the best site
-  if (topSite.analysis.highlights.length > 0) {
-    parts.push(topSite.analysis.highlights[0] + '.');
-  }
-
-  // Mention other good sites
-  if (goodSites.length > 1) {
-    const otherSites = goodSites.slice(1, 3).map((s) => s.site.name);
-    parts.push(`Also good: ${otherSites.join(', ')}.`);
-  }
-
-  const body = parts.join(' ');
 
   return {
-    title,
-    body,
+    title:
+      flyable.length === 1
+        ? `Flyable today at ${top.site.name}`
+        : `Flyable today at ${flyable.length} of your sites`,
+    body: parts.join(' '),
     url: '/dashboard',
     siteId: 'digest',
     tag: `digest-${targetDate}`,
-    analysis: topSite.analysis,
+    analysis: top.analysis,
   };
 }

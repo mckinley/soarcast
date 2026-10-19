@@ -13,6 +13,7 @@ import {
   nearbySites,
   getPgsitesApiKey,
   getSiteById,
+  pgsitesSlug,
   type PgSite,
 } from '~/lib/pgsites-client';
 
@@ -32,19 +33,11 @@ export function meta() {
   ];
 }
 
-function generateSlug(name: string, id: string): string {
-  const nameSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${nameSlug}--${id}`;
-}
-
 function pgSiteToBrowseSite(site: PgSite): BrowseSite {
   return {
     id: site.id,
     name: site.name,
-    slug: generateSlug(site.name, site.id),
+    slug: pgsitesSlug(site.name, site.id),
     countryCode: site.country_code || null,
     region: null,
     latitude: site.latitude,
@@ -204,7 +197,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           return Response.json({ error: 'Site not found' }, { status: 404 });
         }
 
-        const slug = generateSlug(pgSite.name, pgSite.id);
+        const slug = pgsitesSlug(pgSite.name, pgSite.id);
         const id = crypto.randomUUID();
 
         await db.insert(launchSites).values({

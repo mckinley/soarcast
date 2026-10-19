@@ -6,22 +6,26 @@ import { DashboardClient } from '@/components/dashboard-client';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import { userFavoriteSites, customSites, launchSites, settings } from '~/db/schema';
 import { eq, asc } from 'drizzle-orm';
-import { getSitesByCountry, getPgsitesApiKey } from '~/lib/pgsites-client';
-import { getForecast, fetchAllForecasts, setWeatherDb } from '~/lib/weather';
+import { nearbySites, getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
 import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
-import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
-import type { Site, Forecast, DayScore } from '~/types';
+import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
+import { mapWithConcurrency } from '~/lib/utils';
+import type { Site, DayScore } from '~/types';
 import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import { customSiteToSite } from '~/lib/custom-sites';
 
 export interface SiteForecastData {
   site: Site;
-  forecast: Forecast | null;
   scores: DayScore[];
+  /** Today's date where the site is (YYYY-MM-DD) */
+  today: string;
   siteType: 'launch' | 'custom';
   slug?: string;
   error?: string;
 }
+
+/** Forecasts fetched at once: Open-Meteo rate-limits bursts. */
+const FORECAST_CONCURRENCY = 4;
 
 export function meta() {
   return [{ title: 'Dashboard | SoarCast' }];
@@ -33,8 +37,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = getDb(env);
   const userId = session.user.id;
 
-  // Initialize weather/profile DBs for this request
-  setWeatherDb(db);
   setProfileDb(db);
 
   // Fetch favorites, custom sites, settings, and onboarding status in parallel
@@ -82,38 +84,33 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];
 
-  // Fetch forecasts and scores for all sites
-  const data: SiteForecastData[] = await Promise.all(
-    allSites.map(async (site) => {
+  // Day verdicts for every site, a few at a time
+  const data: SiteForecastData[] = await mapWithConcurrency(
+    allSites,
+    FORECAST_CONCURRENCY,
+    async (site) => {
       const meta = siteMetadata.get(site.id)!;
       try {
-        // A failed profile still leaves the forecast to show, just without verdicts
-        const [forecastResult, profileResult] = await Promise.all([
-          getForecast(site.id, site.latitude, site.longitude, meta.siteType),
-          getAtmosphericProfile(site.latitude, site.longitude, 7).catch(() => null),
-        ]);
-        const scores: DayScore[] = profileResult
-          ? evaluateDays(profileResult.profile, launchProfileFromSite(site))
-          : [];
-
+        const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
         return {
           site,
-          forecast: forecastResult.forecast,
-          scores,
+          scores: evaluateDays(profile, launchProfileFromSite(site)),
+          today: profileToday(profile),
           siteType: meta.siteType,
           slug: meta.slug,
         };
       } catch (error) {
+        console.error(`Forecast for ${site.name} failed:`, error);
         return {
           site,
-          forecast: null,
           scores: [],
+          today: new Date().toISOString().slice(0, 10),
           siteType: meta.siteType,
           slug: meta.slug,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: 'The forecast service is busy. Reload in a minute.',
         };
       }
-    }),
+    },
   );
 
   // Get popular sites for onboarding from pgsites API
@@ -127,20 +124,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!onboardingCompleted) {
     try {
       const apiKey = getPgsitesApiKey(env);
-      const result = await getSitesByCountry(apiKey, 'US', 5);
-      popularSites = result.sites.map((s) => {
-        const nameSlug = s.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-        return {
-          id: s.id,
-          name: s.name,
-          slug: `${nameSlug}-${s.id.slice(0, 8)}`,
-          region: null,
-          elevation: s.altitude,
-        };
-      });
+      // SoarCast's pilots are around Seattle so far: suggest launches within 150 km
+      const sites = await nearbySites(apiKey, 47.5, -121.8, 150, 5);
+      popularSites = sites.map((s) => ({
+        id: s.id,
+        name: s.name,
+        slug: pgsitesSlug(s.name, s.id),
+        region: null,
+        elevation: s.altitude,
+      }));
     } catch {
       // Fallback to local DB if API fails
       popularSites = await db
@@ -191,54 +183,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get('intent');
 
-  setWeatherDb(db);
-
   switch (intent) {
-    case 'refreshForecasts': {
-      try {
-        const [userCustomSites, favorites] = await Promise.all([
-          db.query.customSites.findMany({ where: eq(customSites.userId, userId) }),
-          db
-            .select({ favorite: userFavoriteSites, site: launchSites })
-            .from(userFavoriteSites)
-            .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId))
-            .where(eq(userFavoriteSites.userId, userId)),
-        ]);
-
-        const allSites = [
-          ...userCustomSites.map((s) => ({
-            id: s.id,
-            latitude: parseFloat(s.latitude),
-            longitude: parseFloat(s.longitude),
-            siteType: 'custom' as const,
-          })),
-          ...favorites.map((f) => ({
-            id: f.site.id,
-            latitude: f.site.latitude,
-            longitude: f.site.longitude,
-            siteType: 'launch' as const,
-          })),
-        ];
-
-        if (allSites.length === 0) {
-          return { success: false, message: 'No sites configured' };
-        }
-
-        await fetchAllForecasts(allSites);
-        return { success: true, message: `Refreshed forecasts for ${allSites.length} site(s)` };
-      } catch (error) {
-        return {
-          success: false,
-          message: error instanceof Error ? error.message : 'Failed to refresh forecasts',
-        };
-      }
-    }
-
     case 'completeOnboarding': {
+      // Pilots who signed up before settings rows were created at sign-up have none
       await db
-        .update(settings)
-        .set({ onboardingCompleted: true, updatedAt: new Date() })
-        .where(eq(settings.userId, userId));
+        .insert(settings)
+        .values({ userId, onboardingCompleted: true })
+        .onConflictDoUpdate({
+          target: settings.userId,
+          set: { onboardingCompleted: true, updatedAt: new Date() },
+        });
       return { success: true };
     }
 

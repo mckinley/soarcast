@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from './db.server';
 import { user, session, account, verification } from '@/db/auth-schema';
+import { settings } from '@/db/schema';
 
 // Better Auth factory - creates an auth instance with the given env
 // Called per-request since CF Workers pass env through context
@@ -24,6 +25,16 @@ export function createAuth(env: Env) {
       github: {
         clientId: env.AUTH_GITHUB_ID,
         clientSecret: env.AUTH_GITHUB_SECRET,
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Every pilot gets a settings row at sign-up: onboarding and alerts read it
+          after: async (newUser) => {
+            await db.insert(settings).values({ userId: newUser.id }).onConflictDoNothing();
+          },
+        },
       },
     },
     session: {

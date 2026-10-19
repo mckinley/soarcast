@@ -35,6 +35,8 @@ interface WindgramInteractiveProps {
    * Array should match the days in the atmospheric profile data.
    */
   dayScores?: DayScore[];
+  /** Today's date where the site is (YYYY-MM-DD); the chart opens on it */
+  today?: string;
   loading?: boolean;
   className?: string;
   /**
@@ -51,6 +53,7 @@ interface WindgramInteractiveProps {
 export function WindgramInteractive({
   data,
   dayScores = [],
+  today,
   loading = false,
   className = '',
   launchElevation,
@@ -61,37 +64,21 @@ export function WindgramInteractive({
   const days = useMemo(() => {
     if (!data) return [];
 
-    const dayMap = new Map<string, { date: string; hours: typeof data.hours }>();
-
+    // Hour times are local to the site, so their date part is the site's day
+    const dayMap = new Map<string, typeof data.hours>();
     for (const hour of data.hours) {
-      const date = hour.time.split('T')[0]; // YYYY-MM-DD format to match DayScore.date
-      const dayKey = new Date(hour.time).toDateString();
-
-      if (!dayMap.has(dayKey)) {
-        dayMap.set(dayKey, { date, hours: [] });
-      }
-      dayMap.get(dayKey)!.hours.push(hour);
+      const date = hour.time.slice(0, 10);
+      if (!dayMap.has(date)) dayMap.set(date, []);
+      dayMap.get(date)!.push(hour);
     }
-
-    return Array.from(dayMap.entries()).map(([dayKey, { date, hours }]) => ({
-      date: new Date(dayKey),
-      dateString: date, // YYYY-MM-DD for matching with DayScore
-      hours,
-    }));
+    return Array.from(dayMap.entries()).map(([dateString, hours]) => ({ dateString, hours }));
   }, [data]);
 
-  // Calculate the default day index (today if available, otherwise first day)
+  // Open on the site's today when the profile has it, else its first day
   const defaultDayIndex = useMemo(() => {
-    if (!days.length) return 0;
-
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
-
-    const todayIndex = days.findIndex((day) => day.dateString === todayString);
-
-    // If today is found, use it; otherwise use first available day
+    const todayIndex = today ? days.findIndex((day) => day.dateString === today) : -1;
     return todayIndex >= 0 ? todayIndex : 0;
-  }, [days]);
+  }, [days, today]);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(defaultDayIndex);
 
@@ -147,7 +134,11 @@ export function WindgramInteractive({
       {/* Day selector */}
       {days.length > 1 && (
         <WindgramDaySelector
-          days={days.map((d) => d.date)}
+          days={days.map((d) => ({
+            date: d.dateString,
+            score: dayScores.find((score) => score.date === d.dateString),
+          }))}
+          today={today ?? days[0].dateString}
           selectedDayIndex={selectedDayIndex}
           onDayChange={setSelectedDayIndex}
           className="mb-4"

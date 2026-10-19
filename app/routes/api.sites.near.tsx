@@ -1,15 +1,7 @@
 import type { LoaderFunctionArgs } from 'react-router';
-import { nearbySites, getPgsitesApiKey } from '~/lib/pgsites-client';
+import { nearbySites, getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
 
 // Resource route — no default export.
-
-function generateSlug(name: string, id: string): string {
-  const nameSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${nameSlug}--${id}`;
-}
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
   const env = context.cloudflare.env as Env;
@@ -32,7 +24,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const sites = pgSites.map((s) => ({
     id: s.id,
     name: s.name,
-    slug: generateSlug(s.name, s.id),
+    slug: pgsitesSlug(s.name, s.id),
     countryCode: s.country_code || null,
     region: null as null,
     latitude: s.latitude,

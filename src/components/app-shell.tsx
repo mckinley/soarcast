@@ -230,8 +230,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <AppSidebar />
         </div>
 
-        {/* Main Content */}
-        <div className="flex flex-1 flex-col">
+        {/* Main Content. min-w-0 lets it shrink below its widest child (the
+            windgram, wide tables), which otherwise pushes the page past the
+            phone's edge where the sidebar wrapper clips it. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Header */}
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
             <MobileNav />

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { WindgramInteractive } from './windgram';
 import { Card } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import { ForecastCredit } from './data-credits';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import type { DayScore } from '@/types';
 
@@ -16,6 +17,8 @@ interface WindgramSectionProps {
   latitude: number;
   longitude: number;
   scores: DayScore[];
+  /** Today's date where the site is (YYYY-MM-DD), so the chart opens on it */
+  today?: string;
   days?: number;
   /**
    * Optional launch elevation in meters MSL.
@@ -32,6 +35,7 @@ export function WindgramSection({
   latitude,
   longitude,
   scores,
+  today,
   days = 7,
   launchElevation,
 }: WindgramSectionProps) {
@@ -100,8 +104,8 @@ export function WindgramSection({
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-700 dark:text-red-400">
-        <p className="font-medium">Error loading windgram</p>
-        <p className="text-sm">{error}</p>
+        <p className="font-medium">Windgram unavailable right now</p>
+        <p className="text-sm">The forecast service is busy. Reload the page in a minute.</p>
       </div>
     );
   }
@@ -127,8 +131,10 @@ export function WindgramSection({
         key={profile?.fetchedAt}
         data={profile}
         dayScores={scores}
+        today={today}
         launchElevation={launchElevation}
       />
+      <ForecastCredit />
     </div>
   );
 }

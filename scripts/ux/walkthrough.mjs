@@ -56,19 +56,27 @@ async function clickTabs(page, shoot) {
 }
 
 async function sitePage(page, shoot) {
-  await clickTabs(page, shoot);
-  const windgram = page.getByRole('tab', { name: 'Windgram', exact: true }).first();
-  if (await windgram.count()) {
-    await windgram.click();
-    await page.waitForTimeout(800);
-  }
-  // A day later in the week, from the windgram's day picker
-  const later = page.getByRole('button', { name: /^(Sat|Sun)/ }).first();
+  // A day later in the week, from the windgram's day tabs
+  const later = page.getByRole('tab', { name: /^(Sat|Sun)/ }).first();
   if (await later.count()) {
+    await later.scrollIntoViewIfNeeded();
     await later.click();
     await page.waitForTimeout(1500);
     await shoot('later-day', { fromElement: later });
   }
+}
+
+// A new pilot closes the welcome card; it must stay closed after a reload
+async function dismissOnboarding(page, shoot) {
+  const close = page.getByRole('button', { name: 'Dismiss onboarding' });
+  if (!(await close.count())) return;
+  await close.click();
+  await page.waitForTimeout(1500);
+  await page.reload({ waitUntil: 'networkidle' }).catch(() => {});
+  await page.waitForTimeout(1500);
+  const stillThere = await page.getByRole('button', { name: 'Dismiss onboarding' }).count();
+  console.log(`onboarding after dismiss and reload: ${stillThere ? 'STILL SHOWN' : 'gone'}`);
+  await shoot('after-dismiss');
 }
 
 function prodPages() {
@@ -132,7 +140,13 @@ function localPages() {
     },
     { name: 'settings', path: '/settings', user: 'ux-pilot' },
     { name: 'browse-signed-in', path: '/sites/browse', user: 'ux-pilot', settle: 4000 },
-    { name: 'new-user-dashboard', path: '/dashboard', user: 'ux-newbie' },
+    { name: 'missing-page', path: '/sites/not-a-real-site-xyz', user: 'ux-pilot' },
+    {
+      name: 'new-user-dashboard',
+      path: '/dashboard',
+      user: 'ux-newbie',
+      actions: dismissOnboarding,
+    },
   ];
 }
 
