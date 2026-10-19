@@ -119,7 +119,15 @@ export async function getAllSites(
   return fetchApi<{ sites: PgSite[]; total: number }>(apiKey, '/api/sites', params);
 }
 
-/** Get the pgsites API key from the Cloudflare Worker environment. */
+/** The site page slug for a pgsites site: name, then `--` and its UUID (see sites.$slug). */
+export function pgsitesSlug(name: string, id: string): string {
+  const nameSlug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${nameSlug}--${id}`;
+}
+
 /** pgsites' sync progress; `last_modified_check` is the YYYYMMDD of the last daily sync. */
 export async function getSyncStatus(
   apiKey: string,
@@ -127,6 +135,7 @@ export async function getSyncStatus(
   return fetchApi(apiKey, '/api/sync/status');
 }
 
+/** Get the pgsites API key from the Cloudflare Worker environment. */
 export function getPgsitesApiKey(env: { PGSITES_API_KEY?: string }): string {
   return env.PGSITES_API_KEY || '';
 }

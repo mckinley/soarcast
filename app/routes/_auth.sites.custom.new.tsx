@@ -1,0 +1,61 @@
+import { data, Link, redirect, useActionData } from 'react-router';
+import type { Route } from './+types/_auth.sites.custom.new';
+import { getDb } from '~/app/lib/db.server';
+import { requireAuth } from '~/app/lib/auth.server';
+import {
+  customSiteValues,
+  ELEVATION_LOOKUP_ERROR,
+  resolveElevation,
+} from '~/app/lib/custom-sites.server';
+import { customSites } from '~/db/schema';
+import { parseCustomSiteForm, type CustomSiteErrors } from '~/lib/custom-sites';
+import { CustomSiteForm } from '@/components/custom-site-form';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+
+export function meta() {
+  return [{ title: 'Add your own site | SoarCast' }];
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const env = context.cloudflare.env as Env;
+  const session = await requireAuth(request, env);
+  const { input, errors } = parseCustomSiteForm(await request.formData());
+  if (Object.keys(errors).length > 0) return data({ errors }, { status: 400 });
+
+  const elevation = await resolveElevation(input);
+  if (elevation === null) {
+    return data(
+      { errors: { elevation: ELEVATION_LOOKUP_ERROR } as CustomSiteErrors },
+      { status: 400 },
+    );
+  }
+
+  const [site] = await getDb(env)
+    .insert(customSites)
+    .values({ userId: session.user.id, ...customSiteValues(input, elevation) })
+    .returning({ id: customSites.id });
+  return redirect(`/sites/custom/${site.id}`);
+}
+
+export default function NewCustomSitePage() {
+  const actionData = useActionData<typeof action>();
+  return (
+    <div className="max-w-3xl space-y-6">
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/dashboard">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Add your own site</h1>
+        <p className="text-muted-foreground mt-1">
+          Pin a launch that isn&apos;t listed, like a hike-and-fly peak. Only you can see it, and
+          SoarCast rates it and sends alerts for it like any site you follow.
+        </p>
+      </div>
+      <CustomSiteForm errors={actionData?.errors} submitLabel="Add site" cancelHref="/dashboard" />
+    </div>
+  );
+}

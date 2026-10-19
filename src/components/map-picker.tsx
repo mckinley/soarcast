@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { VectorBasemap } from '@/components/vector-basemap';
 import { Icon } from 'leaflet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { LocateFixed } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icon in Next.js
-// Leaflet's default icon paths don't work with webpack
+// Leaflet's default icon paths don't survive bundling
 const markerIcon = new Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -20,119 +20,117 @@ const markerIcon = new Icon({
   shadowSize: [41, 41],
 });
 
-interface MapPickerProps {
+// North Bend, WA: where SoarCast's pilots are so far
+const DEFAULT_CENTER: [number, number] = [47.4829, -121.941];
+const PIN_ZOOM = 14;
+
+export interface MapFocus {
   latitude: number;
   longitude: number;
-  onLocationSelect: (lat: number, lng: number) => void;
 }
 
-/**
- * Component that handles map clicks to select a location
- */
-function LocationMarker({
-  position,
-  onLocationSelect,
-}: {
-  position: [number, number];
+interface MapPickerProps {
+  latitude: number | null;
+  longitude: number | null;
   onLocationSelect: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-
-  return position[0] !== 0 || position[1] !== 0 ? (
-    <Marker position={position} icon={markerIcon} />
-  ) : null;
+  /** Set to move the map to a place (search result, typed coordinates) */
+  focus?: MapFocus | null;
 }
 
-/**
- * Geocoding search result from Nominatim
- */
 interface NominatimResult {
   lat: string;
   lon: string;
   display_name: string;
 }
 
-export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerProps) {
-  const [position, setPosition] = useState<[number, number]>([
-    latitude || 47.4829,
-    longitude || -121.941,
-  ]);
+function ClickToPlace({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+function FlyTo({ focus }: { focus: MapFocus | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (focus) {
+      map.flyTo([focus.latitude, focus.longitude], Math.max(map.getZoom(), PIN_ZOOM));
+    }
+  }, [focus, map]);
+  return null;
+}
+
+/**
+ * Pick a launch on the map: tap to drop the pin, drag it to adjust, search
+ * a place name, or use the device's location when standing on the launch.
+ */
+export function MapPicker({ latitude, longitude, onLocationSelect, focus }: MapPickerProps) {
+  const pinned = latitude !== null && longitude !== null;
+  const [flyTo, setFlyTo] = useState<MapFocus | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<NominatimResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState('');
+  const [message, setMessage] = useState('');
+  const [locating, setLocating] = useState(false);
 
-  // Update position when props change (e.g., editing existing site)
   useEffect(() => {
-    if (latitude && longitude) {
-      setPosition([latitude, longitude]);
-    }
-  }, [latitude, longitude]);
+    if (focus) setFlyTo(focus);
+  }, [focus]);
 
-  const handleLocationSelect = (lat: number, lng: number) => {
-    setPosition([lat, lng]);
+  const moveTo = (lat: number, lng: number) => {
     onLocationSelect(lat, lng);
+    setFlyTo({ latitude: lat, longitude: lng });
   };
 
-  // Debounced search function
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSearchError('Please enter a location to search');
-      return;
-    }
-
+    if (!searchQuery.trim()) return;
     setSearching(true);
-    setSearchError('');
+    setMessage('');
     setSearchResults([]);
-
     try {
-      // Nominatim has a 1 req/sec rate limit - add user agent header
+      // OpenStreetMap's geocoder; peaks are in it by name ("Mailbox Peak")
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`,
-        {
-          headers: {
-            'User-Agent': 'SoarCast Weather App',
-          },
-        },
       );
-
-      if (!response.ok) {
-        throw new Error('Search failed');
-      }
-
+      if (!response.ok) throw new Error(`Search answered ${response.status}`);
       const results: NominatimResult[] = await response.json();
-
-      if (results.length === 0) {
-        setSearchError('No locations found. Try a different search term.');
-      } else {
-        setSearchResults(results);
-      }
+      if (results.length === 0) setMessage('Nothing found. Try another name.');
+      else setSearchResults(results);
     } catch (error) {
-      console.error('Geocoding search error:', error);
-      setSearchError('Search failed. Please try again.');
+      console.error('Place search failed:', error);
+      setMessage('Search failed. Try again in a moment.');
     } finally {
       setSearching(false);
     }
   };
 
-  const handleResultClick = (result: NominatimResult) => {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    handleLocationSelect(lat, lng);
-    setSearchResults([]);
-    setSearchQuery('');
+  const handleLocate = () => {
+    if (!navigator.geolocation) {
+      setMessage("This browser can't share its location.");
+      return;
+    }
+    setLocating(true);
+    setMessage('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        moveTo(position.coords.latitude, position.coords.longitude);
+      },
+      () => {
+        setLocating(false);
+        setMessage("Couldn't get your location.");
+      },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
   };
 
   return (
     <div className="space-y-3">
-      {/* Search box */}
       <div className="flex gap-2">
         <Input
-          placeholder="Search for a location..."
+          placeholder="Search a peak or place"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -143,11 +141,21 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
           }}
         />
         <Button type="button" onClick={handleSearch} disabled={searching} variant="outline">
-          {searching ? 'Searching...' : 'Search'}
+          {searching ? 'Searching…' : 'Search'}
+        </Button>
+        <Button
+          type="button"
+          onClick={handleLocate}
+          disabled={locating}
+          variant="outline"
+          size="icon"
+          title="Use my location"
+          aria-label="Use my location"
+        >
+          <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} />
         </Button>
       </div>
 
-      {/* Search results */}
       {searchResults.length > 0 && (
         <div className="border rounded-md max-h-48 overflow-y-auto">
           {searchResults.map((result, index) => (
@@ -155,7 +163,11 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
               key={index}
               type="button"
               className="w-full text-left px-3 py-2 hover:bg-muted transition-colors text-sm border-b last:border-b-0"
-              onClick={() => handleResultClick(result)}
+              onClick={() => {
+                moveTo(parseFloat(result.lat), parseFloat(result.lon));
+                setSearchResults([]);
+                setSearchQuery('');
+              }}
             >
               {result.display_name}
             </button>
@@ -163,26 +175,37 @@ export function MapPicker({ latitude, longitude, onLocationSelect }: MapPickerPr
         </div>
       )}
 
-      {/* Search error */}
-      {searchError && <p className="text-sm text-red-500">{searchError}</p>}
+      {message && <p className="text-sm text-red-500">{message}</p>}
 
-      {/* Map */}
-      <div className="h-[400px] rounded-md overflow-hidden border">
+      <div className="h-[320px] sm:h-[400px] rounded-md overflow-hidden border">
         <MapContainer
-          center={position}
-          zoom={10}
+          center={pinned ? [latitude, longitude] : DEFAULT_CENTER}
+          zoom={pinned ? PIN_ZOOM : 10}
           maxZoom={18}
           scrollWheelZoom={true}
           className="h-full w-full"
-          key={`${position[0]}-${position[1]}`} // Force re-center when position changes
         >
           <VectorBasemap />
-          <LocationMarker position={position} onLocationSelect={handleLocationSelect} />
+          <ClickToPlace onPick={onLocationSelect} />
+          <FlyTo focus={flyTo} />
+          {pinned && (
+            <Marker
+              position={[latitude, longitude]}
+              icon={markerIcon}
+              draggable={true}
+              eventHandlers={{
+                dragend: (e) => {
+                  const { lat, lng } = e.target.getLatLng();
+                  onLocationSelect(lat, lng);
+                },
+              }}
+            />
+          )}
         </MapContainer>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Click on the map to select a location, or search for a place name above.
+        Tap the map where you launch, then drag the pin to fine-tune it.
       </p>
     </div>
   );

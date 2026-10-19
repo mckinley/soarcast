@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useFetcher } from 'react-router';
+import { Link, useFetcher } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,8 @@ interface SettingsSite {
   elevation: number;
   customMaxWind?: number | null;
   defaultMaxWind?: number | null;
+  /** The user's own site: its wind limit is edited on the site itself */
+  custom?: boolean;
 }
 
 interface SettingsClientProps {
@@ -512,25 +514,34 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                            Wind limit (km/h):
-                          </Label>
-                          <Input
-                            type="number"
-                            min="10"
-                            max="100"
-                            placeholder={
-                              site.defaultMaxWind
-                                ? String(site.defaultMaxWind)
-                                : String(DEFAULT_MAX_WIND_KMH)
-                            }
-                            value={siteCustomWinds[site.id] ?? ''}
-                            onChange={(e) => handleUpdateCustomWind(site.id, e.target.value)}
-                            disabled={isPending}
-                            className="w-[80px] h-8"
-                          />
-                        </div>
+                        {site.custom ? (
+                          <div className="text-sm text-muted-foreground">
+                            Wind limit {site.defaultMaxWind} km/h •{' '}
+                            <Link to={`/sites/custom/${site.id}/edit`} className="underline">
+                              Edit site
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm text-muted-foreground whitespace-nowrap">
+                              Wind limit (km/h):
+                            </Label>
+                            <Input
+                              type="number"
+                              min="10"
+                              max="100"
+                              placeholder={
+                                site.defaultMaxWind
+                                  ? String(site.defaultMaxWind)
+                                  : String(DEFAULT_MAX_WIND_KMH)
+                              }
+                              value={siteCustomWinds[site.id] ?? ''}
+                              onChange={(e) => handleUpdateCustomWind(site.id, e.target.value)}
+                              disabled={isPending}
+                              className="w-[80px] h-8"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -549,9 +560,9 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
-                Notifications are checked twice daily (6 AM and 6 PM UTC). You&apos;ll receive a
-                push notification for each site where the forecast meets your minimum score
-                threshold within your notification window.
+                SoarCast checks your sites at your digest time each morning and at 6 PM, in your
+                local time. You&apos;ll get a push notification for each site where the forecast
+                meets your minimum score threshold within your notification window.
               </p>
             </div>
           </div>

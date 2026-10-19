@@ -76,7 +76,7 @@ export const userFavoriteSites = sqliteTable(
   }),
 );
 
-// User-created custom monitoring points
+// Sites a user pinned themselves (unlisted launches); private to that user
 export const customSites = sqliteTable('custom_sites', {
   id: text('id')
     .primaryKey()
@@ -89,7 +89,14 @@ export const customSites = sqliteTable('custom_sites', {
   longitude: text('longitude').notNull(),
   elevation: integer('elevation').notNull(), // meters
   maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
+  // Directions (degrees, 45° steps) the launch works well in, and ones it
+  // works in only cross; the same split as launch_sites' 2 and 1 ratings.
   idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
+  okWindDirections: text('ok_wind_directions', { mode: 'json' })
+    .notNull()
+    .default(sql`'[]'`)
+    .$type<number[]>(),
+  notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

@@ -104,6 +104,18 @@ export function findNearbySites(
   return nearby;
 }
 
+/** The eight compass points launches are rated on, clockwise from north. */
+export const COMPASS_POINTS = [
+  { label: 'N', degrees: 0 },
+  { label: 'NE', degrees: 45 },
+  { label: 'E', degrees: 90 },
+  { label: 'SE', degrees: 135 },
+  { label: 'S', degrees: 180 },
+  { label: 'SW', degrees: 225 },
+  { label: 'W', degrees: 270 },
+  { label: 'NW', degrees: 315 },
+] as const;
+
 /**
  * Compass direction to degrees mapping for wind columns.
  */

@@ -319,6 +319,9 @@ export function SitesBrowseClient({
                     ? 'No sites match your search'
                     : 'No sites found here — try panning to a different area'}
                 </p>
+                <Link to="/sites/custom/new" className="text-sm underline hover:text-primary">
+                  Not listed? Add your own site
+                </Link>
               </div>
             ) : (
               displaySites.map((site) => (
@@ -341,9 +344,14 @@ export function SitesBrowseClient({
             : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''} in view`}
         </p>
         {displaySites.length === 0 && !isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {isSearchMode ? 'No sites match your search' : 'Pan or zoom the map to explore sites'}
-          </p>
+          <div className="text-sm text-muted-foreground text-center py-8 space-y-2">
+            <p>
+              {isSearchMode ? 'No sites match your search' : 'Pan or zoom the map to explore sites'}
+            </p>
+            <Link to="/sites/custom/new" className="inline-block underline hover:text-primary">
+              Not listed? Add your own site
+            </Link>
+          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {displaySites.map((site) => (

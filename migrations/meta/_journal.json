@@ -22,6 +22,13 @@
       "when": 1792431682522,
       "tag": "0002_app_state",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792433836093,
+      "tag": "0003_custom_site_directions",
+      "breakpoints": true
     }
   ]
 }

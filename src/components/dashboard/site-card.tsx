@@ -113,6 +113,7 @@ export function SiteCard({ site, scores, siteType, slug, className = '' }: SiteC
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate">{site.name}</h3>
             <div className="text-xs text-muted-foreground mt-0.5">
+              {siteType === 'custom' && 'Your site • '}
               {site.elevation}m • {site.maxWindSpeed}km/h max
             </div>
           </div>

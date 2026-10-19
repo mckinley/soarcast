@@ -12,8 +12,7 @@ import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import type { Site, Forecast, DayScore } from '~/types';
 import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
-// import { DashboardClient } from '~/components/dashboard-client'
-// import { OnboardingFlow } from '~/components/onboarding-flow'
+import { customSiteToSite } from '~/lib/custom-sites';
 
 export interface SiteForecastData {
   site: Site;
@@ -78,18 +77,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const customSitesAsSites: Site[] = customs.map((site) => {
     siteMetadata.set(site.id, { siteType: 'custom' });
-    return {
-      id: site.id,
-      name: site.name,
-      latitude: parseFloat(site.latitude),
-      longitude: parseFloat(site.longitude),
-      elevation: site.elevation,
-      idealWindDirections: site.idealWindDirections,
-      maxWindSpeed: site.maxWindSpeed,
-      notes: undefined,
-      createdAt: new Date(site.createdAt).toISOString(),
-      updatedAt: new Date(site.updatedAt).toISOString(),
-    };
+    return customSiteToSite(site);
   });
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];

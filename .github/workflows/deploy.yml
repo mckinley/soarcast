@@ -55,6 +55,16 @@ jobs:
           if grep -q 'Error loading forecast' page.html; then echo "The page shows Error loading forecast"; exit 1; fi
           grep -qE '>(Flyable|Marginal|Not flyable)' page.html
 
+      # Adding your own site reads the terrain at the pin. Mount Si's summit
+      # should come back above 1,000 m with at least one steep face.
+      - name: Smoke test the terrain lookup
+        run: |
+          status=$(curl -sS -o terrain.json -w '%{http_code}' "https://soarcast.mckinleyaviation.com/api/terrain?lat=47.4881&lng=-121.7236")
+          echo "HTTP $status"
+          cat terrain.json; echo
+          test "$status" = 200
+          jq -e '.elevation > 1000 and (.suggestion.good | length) > 0' terrain.json
+
       # Starting a sign-in writes to the database, so this catches a broken
       # database as well as a missing OAuth client id. Google is printed only.
       - name: Smoke test sign-in

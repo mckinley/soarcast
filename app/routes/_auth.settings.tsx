@@ -7,9 +7,10 @@ import {
   pushSubscriptions,
   userFavoriteSites,
   launchSites,
+  customSites,
   type SiteNotificationPreferences,
 } from '~/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 import { SettingsClient } from '~/components/settings-client';
 import { isValidTimeZone } from '~/lib/alert-schedule';
 
@@ -35,8 +36,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = getDb(env);
   const userId = session.user.id;
 
-  // Get settings, push subscriptions, and favorite sites in parallel
-  const [[dbSettings], subs, favorites] = await Promise.all([
+  // Get settings, push subscriptions, and the user's sites in parallel
+  const [[dbSettings], subs, favorites, customs] = await Promise.all([
     db.select().from(settings).where(eq(settings.userId, userId)).limit(1),
     db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).limit(1),
     db
@@ -44,6 +45,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .from(userFavoriteSites)
       .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId))
       .where(eq(userFavoriteSites.userId, userId)),
+    db
+      .select()
+      .from(customSites)
+      .where(eq(customSites.userId, userId))
+      .orderBy(asc(customSites.name)),
   ]);
 
   let appSettings = DEFAULT_SETTINGS;
@@ -73,15 +79,28 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     };
   }
 
-  const sites = favorites.map((f) => ({
-    id: f.site.id,
-    name: f.site.name,
-    latitude: f.site.latitude,
-    longitude: f.site.longitude,
-    elevation: f.site.altitude ?? 0,
-    customMaxWind: f.favorite.customMaxWind,
-    defaultMaxWind: f.site.maxWindSpeed,
-  }));
+  const sites = [
+    ...customs.map((c) => ({
+      id: c.id,
+      name: c.name,
+      latitude: parseFloat(c.latitude),
+      longitude: parseFloat(c.longitude),
+      elevation: c.elevation,
+      customMaxWind: null,
+      defaultMaxWind: c.maxWindSpeed,
+      custom: true,
+    })),
+    ...favorites.map((f) => ({
+      id: f.site.id,
+      name: f.site.name,
+      latitude: f.site.latitude,
+      longitude: f.site.longitude,
+      elevation: f.site.altitude ?? 0,
+      customMaxWind: f.favorite.customMaxWind,
+      defaultMaxWind: f.site.maxWindSpeed,
+      custom: false,
+    })),
+  ];
 
   return {
     settings: appSettings,

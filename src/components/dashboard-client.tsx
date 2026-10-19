@@ -5,7 +5,7 @@ import { SiteCard } from '@/components/dashboard/site-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
 import type { DayScore, Settings } from '@/types';
-import { RefreshCw, LayoutGrid, Table } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Table, MapPinPlus } from 'lucide-react';
 
 /** Build the detail-page URL for a site (launch sites use their slug). */
 function siteHref(siteType: string, slug: string | undefined, siteId: string): string {
@@ -32,11 +32,20 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-3xl font-bold mb-4">Welcome to SoarCast</h1>
         <p className="text-muted-foreground mb-6 text-center max-w-md">
-          No sites yet. Browse launch sites to find your home site.
+          No sites yet. Browse launch sites to find your home site, or pin your own launch if it
+          isn&apos;t listed.
         </p>
-        <Link to="/sites/browse">
-          <Button size="lg">Browse Launch Sites</Button>
-        </Link>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link to="/sites/browse">
+            <Button size="lg">Browse Launch Sites</Button>
+          </Link>
+          <Link to="/sites/custom/new">
+            <Button size="lg" variant="outline">
+              <MapPinPlus className="mr-2 h-4 w-4" />
+              Add your own site
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -156,17 +165,25 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">7-Day Flying Forecast</h1>
           <p className="text-muted-foreground mt-1">
             Select a site to see its full windgram and hourly data
           </p>
         </div>
-        <Button onClick={handleRefresh} disabled={isPending} size="lg">
-          <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
-          {isPending ? 'Refreshing...' : 'Refresh All'}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" asChild>
+            <Link to="/sites/custom/new">
+              <MapPinPlus className="mr-2 h-4 w-4" />
+              Add your own site
+            </Link>
+          </Button>
+          <Button onClick={handleRefresh} disabled={isPending} size="lg">
+            <RefreshCw className={`mr-2 h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+            {isPending ? 'Refreshing...' : 'Refresh All'}
+          </Button>
+        </div>
       </div>
 
       {/* Tabbed View: Cards (default) vs Table */}

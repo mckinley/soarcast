@@ -2,20 +2,20 @@ import { useLoaderData, Link } from 'react-router';
 import type { Route } from './+types/sites.custom.$id';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
-import { customSites } from '~/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { findOwnedCustomSite } from '~/app/lib/custom-sites.server';
+import { customSiteToSite } from '~/lib/custom-sites';
 import { getForecast, setWeatherDb } from '~/lib/weather';
 import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
-import { WindDirectionBadges } from '@/components/wind-direction-badges';
+import { DirectionLegend, LaunchDirectionPicker } from '@/components/launch-direction-picker';
 import { ElevationDisplay } from '@/components/elevation-display';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
-import type { DayScore, Site } from '~/types';
+import { ArrowLeft, Lock, Pencil } from 'lucide-react';
+import type { DayScore } from '~/types';
 
 export function meta({ data }: Route.MetaArgs) {
   if (!data?.site) return [{ title: 'Site Not Found | SoarCast' }];
@@ -31,27 +31,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const db = getDb(env);
   const { id } = params;
 
-  // Scope to the authenticated owner — never expose another user's custom site.
-  const customSite = await db.query.customSites.findFirst({
-    where: and(eq(customSites.id, id!), eq(customSites.userId, session.user.id)),
-  });
-
+  const customSite = await findOwnedCustomSite(db, id!, session.user.id);
   if (!customSite) {
     throw new Response('Site not found', { status: 404 });
   }
-
-  const site: Site = {
-    id: customSite.id,
-    name: customSite.name,
-    latitude: parseFloat(customSite.latitude),
-    longitude: parseFloat(customSite.longitude),
-    elevation: customSite.elevation,
-    idealWindDirections: customSite.idealWindDirections,
-    maxWindSpeed: customSite.maxWindSpeed,
-    notes: undefined,
-    createdAt: new Date(customSite.createdAt).toISOString(),
-    updatedAt: new Date(customSite.updatedAt).toISOString(),
-  };
+  const site = customSiteToSite(customSite);
 
   let forecast = null;
   let scores: DayScore[] | null = null;
@@ -103,12 +87,21 @@ export default function CustomSiteDetailPage() {
             Back to Dashboard
           </Button>
         </Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/sites/custom/${site.id}/edit`}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Link>
+        </Button>
       </div>
 
       {/* Site name */}
       <div>
         <h1 className="text-3xl font-bold">{site.name}</h1>
-        <p className="text-lg text-muted-foreground mt-1">Custom site</p>
+        <p className="text-muted-foreground mt-1 inline-flex items-center gap-1.5">
+          <Lock className="h-4 w-4" />
+          Your site. Only you can see it.
+        </p>
       </div>
 
       {/* Forecast section with windgram and scoring */}
@@ -136,10 +129,32 @@ export default function CustomSiteDetailPage() {
               <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
             </div>
           )}
-          {site.idealWindDirections.length > 0 && (
+          <div>
+            <div className="font-medium mb-2">Launch directions:</div>
+            {site.idealWindDirections.length > 0 || (site.okWindDirections ?? []).length > 0 ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <LaunchDirectionPicker
+                  ratings={Object.fromEntries([
+                    ...(site.okWindDirections ?? []).map((d) => [d, 1 as const]),
+                    ...site.idealWindDirections.map((d) => [d, 2 as const]),
+                  ])}
+                  className="w-36 h-36"
+                />
+                <DirectionLegend />
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                None set, so any wind direction counts as working.{' '}
+                <Link to={`/sites/custom/${site.id}/edit`} className="underline">
+                  Set them
+                </Link>
+              </p>
+            )}
+          </div>
+          {site.notes && (
             <div>
-              <div className="font-medium mb-2">Ideal Wind Directions:</div>
-              <WindDirectionBadges directions={site.idealWindDirections} />
+              <div className="font-medium mb-1">Notes:</div>
+              <p className="text-muted-foreground whitespace-pre-line">{site.notes}</p>
             </div>
           )}
           <div>

@@ -10,6 +10,7 @@ import {
 } from '~/db/schema';
 import { eq } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
+import { customSiteToSite } from '~/lib/custom-sites';
 import { DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
 import { addDays, dueAlertRun, localDate, resolveTimeZone } from '~/lib/alert-schedule';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
@@ -124,20 +125,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
             idealWindDirections: getIdealWindDirections(s),
             okWindDirections: getOkWindDirections(s),
             maxWindSpeed: s.customMaxWind || s.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-            createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
-            updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
+            createdAt: s.createdAt.toISOString(),
+            updatedAt: s.updatedAt.toISOString(),
           })),
-          ...customSitesResult.map((s) => ({
-            id: s.id,
-            name: s.name,
-            latitude: parseFloat(s.latitude),
-            longitude: parseFloat(s.longitude),
-            elevation: s.elevation || 0,
-            idealWindDirections: (s.idealWindDirections as number[]) || [],
-            maxWindSpeed: s.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-            createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
-            updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
-          })),
+          ...customSitesResult.map(customSiteToSite),
         ];
         if (userSites.length === 0) continue;
 

@@ -17,6 +17,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 - **Migrations:** `npx drizzle-kit generate --name <change>` writes `migrations/NNNN_*.sql`; the deploy workflow runs `wrangler d1 migrations apply soarcast --remote` before deploying, so keep migrations additive. Locally: `npx wrangler d1 migrations apply soarcast --local`.
 - **Weather:** Open-Meteo API, free, no key needed (`src/lib/weather.ts`) — call `setWeatherDb(db)` before using
 - **Rating:** `src/lib/forecast-engine` is the only place a day is rated (gates, window, quality, hazards)
+- **Your own sites:** `custom_sites` are private to their owner: load them with `findOwnedCustomSite` (`app/lib/custom-sites.server.ts`) and turn them into a `Site` with `customSiteToSite` (`src/lib/custom-sites.ts`), so pages and alerts rate them through the same engine. Add/edit pages are `/sites/custom/new` and `/sites/custom/:id/edit`. `/api/terrain` gives the form the launch elevation, a launch direction suggested from the slopes around the pin (`src/lib/terrain.ts`, Open-Meteo elevation API) and listed sites nearby.
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
 - **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR)
 - **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
