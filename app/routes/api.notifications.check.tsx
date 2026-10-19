@@ -17,7 +17,6 @@ import type { DayAnalysis } from '~/lib/notifications';
 import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
 import webpush from 'web-push';
-import { describeEmailError, sendMorningDigestEmail } from '~/emails/send';
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const env = context.cloudflare.env as Env;
@@ -201,6 +200,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
               // Send email digest (Cloudflare Email Sending; skipped if the binding is absent)
               if (env.EMAIL && user.email) {
+                // Imported here, not at the top: react-email takes hundreds of
+                // ms to initialize, and Cloudflare caps the Worker's startup CPU
+                const { describeEmailError, sendMorningDigestEmail } =
+                  await import('~/emails/send');
                 try {
                   const dateLabel = new Date(todayStr + 'T12:00:00').toLocaleDateString('en-US', {
                     weekday: 'long',

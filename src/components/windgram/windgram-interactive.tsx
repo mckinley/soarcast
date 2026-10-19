@@ -1,14 +1,32 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useMemo, useRef, useCallback, type ComponentProps } from 'react';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import type { DayScore } from '@/types';
-import { WindgramD3 } from './windgram-d3';
+import { Skeleton } from '@/components/ui/skeleton';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
 import { XcSnapshotPanel } from '@/components/xc-snapshot-panel';
 import { LapseRateLegend } from './lapse-rate-legend';
 import { useAttachTouchGestures } from '@/hooks/use-touch-gestures';
+
+// d3 takes long to initialize, and Cloudflare caps the Worker's startup CPU,
+// so the chart's module loads on first render instead of at startup.
+const WindgramD3 = lazy(() => import('./windgram-d3').then((m) => ({ default: m.WindgramD3 })));
+
+function LazyWindgramD3(props: ComponentProps<typeof WindgramD3>) {
+  return (
+    <Suspense
+      fallback={
+        <div className={`w-full ${props.className ?? ''}`}>
+          <Skeleton className="w-full h-[400px] md:h-[500px] lg:h-[580px]" />
+        </div>
+      }
+    >
+      <WindgramD3 {...props} />
+    </Suspense>
+  );
+}
 
 interface WindgramInteractiveProps {
   data: AtmosphericProfile | null;
@@ -115,7 +133,7 @@ export function WindgramInteractive({
 
   if (loading || !data) {
     return (
-      <WindgramD3
+      <LazyWindgramD3
         data={null}
         loading={true}
         className={className}
@@ -165,7 +183,7 @@ export function WindgramInteractive({
         className="transition-opacity duration-300 relative"
         style={{ animation: 'fadeIn 0.3s ease-in-out' }}
       >
-        <WindgramD3 data={selectedDayData} loading={false} launchElevation={launchElevation} />
+        <LazyWindgramD3 data={selectedDayData} loading={false} launchElevation={launchElevation} />
         {days.length > 1 && (
           <p className="text-xs text-muted-foreground text-center mt-2 md:hidden">
             👈 Swipe to change days 👉
