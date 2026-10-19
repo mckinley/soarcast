@@ -33,6 +33,11 @@ interface SettingsClientProps {
   vapidPublicKey?: string;
 }
 
+// Sent with digest changes so the digest arrives at the user's local time.
+function browserTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
 export function SettingsClient({ initialSettings, sites, vapidPublicKey }: SettingsClientProps) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== 'idle';
@@ -363,7 +368,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
         <CardHeader>
           <CardTitle>Email Morning Digest</CardTitle>
           <CardDescription>
-            Receive a daily email at ~7 AM showing today&apos;s flyability for your sites.
+            Receive a daily email at your delivery time showing today&apos;s flyability for your
+            sites.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -383,7 +389,11 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                   emailDigest: { ...settings.emailDigest, enabled: checked },
                 });
                 fetcher.submit(
-                  { intent: 'toggleEmailDigest', enabled: String(checked) },
+                  {
+                    intent: 'toggleEmailDigest',
+                    enabled: String(checked),
+                    timeZone: browserTimeZone(),
+                  },
                   { method: 'POST' },
                 );
               }}
@@ -404,7 +414,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                     emailDigest: { ...settings.emailDigest, digestTime: time },
                   });
                   fetcher.submit(
-                    { intent: 'updateDigestTime', digestTime: time },
+                    { intent: 'updateDigestTime', digestTime: time, timeZone: browserTimeZone() },
                     { method: 'POST' },
                   );
                 }}
@@ -412,7 +422,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                 className="max-w-[140px]"
               />
               <p className="text-sm text-muted-foreground">
-                When to receive your morning digest (your local time).
+                Your local time; it goes out at the start of that hour.
               </p>
             </div>
           )}

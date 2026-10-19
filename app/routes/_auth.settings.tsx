@@ -11,6 +11,7 @@ import {
 } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { SettingsClient } from '~/components/settings-client';
+import { isValidTimeZone } from '~/lib/alert-schedule';
 
 export function meta() {
   return [{ title: 'Settings | SoarCast' }];
@@ -89,6 +90,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   };
 }
 
+// The digest goes out at the user's local time, so digest changes carry the
+// browser's IANA time zone.
+function browserTimeZone(formData: FormData): string | null {
+  const timeZone = formData.get('timeZone');
+  return typeof timeZone === 'string' && isValidTimeZone(timeZone) ? timeZone : null;
+}
+
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env as Env;
   const session = await requireAuth(request, env);
@@ -151,12 +159,17 @@ export async function action({ request, context }: Route.ActionArgs) {
 
     case 'toggleEmailDigest': {
       const enabled = formData.get('enabled') === 'true';
+      const timeZone = browserTimeZone(formData);
       await db
         .insert(settings)
-        .values({ userId, morningDigestEnabled: enabled, updatedAt: new Date() })
+        .values({ userId, morningDigestEnabled: enabled, timeZone, updatedAt: new Date() })
         .onConflictDoUpdate({
           target: settings.userId,
-          set: { morningDigestEnabled: enabled, updatedAt: new Date() },
+          set: {
+            morningDigestEnabled: enabled,
+            ...(timeZone && { timeZone }),
+            updatedAt: new Date(),
+          },
         });
       return { success: true };
     }
@@ -165,12 +178,13 @@ export async function action({ request, context }: Route.ActionArgs) {
       const time = formData.get('digestTime') as string;
       if (!/^\d{2}:\d{2}$/.test(time)) return { error: 'Invalid time format' };
 
+      const timeZone = browserTimeZone(formData);
       await db
         .insert(settings)
-        .values({ userId, morningDigestTime: time, updatedAt: new Date() })
+        .values({ userId, morningDigestTime: time, timeZone, updatedAt: new Date() })
         .onConflictDoUpdate({
           target: settings.userId,
-          set: { morningDigestTime: time, updatedAt: new Date() },
+          set: { morningDigestTime: time, ...(timeZone && { timeZone }), updatedAt: new Date() },
         });
       return { success: true };
     }

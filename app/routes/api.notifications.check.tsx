@@ -11,12 +11,14 @@ import {
 import { eq } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import { DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
+import { addDays, dueAlertRun, localDate, resolveTimeZone } from '~/lib/alert-schedule';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '~/lib/notifications';
 import type { DayAnalysis } from '~/lib/notifications';
 import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
 import webpush from 'web-push';
+import { sendPush } from '~/lib/push-send';
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const env = context.cloudflare.env as Env;
@@ -47,9 +49,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
     let totalNotificationsSent = 0;
     let totalErrors = 0;
 
+    // The Worker's hourly cron posts here (worker.ts); each user's runs are
+    // due at their own local hours. `?run=morning|evening` runs one for
+    // everyone now, for testing.
     const now = new Date();
-    const currentHour = now.getUTCHours();
-    const isMorningRun = currentHour >= 6 && currentHour < 8;
+    const forcedRun = new URL(request.url).searchParams.get('run');
 
     for (const user of allUsers) {
       try {
@@ -61,12 +65,23 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
         if (!userSettings) continue;
 
+        const run =
+          forcedRun === 'morning' || forcedRun === 'evening'
+            ? forcedRun
+            : dueAlertRun(now, userSettings.timeZone, userSettings.morningDigestTime);
+        if (!run) continue;
+        const isMorningRun = run === 'morning';
+        const todayStr = localDate(now, resolveTimeZone(userSettings.timeZone));
+
         const subscriptions = await db
           .select()
           .from(pushSubscriptions)
           .where(eq(pushSubscriptions.userId, user.id));
 
-        if (subscriptions.length === 0) continue;
+        // The digest can go by email alone; site alerts are push only.
+        const wantsEmailDigest =
+          isMorningRun && userSettings.morningDigestEnabled && !!env.EMAIL && !!user.email;
+        if (subscriptions.length === 0 && !wantsEmailDigest) continue;
 
         // Get user's monitored sites from both favorite launch sites and custom sites
         const favoriteSitesResult = await db
@@ -129,10 +144,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
         // Morning digest
         if (isMorningRun && userSettings.morningDigestEnabled) {
           try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayStr = today.toISOString().split('T')[0];
-
             const siteAnalyses: Array<{
               site: Site;
               analysis: DayAnalysis;
@@ -177,7 +188,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
               for (const subscription of subscriptions) {
                 try {
-                  await webpush.sendNotification(
+                  await sendPush(
                     { endpoint: subscription.endpoint, keys: subscription.keys },
                     payload,
                   );
@@ -283,6 +294,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         }
 
         // Individual site notifications
+        if (subscriptions.length === 0) continue;
         for (const site of userSites) {
           const siteNotifications = userSettings.siteNotifications as Record<
             string,
@@ -305,13 +317,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
             const siteObj = site;
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             for (let dayOffset = 0; dayOffset < userSettings.daysAhead; dayOffset++) {
-              const checkDate = new Date(today);
-              checkDate.setDate(checkDate.getDate() + dayOffset);
-              const dateStr = checkDate.toISOString().split('T')[0];
+              const dateStr = addDays(todayStr, dayOffset);
 
               const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, dateStr);
 
@@ -320,7 +327,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
                 for (const subscription of subscriptions) {
                   try {
-                    await webpush.sendNotification(
+                    await sendPush(
                       { endpoint: subscription.endpoint, keys: subscription.keys },
                       payload,
                     );

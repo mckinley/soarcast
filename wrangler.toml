@@ -20,6 +20,11 @@ database_name = "soarcast"
 database_id = "e92d8ad3-7ca9-47aa-b26b-e2288ec3b963"
 migrations_dir = "migrations"
 
+# Alerts: hourly, so each user's morning and evening runs land at their local
+# hour (worker.ts scheduled -> /api/notifications/check).
+[triggers]
+crons = ["0 * * * *"]
+
 [[routes]]
 pattern = "soarcast.mckinleyaviation.com"
 custom_domain = true

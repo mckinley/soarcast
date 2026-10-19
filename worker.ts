@@ -20,4 +20,17 @@ export default {
       cloudflare: { env, ctx },
     });
   },
+
+  // Hourly cron (wrangler.toml): the alerts check decides whose morning or
+  // evening run is due in their local time.
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    const request = new Request(new URL('/api/notifications/check', env.BETTER_AUTH_URL), {
+      method: 'POST',
+      headers: { authorization: `Bearer ${env.CRON_SECRET}` },
+    });
+    const response = await requestHandler(request, { cloudflare: { env, ctx } });
+    const body = await response.text();
+    if (!response.ok) throw new Error(`Alerts check failed: ${response.status} ${body}`);
+    console.log(`Alerts check: ${body}`);
+  },
 } satisfies ExportedHandler<Env>;
