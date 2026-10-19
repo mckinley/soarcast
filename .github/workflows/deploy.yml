@@ -55,15 +55,24 @@ jobs:
           if grep -q 'Error loading forecast' page.html; then echo "The page shows Error loading forecast"; exit 1; fi
           grep -qE '>(Flyable|Marginal|Not flyable)' page.html
 
-      # Adding your own site reads the terrain at the pin. Mount Si's summit
-      # should come back above 1,000 m with at least one steep face.
+      # Adding your own site reads the terrain at the pin. Mount Rainier's
+      # summit must come back above 4,000 m with a steep face. Listed launches
+      # near North Bend are printed next to the terrain's suggestion, to
+      # compare the suggested directions with real launches.
       - name: Smoke test the terrain lookup
         run: |
-          status=$(curl -sS -o terrain.json -w '%{http_code}' "https://soarcast.mckinleyaviation.com/api/terrain?lat=47.4881&lng=-121.7236")
-          echo "HTTP $status"
-          cat terrain.json; echo
+          api=https://soarcast.mckinleyaviation.com
+          status=$(curl -sS -o rainier.json -w '%{http_code}' "$api/api/terrain?lat=46.8529&lng=-121.7604")
+          echo "Rainier summit: HTTP $status $(cat rainier.json)"
           test "$status" = 200
-          jq -e '.elevation > 1000 and (.suggestion.good | length) > 0' terrain.json
+          jq -e '.elevation > 4000 and (.suggestion.good | length) > 0' rainier.json
+          curl -sS "$api/api/sites/near?lat=47.49&lng=-121.79&radius=40&limit=8" > near.json
+          jq -c '.sites[] | {name, latitude, longitude, altitude, rated: ([["N",.windN],["NE",.windNe],["E",.windE],["SE",.windSe],["S",.windS],["SW",.windSw],["W",.windW],["NW",.windNw]] | map(select(.[1] > 0) | "\(.[0])=\(.[1])"))}' near.json |
+            while read -r site; do
+              echo "$site"
+              lat=$(echo "$site" | jq -r .latitude); lng=$(echo "$site" | jq -r .longitude)
+              echo "  terrain: $(curl -sS "$api/api/terrain?lat=$lat&lng=$lng" | jq -c '{elevation, suggestion}')"
+            done
 
       # Starting a sign-in writes to the database, so this catches a broken
       # database as well as a missing OAuth client id. Google is printed only.
