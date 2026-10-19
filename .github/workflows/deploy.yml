@@ -36,3 +36,13 @@ jobs:
           head -c 600 body.json; echo
           test "$status" = 200
           grep -q '"sunriseByDay"' body.json
+
+      # A site page must render a verdict, not "Error loading forecast".
+      - name: Smoke test a site page
+        run: |
+          status=$(curl -sS -o page.html -w '%{http_code}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain")
+          echo "HTTP $status"
+          grep -oE '>(Flyable|Marginal|Not flyable)[^<]{0,100}' page.html | head -3 || true
+          test "$status" = 200
+          if grep -q 'Error loading forecast' page.html; then echo "The page shows Error loading forecast"; exit 1; fi
+          grep -qE '>(Flyable|Marginal|Not flyable)' page.html

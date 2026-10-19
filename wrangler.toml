@@ -20,3 +20,8 @@ custom_domain = true
 [[send_email]]
 name = "EMAIL"
 allowed_sender_addresses = ["soarcast@mckinleyaviation.com"]
+
+# Workers Logs: console output and uncaught errors are kept and searchable in
+# the Cloudflare dashboard (Workers & Pages > soarcast > Logs).
+[observability]
+enabled = true
