@@ -93,17 +93,16 @@ async function changeGoal(page, shoot) {
   await shoot('goal-safe-launch');
 }
 
-// A new pilot closes the welcome card; it must stay closed after a reload
-async function dismissOnboarding(page, shoot) {
-  const close = page.getByRole('button', { name: 'Dismiss onboarding' });
-  if (!(await close.count())) return;
-  await close.click();
-  await page.waitForTimeout(1500);
-  await page.reload({ waitUntil: 'networkidle' }).catch(() => {});
-  await page.waitForTimeout(1500);
-  const stillThere = await page.getByRole('button', { name: 'Dismiss onboarding' }).count();
-  console.log(`onboarding after dismiss and reload: ${stillThere ? 'STILL SHOWN' : 'gone'}`);
-  await shoot('after-dismiss');
+// The dashboard must never cover itself with a popup, for new pilots or pilots with sites
+async function noPopup(page) {
+  const overlays = await page.locator('div.fixed.inset-0').count();
+  const welcome = await page.getByText('Welcome to SoarCast').count();
+  console.log(`dashboard popup: ${overlays ? 'SHOWN' : 'none'}; welcome text ${welcome}`);
+}
+
+async function dashboardTabs(page, shoot) {
+  await noPopup(page);
+  await clickTabs(page, shoot);
 }
 
 function prodPages() {
@@ -124,7 +123,13 @@ function prodPages() {
 function localPages() {
   const [first, second] = seed.sites;
   return [
-    { name: 'dashboard', path: '/dashboard', user: 'ux-pilot', actions: clickTabs, settle: 3000 },
+    {
+      name: 'dashboard',
+      path: '/dashboard',
+      user: 'ux-pilot',
+      actions: dashboardTabs,
+      settle: 3000,
+    },
     {
       name: 'site-followed',
       path: `/sites/${first.slug}`,
@@ -177,7 +182,7 @@ function localPages() {
       name: 'new-user-dashboard',
       path: '/dashboard',
       user: 'ux-newbie',
-      actions: dismissOnboarding,
+      actions: noPopup,
     },
   ];
 }

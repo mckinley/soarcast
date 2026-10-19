@@ -115,8 +115,9 @@ sql.push(
   `INSERT INTO custom_sites (id, user_id, name, latitude, longitude, elevation, max_wind_speed, ideal_wind_directions, ok_wind_directions, notes) VALUES (${q(customId)}, ${q(pilot.id)}, 'Granite Mountain', '47.3979', '-121.4864', 1716, 25, '[180,225]', '[270]', 'Hike up the lookout trail; launch on the south meadow below the lookout.');`,
 );
 
+// onboarding_completed 0, like a pilot who never closed the old welcome popup
 sql.push(
-  `INSERT INTO settings (id, user_id, min_score_threshold, days_ahead, site_notifications, morning_digest_enabled, morning_digest_time, time_zone, onboarding_completed) VALUES ('ux-settings', ${q(pilot.id)}, 70, 2, '{}', 1, '07:00', 'America/Los_Angeles', 1);`,
+  `INSERT INTO settings (id, user_id, min_score_threshold, days_ahead, site_notifications, morning_digest_enabled, morning_digest_time, time_zone, onboarding_completed) VALUES ('ux-settings', ${q(pilot.id)}, 70, 2, '{}', 1, '07:00', 'America/Los_Angeles', 0);`,
 );
 
 fs.mkdirSync(outDir, { recursive: true });

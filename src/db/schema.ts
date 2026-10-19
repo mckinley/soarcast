@@ -169,6 +169,7 @@ export const settings = sqliteTable('settings', {
   morningDigestTime: text('morning_digest_time').default('08:00'), // HH:MM format in user's local timezone
   // IANA zone from the user's browser; alerts go out by local time (src/lib/alert-schedule.ts)
   timeZone: text('time_zone'),
+  // Unused since the welcome popup was removed; kept so migrations stay additive
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()
     .default(false),

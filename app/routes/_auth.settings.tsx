@@ -248,17 +248,6 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { success: true };
     }
 
-    case 'completeOnboarding': {
-      await db
-        .insert(settings)
-        .values({ userId, onboardingCompleted: true })
-        .onConflictDoUpdate({
-          target: settings.userId,
-          set: { onboardingCompleted: true, updatedAt: new Date() },
-        });
-      return { success: true };
-    }
-
     default:
       return { error: 'Unknown action' };
   }

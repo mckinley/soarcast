@@ -2,8 +2,7 @@ import { useLoaderData } from 'react-router';
 import type { Route } from './+types/_auth.dashboard';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
-import { DashboardClient } from '@/components/dashboard-client';
-import { OnboardingFlow } from '@/components/onboarding-flow';
+import { DashboardClient, type SuggestedSite } from '@/components/dashboard-client';
 import { userFavoriteSites, customSites, launchSites, settings } from '~/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { nearbySites, getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
@@ -40,7 +39,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   setProfileDb(db);
 
-  // Fetch favorites, custom sites, settings, and onboarding status in parallel
+  // Fetch favorites, custom sites and settings in parallel
   const [favorites, customs, [userSettings]] = await Promise.all([
     db
       .select({ favorite: userFavoriteSites, site: launchSites })
@@ -55,8 +54,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .orderBy(asc(customSites.name)),
     db.select().from(settings).where(eq(settings.userId, userId)).limit(1),
   ]);
-
-  const onboardingCompleted = userSettings?.onboardingCompleted ?? false;
 
   // Convert to Site format and build metadata
   const siteMetadata = new Map<string, { siteType: 'launch' | 'custom'; slug?: string }>();
@@ -108,39 +105,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     },
   );
 
-  // Get popular sites for onboarding from pgsites API
-  let popularSites: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    region: string | null;
-    elevation: number | null;
-  }> = [];
-  if (!onboardingCompleted) {
+  // A pilot with no sites yet gets launches to start from on the empty dashboard
+  let suggestions: SuggestedSite[] = [];
+  if (allSites.length === 0) {
     try {
-      const apiKey = getPgsitesApiKey(env);
       // SoarCast's pilots are around Seattle so far: suggest launches within 150 km
-      const sites = await nearbySites(apiKey, 47.5, -121.8, 150, 5);
-      popularSites = sites.map((s) => ({
+      const sites = await nearbySites(getPgsitesApiKey(env), 47.5, -121.8, 150, 3);
+      suggestions = sites.map((s) => ({
         id: s.id,
         name: s.name,
         slug: pgsitesSlug(s.name, s.id),
-        region: null,
         elevation: s.altitude,
       }));
-    } catch {
-      // Fallback to local DB if API fails
-      popularSites = await db
-        .select({
-          id: launchSites.id,
-          name: launchSites.name,
-          slug: launchSites.slug,
-          region: launchSites.region,
-          elevation: launchSites.altitude,
-        })
-        .from(launchSites)
-        .orderBy(asc(launchSites.name))
-        .limit(5);
+    } catch (error) {
+      console.error('Launch suggestions failed:', error);
     }
   }
 
@@ -163,44 +141,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     user: session.user,
     data,
     settings: appSettings,
-    onboardingCompleted,
-    popularSites,
+    suggestions,
   };
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
-  const env = context.cloudflare.env as Env;
-  const session = await requireAuth(request, env);
-  const db = getDb(env);
-  const userId = session.user.id;
-  const formData = await request.formData();
-  const intent = formData.get('intent');
-
-  switch (intent) {
-    case 'completeOnboarding': {
-      // Pilots who signed up before settings rows were created at sign-up have none
-      await db
-        .insert(settings)
-        .values({ userId, onboardingCompleted: true })
-        .onConflictDoUpdate({
-          target: settings.userId,
-          set: { onboardingCompleted: true, updatedAt: new Date() },
-        });
-      return { success: true };
-    }
-
-    default:
-      return { error: 'Unknown action' };
-  }
-}
-
 export default function DashboardPage() {
-  const {
-    data,
-    settings: appSettings,
-    onboardingCompleted,
-    popularSites,
-  } = useLoaderData<typeof loader>();
+  const { data, settings: appSettings, suggestions } = useLoaderData<typeof loader>();
 
   const defaultSettings = {
     notifications: {
@@ -213,13 +159,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <>
-      {!onboardingCompleted && <OnboardingFlow popularSites={popularSites} />}
-      <DashboardClient
-        data={data}
-        settings={appSettings ?? defaultSettings}
-        isAuthenticated={true}
-      />
-    </>
+    <DashboardClient
+      data={data}
+      settings={appSettings ?? defaultSettings}
+      isAuthenticated={true}
+      suggestions={suggestions}
+    />
   );
 }

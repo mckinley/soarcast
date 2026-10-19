@@ -30,7 +30,7 @@ export function createAuth(env: Env) {
     databaseHooks: {
       user: {
         create: {
-          // Every pilot gets a settings row at sign-up: onboarding and alerts read it
+          // Every pilot gets a settings row at sign-up: alerts read it
           after: async (newUser) => {
             await db.insert(settings).values({ userId: newUser.id }).onConflictDoNothing();
           },

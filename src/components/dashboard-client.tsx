@@ -17,7 +17,7 @@ import {
   dayStatus,
   shortDate,
 } from '@/lib/verdict-display';
-import { LayoutGrid, Table, MapPinPlus } from 'lucide-react';
+import { LayoutGrid, Table, MapPin, MapPinPlus, ArrowRight } from 'lucide-react';
 
 /** Build the detail-page URL for a site (launch sites use their slug). */
 function siteHref(siteType: string, slug: string | undefined, siteId: string): string {
@@ -44,22 +44,59 @@ function StatusLegend() {
   );
 }
 
+/** A listed launch offered to a pilot who follows no sites yet. */
+export interface SuggestedSite {
+  id: string;
+  name: string;
+  slug: string;
+  elevation: number | null;
+}
+
 interface DashboardClientProps {
   data: SiteForecastData[];
   settings: Settings;
   isAuthenticated: boolean; // Always true since dashboard requires auth
+  suggestions?: SuggestedSite[];
 }
 
-export function DashboardClient({ data, settings, isAuthenticated }: DashboardClientProps) {
+export function DashboardClient({
+  data,
+  settings,
+  isAuthenticated,
+  suggestions = [],
+}: DashboardClientProps) {
   // Empty state when authenticated user has no sites
   if (data.length === 0 && isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-3xl font-bold mb-4">Welcome to SoarCast</h1>
         <p className="text-muted-foreground mb-6 text-center max-w-md">
-          No sites yet. Browse launch sites to find your home site, or pin your own launch if it
-          isn&apos;t listed.
+          No sites yet. Follow a launch and it shows up here with the days and hours it&apos;s
+          flyable this week, or pin your own launch if it isn&apos;t listed.
         </p>
+        {suggestions.length > 0 && (
+          <div className="mb-6 w-full max-w-md space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Launches around Seattle</p>
+            {suggestions.map((site) => (
+              <Link
+                key={site.id}
+                to={`/sites/${site.slug}`}
+                className="flex items-center gap-2 rounded-md border border-border p-3 transition-colors hover:bg-accent"
+              >
+                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{site.name}</div>
+                  {site.elevation != null && (
+                    <div className="text-xs text-muted-foreground">
+                      {site.elevation.toLocaleString('en-US')} m
+                    </div>
+                  )}
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-3">
           <Link to="/sites/browse">
             <Button size="lg">Browse Launch Sites</Button>
