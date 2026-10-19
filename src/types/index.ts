@@ -7,6 +7,7 @@ export interface Site {
   longitude: number;
   elevation: number; // meters
   idealWindDirections: number[]; // degrees, e.g., [180, 225, 270]
+  okWindDirections?: number[]; // degrees the launch works in, but not ideally
   maxWindSpeed: number; // km/h
   notes?: string;
   createdAt: string;
@@ -42,24 +43,22 @@ export interface Forecast {
 
 export interface DayScore {
   date: string; // YYYY-MM-DD
-  overallScore: number; // 0-100
+  overallScore: number; // 0-100; under 31 means no flyable window
   label: 'Poor' | 'Fair' | 'Good' | 'Great' | 'Epic';
-  factors: {
-    cape: number; // 0-100
-    windSpeed: number; // 0-100
-    windDirection: number; // 0-100
-    cloudCover: number; // 0-100
-    precipitation: number; // 0-100
-    blh: number; // 0-100 (boundary layer height)
-    upperWind: number; // 0-100 (850hPa wind)
-  };
-  // v2 fields (optional for backward compat)
-  wStar?: number | null; // Peak W* in m/s during flyable window
-  bestWindow?: string; // e.g. "12:00-16:00"
+  /** go: a window of 2+ hours where every launch check passes; marginal: only with caveats; no: not flyable */
+  verdict: 'go' | 'marginal' | 'no';
+  flyableWindow: string | null; // e.g. "11:00-16:00"
+  /** The main thing holding the day back, in plain words */
+  limitingFactor: string | null;
+  /** Every failed or marginal launch check with its time span, worst first */
+  reasons: string[];
+  wStar?: number | null; // Peak W* in m/s during the window
+  bestWindow?: string; // same as flyableWindow, kept for existing consumers
   odRisk?: 'none' | 'low' | 'moderate' | 'high';
   windShear?: 'none' | 'low' | 'moderate' | 'high';
   freezingConcern?: boolean;
   peakCeilingMsl?: number | null; // meters MSL
+  topOfLiftAboveLaunch?: number | null; // meters
 }
 
 export interface Settings {

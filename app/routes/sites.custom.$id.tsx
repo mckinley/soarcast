@@ -5,7 +5,7 @@ import { requireAuth } from '~/app/lib/auth.server';
 import { customSites } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getForecast, setWeatherDb } from '~/lib/weather';
-import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
+import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
@@ -15,7 +15,7 @@ import { ElevationDisplay } from '@/components/elevation-display';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
-import type { Site } from '~/types';
+import type { DayScore, Site } from '~/types';
 
 export function meta({ data }: Route.MetaArgs) {
   if (!data?.site) return [{ title: 'Site Not Found | SoarCast' }];
@@ -54,7 +54,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   };
 
   let forecast = null;
-  let scores = null;
+  let scores: DayScore[] | null = null;
   let forecastError = null;
 
   try {
@@ -75,11 +75,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       forecast = forecastResult.value.forecast;
     }
 
-    if (forecast) {
-      scores =
-        profileResult.status === 'fulfilled'
-          ? calculateDailyScoresFromProfile(profileResult.value.profile, forecast, site)
-          : calculateDailyScores(forecast, site);
+    // Without a profile there are no verdicts, but the forecast still shows
+    if (profileResult.status === 'rejected') {
+      scores = [];
+    } else {
+      scores = evaluateDays(profileResult.value.profile, launchProfileFromSite(site));
     }
   } catch (e) {
     forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';

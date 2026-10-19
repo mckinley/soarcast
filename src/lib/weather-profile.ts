@@ -45,6 +45,11 @@ export interface SurfaceData {
   convectiveInhibition: number | null; // J/kg
   liftedIndex: number | null; // °C
   shortwaveRadiation: number; // W/m²
+  // Optional so profiles cached before these were fetched still load
+  dewPoint?: number | null; // °C at 2 m
+  precipitation?: number | null; // mm in the preceding hour
+  cloudCoverLow?: number | null; // %
+  visibility?: number | null; // meters
 }
 
 /**
@@ -77,10 +82,14 @@ export interface AtmosphericHour {
 export interface AtmosphericProfile {
   latitude: number;
   longitude: number;
+  // Average height of the model's grid cell (fetched with elevation=nan), so
+  // surface values, boundary-layer height and cloud base share one ground.
   elevation: number; // meters
   timezone: string;
   fetchedAt: string; // ISO 8601
   expiresAt: string; // ISO 8601
+  sunriseByDay?: Record<string, string>; // YYYY-MM-DD -> local ISO time
+  sunsetByDay?: Record<string, string>; // YYYY-MM-DD -> local ISO time
   hours: AtmosphericHour[];
 }
 
@@ -92,6 +101,11 @@ interface OpenMeteoProfileResponse {
   longitude: number;
   elevation: number;
   timezone: string;
+  daily?: {
+    time: string[];
+    sunrise: string[];
+    sunset: string[];
+  };
   hourly: {
     time: string[];
     // Surface parameters
@@ -106,6 +120,10 @@ interface OpenMeteoProfileResponse {
     convective_inhibition: (number | null)[];
     lifted_index: (number | null)[];
     shortwave_radiation: number[];
+    dew_point_2m?: (number | null)[];
+    precipitation?: (number | null)[];
+    cloud_cover_low?: (number | null)[];
+    visibility?: (number | null)[];
     // Pressure-level parameters (8 levels × 6 params = 48 fields)
     temperature_1000hPa: number[];
     temperature_950hPa: number[];
@@ -182,28 +200,6 @@ export function calculateLapseRate(
 }
 
 /**
- * Estimates cloud base from surface temperature and dewpoint
- * Using simplified formula: cloud base (ft) ≈ (T - Td) / 2.5 × 1000
- * @param temperature - Surface temperature (°C)
- * @param relativeHumidity - Surface RH (%)
- * @returns Estimated cloud base in meters AGL, or null if conditions don't support clouds
- */
-export function estimateCloudBase(temperature: number, relativeHumidity: number): number | null {
-  if (relativeHumidity >= 95) return 0; // On ground
-  if (relativeHumidity < 50) return null; // Unlikely to form clouds
-
-  // Calculate dewpoint using Magnus formula approximation
-  const a = 17.27;
-  const b = 237.7;
-  const alpha = (a * temperature) / (b + temperature) + Math.log(relativeHumidity / 100);
-  const dewpoint = (b * alpha) / (a - alpha);
-
-  const tempSpread = temperature - dewpoint;
-  const cloudBaseFeet = (tempSpread / 2.5) * 1000;
-  return cloudBaseFeet * 0.3048; // Convert to meters
-}
-
-/**
  * Calculates a composite thermal index from atmospheric parameters
  * Higher values indicate better soaring conditions (0-100 scale)
  * @param lapseRate - Lapse rate °C/1000ft (higher = more unstable)
@@ -237,28 +233,59 @@ export function calculateThermalIndex(
 }
 
 /**
- * Calculates thermal updraft velocity (W*) from CAPE
- * Uses simplified approximation: W* ≈ 0.12 * sqrt(CAPE)
- * @param cape - Convective Available Potential Energy (J/kg)
- * @returns Thermal velocity in m/s, or null if CAPE is invalid
+ * Estimates cumulus cloud base above the ground from the surface
+ * temperature-dewpoint spread: a rising thermal reaches saturation about
+ * 125 m higher for every °C of spread.
+ * @returns Cloud base in meters AGL
  */
-export function calculateThermalVelocity(cape: number | null): number | null {
-  if (cape === null || cape <= 0) return null;
-  return 0.12 * Math.sqrt(cape);
+export function estimateCloudBaseFromDewpoint(temperature: number, dewPoint: number): number {
+  return Math.max(0, Math.round(125 * (temperature - dewPoint)));
+}
+
+/** Fraction of incoming shortwave that heats the air as sensible heat over land (a typical midday value). */
+const SENSIBLE_HEAT_FRACTION = 0.3;
+/** Air density × specific heat (J/m³K), converting W/m² to a kinematic heat flux in K·m/s. */
+const RHO_CP = 1200;
+
+/**
+ * Convective velocity scale W* (Deardorff), the typical thermal updraft
+ * speed RASP and SkySight report: W* = (g/T × BLH × surface heat flux)^(1/3).
+ * Open-Meteo has no sensible heat flux, so it is estimated as a fixed
+ * fraction of the shortwave radiation reaching the ground.
+ * @param blh - Boundary layer height above ground (m)
+ * @param shortwaveRadiation - Incoming shortwave at the surface (W/m²)
+ * @param temperature - Surface air temperature (°C)
+ * @returns W* in m/s, or null when there is no boundary layer or no sun
+ */
+export function calculateWStar(
+  blh: number | null,
+  shortwaveRadiation: number | null,
+  temperature: number,
+): number | null {
+  if (blh === null || blh <= 0 || shortwaveRadiation === null || shortwaveRadiation <= 0) {
+    return null;
+  }
+  const heatFlux = (SENSIBLE_HEAT_FRACTION * shortwaveRadiation) / RHO_CP;
+  const wStar = Math.cbrt((9.81 / (temperature + 273.15)) * blh * heatFlux);
+  return Math.round(wStar * 10) / 10;
 }
 
 /**
- * Estimates top of lift from boundary layer height and CAPE
- * @param blh - Boundary layer height (meters)
- * @param cape - CAPE value (J/kg)
- * @returns Estimated top of lift in meters MSL, or null if insufficient data
+ * Estimates the top of usable lift: thermals stop at the top of the
+ * boundary layer, or at cloud base when cumulus forms below it.
+ * @param blh - Boundary layer height above ground (m)
+ * @param cloudBaseAgl - Cumulus cloud base above ground (m), or null
+ * @param groundElevation - Ground height the AGL values are measured from (m MSL)
+ * @returns Top of lift in meters MSL, or null if there is no boundary layer
  */
-export function estimateTopOfLift(blh: number | null, cape: number): number | null {
+export function estimateTopOfLift(
+  blh: number | null,
+  cloudBaseAgl: number | null,
+  groundElevation: number,
+): number | null {
   if (blh === null || blh <= 0) return null;
-
-  // Use BLH as base, add CAPE-based boost (every 100 J/kg adds ~100m)
-  const capeBoost = Math.min(2000, (cape / 100) * 100);
-  return Math.round(blh + capeBoost);
+  const top = cloudBaseAgl !== null ? Math.min(blh, cloudBaseAgl) : blh;
+  return Math.round(groundElevation + top);
 }
 
 /**
@@ -392,6 +419,10 @@ export async function fetchAtmosphericProfile(
     'convective_inhibition',
     'lifted_index',
     'shortwave_radiation',
+    'dew_point_2m',
+    'precipitation',
+    'cloud_cover_low',
+    'visibility',
   ];
 
   // Build pressure-level parameter list
@@ -415,8 +446,13 @@ export async function fetchAtmosphericProfile(
     latitude: latitude.toString(),
     longitude: longitude.toString(),
     hourly: [...surfaceParams, ...pressureParams].join(','),
+    daily: 'sunrise,sunset',
     forecast_days: days.toString(),
     timezone: 'auto',
+    // Use the model grid cell's own height instead of downscaling to the
+    // point's terrain, so 10 m wind, boundary-layer height and the
+    // pressure levels all refer to the same ground.
+    elevation: 'nan',
   });
 
   const url = `${OPEN_METEO_BASE_URL}?${params.toString()}`;
@@ -460,6 +496,10 @@ export async function fetchAtmosphericProfile(
         convectiveInhibition: data.hourly.convective_inhibition[idx],
         liftedIndex: data.hourly.lifted_index[idx],
         shortwaveRadiation: data.hourly.shortwave_radiation[idx],
+        dewPoint: data.hourly.dew_point_2m?.[idx] ?? null,
+        precipitation: data.hourly.precipitation?.[idx] ?? null,
+        cloudCoverLow: data.hourly.cloud_cover_low?.[idx] ?? null,
+        visibility: data.hourly.visibility?.[idx] ?? null,
       };
 
       // Calculate derived parameters
@@ -477,12 +517,11 @@ export async function fetchAtmosphericProfile(
             )
           : null;
 
-      // Estimate cloud base from surface temperature and humidity
-      // Use 950 hPa as "surface" (closer to typical launch elevations)
-      const surfaceLevel = pressureLevels.find((l) => l.pressure === 950);
-      const cloudBase = surfaceLevel
-        ? estimateCloudBase(surfaceLevel.temperature, surfaceLevel.relativeHumidity)
-        : null;
+      // Cloud base above the model ground, from the surface dewpoint spread
+      const cloudBase =
+        surface.dewPoint != null
+          ? estimateCloudBaseFromDewpoint(surface.temperature, surface.dewPoint)
+          : null;
 
       // Calculate thermal index
       const thermalIndex = calculateThermalIndex(
@@ -493,10 +532,14 @@ export async function fetchAtmosphericProfile(
       );
 
       // Estimate top of lift
-      const topOfLift = estimateTopOfLift(surface.boundaryLayerHeight, surface.cape);
+      const topOfLift = estimateTopOfLift(surface.boundaryLayerHeight, cloudBase, data.elevation);
 
       // W* (thermal updraft velocity)
-      const wStar = calculateThermalVelocity(surface.cape);
+      const wStar = calculateWStar(
+        surface.boundaryLayerHeight,
+        surface.shortwaveRadiation,
+        surface.temperature,
+      );
 
       // Freezing level (0°C isotherm)
       const freezingLevel = calculateFreezingLevel(pressureLevels);
@@ -534,6 +577,12 @@ export async function fetchAtmosphericProfile(
       timezone: data.timezone,
       fetchedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      sunriseByDay: data.daily
+        ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunrise[i]]))
+        : undefined,
+      sunsetByDay: data.daily
+        ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunset[i]]))
+        : undefined,
       hours,
     };
   } catch (error) {
@@ -565,6 +614,11 @@ export interface AtmosphericProfileResult {
  * @param days - Number of forecast days (default 2)
  * @returns Atmospheric profile result with cache metadata
  */
+/** Cache key for a location: coordinates rounded to 2 decimals (~1 km). */
+export function profileLocationKey(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+}
+
 export async function getAtmosphericProfile(
   latitude: number,
   longitude: number,
@@ -584,7 +638,7 @@ export async function getAtmosphericProfile(
   const now = new Date();
 
   // Create cache key from rounded coordinates (2 decimal precision ~1km)
-  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  const cacheKey = profileLocationKey(latitude, longitude);
 
   // Try to get cached profile (both fresh and stale)
   const [cachedRow] = await db
@@ -598,8 +652,13 @@ export async function getAtmosphericProfile(
     )
     .limit(1);
 
-  // Check if cache exists and is still valid
-  if (cachedRow && new Date(cachedRow.expiresAt) > now) {
+  // Check if cache exists and is still valid. Profiles cached before
+  // sunrise/sunset were fetched lack fields the forecast engine needs.
+  if (
+    cachedRow &&
+    new Date(cachedRow.expiresAt) > now &&
+    (cachedRow.data as AtmosphericProfile).sunriseByDay
+  ) {
     return {
       profile: cachedRow.data as AtmosphericProfile,
       isStale: false,

@@ -551,7 +551,7 @@ export function WindgramChart({
       if (idx % 2 !== 0 && isMobile) return; // Thin out on mobile
 
       const x = CHART_PADDING.left + (idx / (daylightHours.length - 1)) * chartWidth;
-      drawThermalIndicator(ctx, x, thermalY, hour.surface.cape, isDarkTheme);
+      drawThermalIndicator(ctx, x, thermalY, hour.derived.wStar, isDarkTheme);
     });
 
     // ========================================

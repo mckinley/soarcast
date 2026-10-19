@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { DayScore } from '@/types';
-import type { AtmosphericProfile, AtmosphericHour } from '@/lib/weather-profile';
+import type { AtmosphericProfile } from '@/lib/weather-profile';
+import { deriveLaunchConditions } from '@/lib/forecast-engine/launch-conditions';
+import { verdictSummary } from '@/lib/forecast-engine';
+import { calculateCircularMean } from '@/lib/site-utils';
 
 interface FlyabilitySummaryProps {
   dayScore: DayScore;
@@ -12,31 +15,28 @@ interface FlyabilitySummaryProps {
    * Date to analyze (YYYY-MM-DD)
    */
   date: string;
+  /** Launch altitude in meters MSL, so wind is shown where the pilot launches */
+  launchElevation?: number;
 }
 
 /**
- * Displays an at-a-glance flyability assessment for pilots who don't want to
- * interpret the windgram themselves. Combines simple scoring with atmospheric
- * profile data for richer, plain-language assessments.
+ * The engine's verdict for one day in plain language: can I fly, when, and
+ * what stops me otherwise. The details show the conditions behind it.
  */
-export function FlyabilitySummary({ dayScore, atmosphericData, date }: FlyabilitySummaryProps) {
+export function FlyabilitySummary({
+  dayScore,
+  atmosphericData,
+  date,
+  launchElevation = 0,
+}: FlyabilitySummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Filter hours for the target date and daylight hours (6 AM - 8 PM)
-  const dayHours = atmosphericData.hours.filter((hour) => {
-    const hourDate = hour.time.split('T')[0];
-    const hourTime = parseInt(hour.time.split('T')[1].split(':')[0], 10);
-    return hourDate === date && hourTime >= 6 && hourTime <= 20;
-  });
-
-  if (dayHours.length === 0) {
+  const hours = hoursToDescribe(atmosphericData, date, dayScore.flyableWindow);
+  if (hours.length === 0) {
     return null; // No data for this day
   }
+  const details = describeConditions(atmosphericData, hours, launchElevation);
 
-  // Analyze atmospheric data
-  const analysis = analyzeDay(dayHours, dayScore);
-
-  // Color classes for rating badges
   const ratingColors: Record<DayScore['label'], string> = {
     Epic: 'bg-purple-500 text-white',
     Great: 'bg-green-500 text-white',
@@ -44,10 +44,10 @@ export function FlyabilitySummary({ dayScore, atmosphericData, date }: Flyabilit
     Fair: 'bg-yellow-500 text-gray-900',
     Poor: 'bg-gray-400 text-gray-900',
   };
+  const windowLabel = dayScore.verdict === 'go' ? 'Flyable' : 'Marginal';
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
-      {/* Header with rating badge */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
@@ -56,32 +56,30 @@ export function FlyabilitySummary({ dayScore, atmosphericData, date }: Flyabilit
             >
               {dayScore.label}
             </span>
-            {analysis.bestWindow && (
+            {dayScore.flyableWindow && (
               <span className="text-sm text-muted-foreground">
-                Best: <span className="font-medium text-foreground">{analysis.bestWindow}</span>
+                {windowLabel}:{' '}
+                <span className="font-medium text-foreground">{dayScore.flyableWindow}</span>
               </span>
             )}
           </div>
 
-          {/* Plain-language summary */}
-          <p className="text-sm leading-relaxed">{analysis.summary}</p>
+          <p className="text-sm leading-relaxed">{verdictSummary(dayScore)}</p>
 
-          {/* Key concerns */}
-          {analysis.concerns.length > 0 && (
+          {dayScore.reasons.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {analysis.concerns.map((concern, idx) => (
+              {dayScore.reasons.map((reason) => (
                 <span
-                  key={idx}
+                  key={reason}
                   className="inline-flex items-center rounded-md bg-orange-100 dark:bg-orange-950 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300"
                 >
-                  {concern}
+                  {reason}
                 </span>
               ))}
             </div>
           )}
         </div>
 
-        {/* Expand/collapse button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex-shrink-0 rounded-md p-2 hover:bg-muted transition-colors"
@@ -91,65 +89,79 @@ export function FlyabilitySummary({ dayScore, atmosphericData, date }: Flyabilit
         </button>
       </div>
 
-      {/* Expanded details */}
       {isExpanded && (
         <div className="pt-3 border-t space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {dayScore.flyableWindow
+              ? `Averages for ${dayScore.flyableWindow}`
+              : 'Averages for the daylight hours'}
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-            {/* Wind at launch altitude */}
             <div>
-              <div className="text-muted-foreground text-xs">Launch Wind (avg)</div>
+              <div className="text-muted-foreground text-xs">Wind at Launch</div>
               <div className="font-medium">
-                {analysis.launchWindSpeed} kt / {Math.round(analysis.launchWindSpeed * 1.15078)} mph
+                {details.launchWindKmh} km/h / {Math.round(details.launchWindKmh * 0.621371)} mph
               </div>
-              <div className="text-xs text-muted-foreground">{analysis.launchWindDirection}</div>
+              <div className="text-xs text-muted-foreground">{details.launchWindDirection}</div>
             </div>
 
-            {/* Thermal strength */}
             <div>
               <div className="text-muted-foreground text-xs">Thermal Strength</div>
-              <div className="font-medium">{analysis.thermalStrength}</div>
-              <div className="text-xs text-muted-foreground">Index {analysis.avgThermalIndex}</div>
+              <div className="font-medium">
+                {dayScore.wStar != null ? `${dayScore.wStar} m/s` : 'None'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {thermalLabel(dayScore.wStar ?? null)}
+              </div>
             </div>
 
-            {/* Cloud base */}
             <div>
               <div className="text-muted-foreground text-xs">Cloud Base (est)</div>
               <div className="font-medium">
-                {analysis.cloudBase !== null
-                  ? `${analysis.cloudBase}m / ${Math.round(analysis.cloudBase * 3.28084)}ft`
-                  : 'N/A'}
-              </div>
-              <div className="text-xs text-muted-foreground">AGL</div>
-            </div>
-
-            {/* Top of lift */}
-            <div>
-              <div className="text-muted-foreground text-xs">Top of Lift (est)</div>
-              <div className="font-medium">
-                {analysis.topOfLift !== null
-                  ? `${analysis.topOfLift}m / ${Math.round(analysis.topOfLift * 3.28084)}ft`
+                {details.cloudBaseMsl !== null
+                  ? `${details.cloudBaseMsl}m / ${Math.round(details.cloudBaseMsl * 3.28084)}ft`
                   : 'N/A'}
               </div>
               <div className="text-xs text-muted-foreground">MSL</div>
             </div>
 
-            {/* Upper winds */}
             <div>
-              <div className="text-muted-foreground text-xs">Upper Winds (850 hPa)</div>
-              <div className="font-medium">{analysis.upperWindSpeed} kt</div>
-              <div className="text-xs text-muted-foreground">{analysis.upperWindCategory}</div>
+              <div className="text-muted-foreground text-xs">Top of Lift (est)</div>
+              <div className="font-medium">
+                {dayScore.peakCeilingMsl != null
+                  ? `${dayScore.peakCeilingMsl}m / ${Math.round(dayScore.peakCeilingMsl * 3.28084)}ft`
+                  : 'N/A'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {dayScore.topOfLiftAboveLaunch != null
+                  ? `${dayScore.topOfLiftAboveLaunch} m above launch`
+                  : 'MSL'}
+              </div>
             </div>
 
-            {/* Precipitation */}
             <div>
-              <div className="text-muted-foreground text-xs">Rain Chance</div>
-              <div className="font-medium">{analysis.precipChance}%</div>
+              <div className="text-muted-foreground text-xs">Upper Winds (850 hPa)</div>
+              <div className="font-medium">{details.upperWindKmh} km/h</div>
               <div className="text-xs text-muted-foreground">
-                {analysis.precipChance <= 10
+                {details.upperWindKmh < 35
+                  ? 'Light'
+                  : details.upperWindKmh < 65
+                    ? 'Moderate'
+                    : details.upperWindKmh < 90
+                      ? 'Strong'
+                      : 'Very strong'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-muted-foreground text-xs">Rain Chance (max)</div>
+              <div className="font-medium">{details.maxPrecipChance}%</div>
+              <div className="text-xs text-muted-foreground">
+                {details.maxPrecipChance <= 10
                   ? 'Very low'
-                  : analysis.precipChance <= 30
+                  : details.maxPrecipChance <= 30
                     ? 'Low'
-                    : analysis.precipChance <= 50
+                    : details.maxPrecipChance <= 50
                       ? 'Moderate'
                       : 'High'}
               </div>
@@ -161,303 +173,52 @@ export function FlyabilitySummary({ dayScore, atmosphericData, date }: Flyabilit
   );
 }
 
-/**
- * Analysis result interface
- */
-interface DayAnalysis {
-  summary: string;
-  bestWindow: string | null;
-  concerns: string[];
-  launchWindSpeed: number;
-  launchWindDirection: string;
-  thermalStrength: string;
-  avgThermalIndex: number;
-  cloudBase: number | null;
-  topOfLift: number | null;
-  upperWindSpeed: number;
-  upperWindCategory: string;
-  precipChance: number;
+/** The flyable window's hours, or the day's daylight hours when there is none. */
+function hoursToDescribe(profile: AtmosphericProfile, date: string, window: string | null) {
+  const dayHours = profile.hours.filter((h) => h.time.startsWith(date));
+  const hourOf = (time: string) => parseInt(time.slice(11, 13), 10);
+  if (window) {
+    const [start, end] = window.split('-').map((t) => parseInt(t, 10));
+    return dayHours.filter((h) => hourOf(h.time) >= start && hourOf(h.time) < end);
+  }
+  const sunrise = profile.sunriseByDay?.[date];
+  const sunset = profile.sunsetByDay?.[date];
+  const first = sunrise ? hourOf(sunrise) : 6;
+  const last = sunset ? hourOf(sunset) : 20;
+  return dayHours.filter((h) => hourOf(h.time) >= first && hourOf(h.time) <= last);
 }
 
-/**
- * Analyzes a day's atmospheric data and generates a plain-language assessment
- */
-function analyzeDay(hours: AtmosphericHour[], dayScore: DayScore): DayAnalysis {
-  const concerns: string[] = [];
+function describeConditions(
+  profile: AtmosphericProfile,
+  hours: AtmosphericProfile['hours'],
+  launchElevation: number,
+) {
+  const average = (values: number[]) =>
+    values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
 
-  // Calculate average launch-level wind (use 950 hPa as typical launch altitude)
-  const launchWinds = hours.map((h) => {
-    const level950 = h.pressureLevels.find((l) => l.pressure === 950);
-    return {
-      speed: level950?.windSpeed ?? h.surface.windSpeed,
-      direction: level950?.windDirection ?? h.surface.windDirection,
-    };
-  });
-  const avgLaunchWindSpeed = Math.round(
-    (launchWinds.reduce((sum, w) => sum + w.speed, 0) / launchWinds.length) * 0.539957,
-  ); // km/h to knots
-  const avgLaunchWindDir = Math.round(
-    launchWinds.reduce((sum, w) => sum + w.direction, 0) / launchWinds.length,
+  const atLaunch = hours.map((h) => deriveLaunchConditions(h, profile.elevation, launchElevation));
+  const cloudBases = atLaunch.map((c) => c.cloudBaseMsl).filter((v): v is number => v !== null);
+  const upperWinds = hours.map(
+    (h) => h.pressureLevels.find((l) => l.pressure === 850)?.windSpeed ?? 0,
   );
-  const launchWindDirection = degreesToCardinal(avgLaunchWindDir);
-
-  // Check for increasing winds
-  const earlyWinds = hours.slice(0, Math.floor(hours.length / 2));
-  const lateWinds = hours.slice(Math.floor(hours.length / 2));
-  const earlyAvgSpeed =
-    earlyWinds.reduce((sum, h) => sum + h.surface.windSpeed, 0) / earlyWinds.length;
-  const lateAvgSpeed =
-    lateWinds.reduce((sum, h) => sum + h.surface.windSpeed, 0) / lateWinds.length;
-
-  if (lateAvgSpeed > earlyAvgSpeed + 10) {
-    const time = hours[Math.floor(hours.length / 2)].time.split('T')[1].split(':')[0];
-    const timePeriod = formatHour(parseInt(time, 10));
-    concerns.push(`Increasing winds after ${timePeriod}`);
-  }
-
-  // Check for strong winds
-  if (avgLaunchWindSpeed > 20) {
-    concerns.push('Strong winds');
-  }
-
-  // Calculate average thermal index
-  const thermalIndices = hours
-    .map((h) => h.derived.thermalIndex)
-    .filter((t): t is number => t !== null);
-  const avgThermalIndex =
-    thermalIndices.length > 0
-      ? Math.round(thermalIndices.reduce((sum, t) => sum + t, 0) / thermalIndices.length)
-      : 0;
-
-  const thermalStrength =
-    avgThermalIndex >= 75
-      ? 'Strong'
-      : avgThermalIndex >= 50
-        ? 'Moderate'
-        : avgThermalIndex >= 25
-          ? 'Weak'
-          : 'Very weak';
-
-  // Check for weak thermals
-  if (avgThermalIndex < 40) {
-    concerns.push('Weak thermals');
-  }
-
-  // Calculate average cloud base (AGL)
-  const cloudBases = hours
-    .map((h) => h.derived.estimatedCloudBase)
-    .filter((c): c is number => c !== null);
-  const avgCloudBase =
-    cloudBases.length > 0
-      ? Math.round(cloudBases.reduce((sum, c) => sum + c, 0) / cloudBases.length)
-      : null;
-
-  // Check for low cloud base
-  if (avgCloudBase !== null && avgCloudBase < 800) {
-    concerns.push('Low cloud base');
-  }
-
-  // Calculate average top of lift (MSL)
-  const topOfLifts = hours
-    .map((h) => h.derived.estimatedTopOfLift)
-    .filter((t): t is number => t !== null);
-  const avgTopOfLift =
-    topOfLifts.length > 0
-      ? Math.round(topOfLifts.reduce((sum, t) => sum + t, 0) / topOfLifts.length)
-      : null;
-
-  // Upper winds (850 hPa)
-  const upperWinds = hours.map((h) => {
-    const level850 = h.pressureLevels.find((l) => l.pressure === 850);
-    return level850?.windSpeed ?? 0;
-  });
-  const avgUpperWindSpeed = Math.round(
-    (upperWinds.reduce((sum, w) => sum + w, 0) / upperWinds.length) * 0.539957,
-  ); // km/h to knots
-
-  const upperWindCategory =
-    avgUpperWindSpeed < 20
-      ? 'Light'
-      : avgUpperWindSpeed < 35
-        ? 'Moderate'
-        : avgUpperWindSpeed < 50
-          ? 'Strong'
-          : 'Very strong';
-
-  // Check for strong upper winds
-  if (avgUpperWindSpeed > 40) {
-    concerns.push('Strong upper winds');
-  }
-
-  // Precipitation
-  const avgPrecipChance = Math.round(
-    hours.reduce((sum, h) => sum + h.surface.precipitationProbability, 0) / hours.length,
-  );
-
-  if (avgPrecipChance > 30) {
-    concerns.push('Rain possible');
-  }
-
-  // Find best window (consecutive hours with thermal index > 50)
-  const bestWindow = findBestWindow(hours);
-
-  // Generate plain-language summary
-  const summary = generateSummary(dayScore, avgThermalIndex, concerns, bestWindow);
 
   return {
-    summary,
-    bestWindow,
-    concerns,
-    launchWindSpeed: avgLaunchWindSpeed,
-    launchWindDirection,
-    thermalStrength,
-    avgThermalIndex,
-    cloudBase: avgCloudBase,
-    topOfLift: avgTopOfLift,
-    upperWindSpeed: avgUpperWindSpeed,
-    upperWindCategory,
-    precipChance: avgPrecipChance,
+    launchWindKmh: Math.round(average(atLaunch.map((c) => c.windSpeed))),
+    launchWindDirection: degreesToCardinal(
+      calculateCircularMean(atLaunch.map((c) => c.windDirection)),
+    ),
+    cloudBaseMsl: cloudBases.length > 0 ? Math.round(average(cloudBases)) : null,
+    upperWindKmh: Math.round(average(upperWinds)),
+    maxPrecipChance: Math.max(0, ...atLaunch.map((c) => c.precipitationProbability)),
   };
 }
 
-/**
- * Finds the best flying window (consecutive hours with good conditions)
- */
-function findBestWindow(hours: AtmosphericHour[]): string | null {
-  if (hours.length === 0) return null;
-
-  // Find longest consecutive stretch with thermal index > 50
-  let bestStart = -1;
-  let bestLength = 0;
-  let currentStart = -1;
-  let currentLength = 0;
-
-  hours.forEach((hour, idx) => {
-    const thermalIndex = hour.derived.thermalIndex ?? 0;
-
-    if (thermalIndex > 50) {
-      if (currentStart === -1) {
-        currentStart = idx;
-        currentLength = 1;
-      } else {
-        currentLength++;
-      }
-    } else {
-      if (currentLength > bestLength) {
-        bestStart = currentStart;
-        bestLength = currentLength;
-      }
-      currentStart = -1;
-      currentLength = 0;
-    }
-  });
-
-  // Check final stretch
-  if (currentLength > bestLength) {
-    bestStart = currentStart;
-    bestLength = currentLength;
-  }
-
-  // Need at least 2 hours for a window
-  if (bestLength < 2) {
-    return null;
-  }
-
-  const startHour = parseInt(hours[bestStart].time.split('T')[1].split(':')[0], 10);
-  const endHour = parseInt(hours[bestStart + bestLength - 1].time.split('T')[1].split(':')[0], 10);
-
-  return `${formatHour(startHour)}-${formatHour(endHour)}`;
-}
-
-/**
- * Generates a plain-language summary of the day's conditions
- */
-function generateSummary(
-  dayScore: DayScore,
-  avgThermalIndex: number,
-  concerns: string[],
-  bestWindow: string | null,
-): string {
-  const rating = dayScore.label;
-
-  // Base message on rating
-  let summary = '';
-
-  switch (rating) {
-    case 'Epic':
-      summary = '🎉 Exceptional soaring conditions! ';
-      if (bestWindow) {
-        summary += `Prime XC window ${bestWindow}. `;
-      }
-      summary += 'Get to launch early!';
-      break;
-
-    case 'Great':
-      summary = '✨ Excellent flying day! ';
-      if (bestWindow) {
-        summary += `Best window ${bestWindow}. `;
-      }
-      if (concerns.length === 0) {
-        summary += 'Conditions look ideal.';
-      }
-      break;
-
-    case 'Good':
-      summary = 'Good flyable day. ';
-      if (bestWindow) {
-        summary += `Look for the window ${bestWindow}. `;
-      }
-      if (avgThermalIndex >= 60) {
-        summary += 'Thermals should be workable.';
-      }
-      break;
-
-    case 'Fair':
-      summary = 'Marginal but flyable. ';
-      if (avgThermalIndex < 40) {
-        summary += 'Thermals may be weak. ';
-      }
-      if (bestWindow) {
-        summary += `Best bet ${bestWindow}.`;
-      } else {
-        summary += 'Conditions could be challenging.';
-      }
-      break;
-
-    case 'Poor':
-      summary = 'Not recommended for flying. ';
-      if (concerns.length > 0) {
-        summary += 'Multiple unfavorable factors.';
-      } else {
-        summary += 'Conditions look unfavorable.';
-      }
-      break;
-  }
-
-  // Add concern-specific advice
-  if (concerns.length > 0 && rating !== 'Poor') {
-    if (concerns.includes('Strong winds') || concerns.includes('Strong upper winds')) {
-      summary += ' Monitor wind speeds carefully.';
-    } else if (concerns.includes('Weak thermals')) {
-      summary += ' Expect lighter lift.';
-    } else if (concerns.includes('Low cloud base')) {
-      summary += ' Cloud base may limit altitude.';
-    } else if (concerns.includes('Rain possible')) {
-      summary += ' Check radar before launching.';
-    }
-  }
-
-  return summary;
-}
-
-/**
- * Formats hour (24h) to 12h format
- */
-function formatHour(hour: number): string {
-  if (hour === 0) return '12AM';
-  if (hour < 12) return `${hour}AM`;
-  if (hour === 12) return '12PM';
-  return `${hour - 12}PM`;
+function thermalLabel(wStar: number | null): string {
+  if (wStar === null || wStar < 0.5) return 'No usable thermals';
+  if (wStar < 1.2) return 'Weak';
+  if (wStar < 2) return 'Moderate';
+  if (wStar < 3) return 'Strong';
+  return 'Very strong';
 }
 
 /**

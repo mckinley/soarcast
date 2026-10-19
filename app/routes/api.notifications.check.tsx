@@ -1,10 +1,16 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { getDb } from '~/app/lib/db.server';
-import { users, launchSites, userFavoriteSites, customSites, pushSubscriptions, settings as settingsTable } from '~/db/schema';
+import {
+  users,
+  launchSites,
+  userFavoriteSites,
+  customSites,
+  pushSubscriptions,
+  settings as settingsTable,
+} from '~/db/schema';
 import { eq } from 'drizzle-orm';
-import { getIdealWindDirections } from '~/lib/site-utils';
-import { getForecast, setWeatherDb } from '~/lib/weather';
-import { calculateDailyScores, scoreToLabel } from '~/lib/scoring';
+import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
+import { DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '~/lib/notifications';
 import type { DayAnalysis } from '~/lib/notifications';
@@ -24,7 +30,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
     }
 
     const db = getDb(env);
-    setWeatherDb(db);
     setProfileDb(db);
 
     // Configure VAPID keys
@@ -103,7 +108,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
             longitude: s.longitude as number,
             elevation: s.altitude || 0,
             idealWindDirections: getIdealWindDirections(s),
-            maxWindSpeed: s.customMaxWind || s.maxWindSpeed || 40,
+            okWindDirections: getOkWindDirections(s),
+            maxWindSpeed: s.customMaxWind || s.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
             createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
             updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
           })),
@@ -114,7 +120,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
             longitude: parseFloat(s.longitude),
             elevation: s.elevation || 0,
             idealWindDirections: (s.idealWindDirections as number[]) || [],
-            maxWindSpeed: s.maxWindSpeed || 40,
+            maxWindSpeed: s.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
             createdAt: new Date((s.createdAt as unknown as number) * 1000).toISOString(),
             updatedAt: new Date((s.updatedAt as unknown as number) * 1000).toISOString(),
           })),
@@ -288,12 +294,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
             : userSettings.minScoreThreshold;
 
           try {
-            const forecastResult = await getForecast(
-              site.id,
-              site.latitude,
-              site.longitude,
-            );
-
             const atmosphericResult = await getAtmosphericProfile(
               site.latitude,
               site.longitude,
@@ -301,8 +301,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
             );
 
             const siteObj = site;
-
-            const dailyScores = calculateDailyScores(forecastResult.forecast, siteObj);
 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -313,24 +311,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
               const dateStr = checkDate.toISOString().split('T')[0];
 
               const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, dateStr);
-              const dayScore = dailyScores.find((score) => score.date === dateStr);
-              const score = analysis?.score ?? dayScore?.overallScore ?? 0;
 
-              if (score >= siteMinScore) {
-                let payload: string;
-                if (analysis) {
-                  const notification = generateNotification(siteObj, analysis);
-                  payload = JSON.stringify(notification);
-                } else {
-                  const scoreLabel = scoreToLabel(score);
-                  payload = JSON.stringify({
-                    title: `${scoreLabel} Flying Day: ${site.name}`,
-                    body: `${dateStr}: Score ${Math.round(score)}/100`,
-                    url: `/sites/${site.id}`,
-                    siteId: site.id,
-                    tag: `site-${site.id}-${dateStr}`,
-                  });
-                }
+              if (analysis && analysis.score >= siteMinScore) {
+                const payload = JSON.stringify(generateNotification(siteObj, analysis));
 
                 for (const subscription of subscriptions) {
                   try {

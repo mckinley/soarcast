@@ -1,12 +1,13 @@
 import { useLoaderData, useFetcher, Link } from 'react-router';
 import type { Route } from './+types/sites.$slug';
+import type { DayScore } from '~/types';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
 import { launchSites, userFavoriteSites } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { getIdealWindDirections, getOrientations } from '~/lib/site-utils';
+import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
 import { getForecast, setWeatherDb } from '~/lib/weather';
-import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
+import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
@@ -243,7 +244,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // All pgsites sites are launch sites — use 'launch' as the cache discriminator
   const forecastSiteType: 'launch' | 'custom' | 'legacy' = 'launch';
   let forecast = null;
-  let scores = null;
+  let scores: DayScore[] | null = null;
   let forecastError = null;
 
   try {
@@ -265,7 +266,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       forecast = forecastResult.value.forecast;
     }
 
-    if (forecast) {
+    // Without a profile there are no verdicts, but the forecast still shows
+    if (profileResult.status === 'rejected') {
+      scores = [];
+    } else {
       const siteForScoring = {
         id: forecastSiteId,
         name: site.name,
@@ -273,15 +277,13 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         longitude: site.longitude,
         elevation: site.altitude || 0,
         idealWindDirections: getIdealWindDirections(site),
-        maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
+        okWindDirections: getOkWindDirections(site),
+        maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
         createdAt: site.createdAt,
         updatedAt: site.updatedAt,
       };
 
-      scores =
-        profileResult.status === 'fulfilled'
-          ? calculateDailyScoresFromProfile(profileResult.value.profile, forecast, siteForScoring)
-          : calculateDailyScores(forecast, siteForScoring);
+      scores = evaluateDays(profileResult.value.profile, launchProfileFromSite(siteForScoring));
     }
   } catch (e) {
     forecastError = e instanceof Error ? e.message : 'Failed to fetch forecast';
@@ -517,7 +519,8 @@ export default function SiteDetailPage() {
             longitude: site.longitude,
             elevation: site.altitude || 0,
             idealWindDirections: getIdealWindDirections(site),
-            maxWindSpeed: customMaxWind || site.maxWindSpeed || 40,
+            okWindDirections: getOkWindDirections(site),
+            maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
             createdAt: site.createdAt,
             updatedAt: site.updatedAt,
           }}
@@ -586,7 +589,9 @@ export default function SiteDetailPage() {
                 </span>
               ) : (
                 <span className="text-muted-foreground">
-                  {site.maxWindSpeed ? `${site.maxWindSpeed} km/h` : '~40 km/h (default)'}
+                  {site.maxWindSpeed
+                    ? `${site.maxWindSpeed} km/h`
+                    : `${DEFAULT_MAX_WIND_KMH} km/h (default)`}
                 </span>
               )}
             </div>

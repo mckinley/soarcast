@@ -8,10 +8,10 @@ import { userFavoriteSites, customSites, launchSites, settings } from '~/db/sche
 import { eq, asc } from 'drizzle-orm';
 import { getSitesByCountry, getPgsitesApiKey } from '~/lib/pgsites-client';
 import { getForecast, fetchAllForecasts, setWeatherDb } from '~/lib/weather';
-import { calculateDailyScores, calculateDailyScoresFromProfile } from '~/lib/scoring';
+import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import type { Site, Forecast, DayScore } from '~/types';
-import { getIdealWindDirections } from '~/lib/site-utils';
+import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 // import { DashboardClient } from '~/components/dashboard-client'
 // import { OnboardingFlow } from '~/components/onboarding-flow'
 
@@ -68,7 +68,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       longitude: f.site.longitude,
       elevation: f.site.altitude || 0,
       idealWindDirections: f.favorite.customIdealDirections || getIdealWindDirections(f.site),
-      maxWindSpeed: f.favorite.customMaxWind || f.site.maxWindSpeed || 40,
+      okWindDirections: f.favorite.customIdealDirections ? [] : getOkWindDirections(f.site),
+      maxWindSpeed: f.favorite.customMaxWind || f.site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
       notes: f.favorite.notes ?? undefined,
       createdAt: new Date(f.site.createdAt).toISOString(),
       updatedAt: new Date(f.site.updatedAt).toISOString(),
@@ -98,24 +99,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     allSites.map(async (site) => {
       const meta = siteMetadata.get(site.id)!;
       try {
-        const forecastResult = await getForecast(
-          site.id,
-          site.latitude,
-          site.longitude,
-          meta.siteType,
-        );
-
-        let scores: DayScore[];
-        try {
-          const profileResult = await getAtmosphericProfile(site.latitude, site.longitude, 7);
-          scores = calculateDailyScoresFromProfile(
-            profileResult.profile,
-            forecastResult.forecast,
-            site,
-          );
-        } catch {
-          scores = calculateDailyScores(forecastResult.forecast, site);
-        }
+        // A failed profile still leaves the forecast to show, just without verdicts
+        const [forecastResult, profileResult] = await Promise.all([
+          getForecast(site.id, site.latitude, site.longitude, meta.siteType),
+          getAtmosphericProfile(site.latitude, site.longitude, 7).catch(() => null),
+        ]);
+        const scores: DayScore[] = profileResult
+          ? evaluateDays(profileResult.profile, launchProfileFromSite(site))
+          : [];
 
         return {
           site,

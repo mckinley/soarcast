@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Settings } from '@/types';
+import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -509,7 +510,11 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                             type="number"
                             min="10"
                             max="100"
-                            placeholder={site.defaultMaxWind ? String(site.defaultMaxWind) : '40'}
+                            placeholder={
+                              site.defaultMaxWind
+                                ? String(site.defaultMaxWind)
+                                : String(DEFAULT_MAX_WIND_KMH)
+                            }
                             value={siteCustomWinds[site.id] ?? ''}
                             onChange={(e) => handleUpdateCustomWind(site.id, e.target.value)}
                             disabled={isPending}
