@@ -5,11 +5,15 @@ import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { WindgramThumbnail } from '@/components/windgram/windgram-thumbnail';
 import { Skeleton } from '@/components/ui/skeleton';
 import { addDays } from '@/lib/alert-schedule';
+import { flightSummary } from '@/lib/forecast-engine';
+import { GOAL_LABEL } from '@/lib/site-goals';
 import {
-  VERDICT_BADGE,
-  VERDICT_DOT,
-  VERDICT_WORD,
+  STATUS_BADGE,
+  STATUS_DOT,
+  STATUS_WORD,
+  dayHeadline,
   dayName,
+  dayStatus,
   shortDate,
   shortReason,
 } from '@/lib/verdict-display';
@@ -25,9 +29,18 @@ interface SiteCardProps {
   className?: string;
 }
 
+/** Today's line on the card: the flight and when, or what stops it. */
+function todayLine(day: DayScore): string {
+  if (day.verdict === 'no') return `Today: ${day.limitingFactor ?? 'no flyable hours'}`;
+  if (day.verdict === 'marginal') {
+    return `Today: marginal ${day.flyableWindow ?? ''}, ${day.limitingFactor ?? ''}`;
+  }
+  return `Today: ${flightSummary(day) ?? `flyable ${day.flyableWindow}`}`;
+}
+
 /**
- * Dashboard card for a site: today's verdict and window, a windgram
- * thumbnail, and the week as a strip of verdicts.
+ * Dashboard card for a site: whether today is a go for the pilot's goal,
+ * the flight it gives, a windgram thumbnail, and the week as a strip.
  */
 export function SiteCard({
   site,
@@ -115,24 +128,19 @@ export function SiteCard({
             <div className="text-xs text-muted-foreground mt-0.5">
               {siteType === 'custom' && 'Your site • '}
               {site.elevation}m • {site.maxWindSpeed}km/h max
+              {site.goal && ` • ${GOAL_LABEL[site.goal]}`}
             </div>
           </div>
           {todayScore && (
             <div
-              className={`px-2 py-1 rounded text-xs font-semibold ml-2 whitespace-nowrap ${VERDICT_BADGE[todayScore.verdict]}`}
+              className={`px-2 py-1 rounded text-xs font-semibold ml-2 whitespace-nowrap ${STATUS_BADGE[dayStatus(todayScore)]}`}
             >
-              {VERDICT_WORD[todayScore.verdict]}
+              {STATUS_WORD[dayStatus(todayScore)]}
             </div>
           )}
         </div>
         <p className="mb-3 text-sm text-muted-foreground truncate">
-          {error
-            ? error
-            : todayScore
-              ? todayScore.verdict === 'no'
-                ? `Today: ${todayScore.limitingFactor ?? 'no flyable hours'}`
-                : `Today ${todayScore.flyableWindow}${todayScore.wStar ? `, thermals ${todayScore.wStar.toFixed(1)} m/s` : ''}`
-              : 'No forecast for today'}
+          {error ? error : todayScore ? todayLine(todayScore) : 'No forecast for today'}
         </p>
 
         {/* Windgram Thumbnail */}
@@ -157,8 +165,8 @@ export function SiteCard({
               title={`${dayName(date, today)} ${shortDate(date)}: ${
                 score
                   ? score.verdict === 'no'
-                    ? (shortReason(score) ?? VERDICT_WORD.no)
-                    : `${VERDICT_WORD[score.verdict]} ${score.flyableWindow}`
+                    ? (shortReason(score) ?? STATUS_WORD.no)
+                    : dayHeadline(score)
                   : 'no forecast'
               }`}
             >
@@ -171,7 +179,7 @@ export function SiteCard({
                     })}
               </span>
               <span
-                className={`h-2.5 w-full rounded-full ${score ? VERDICT_DOT[score.verdict] : 'bg-muted'}`}
+                className={`h-2.5 w-full rounded-full ${score ? STATUS_DOT[dayStatus(score)] : 'bg-muted'}`}
               />
             </div>
           ))}

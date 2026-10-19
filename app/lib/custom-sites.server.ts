@@ -38,6 +38,8 @@ export function customSiteValues(input: CustomSiteInput, elevation: number) {
     maxWindSpeed: input.maxWindSpeed,
     idealWindDirections: input.goodDirections,
     okWindDirections: input.okDirections,
+    siteKind: input.kind,
+    goal: input.goal,
     notes: input.notes,
   };
 }

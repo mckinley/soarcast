@@ -6,7 +6,7 @@ import type { DayScore } from '@/types';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { deriveLaunchConditions } from '@/lib/forecast-engine/launch-conditions';
 import { verdictSummary } from '@/lib/forecast-engine';
-import { VERDICT_BADGE, VERDICT_WORD } from '@/lib/verdict-display';
+import { STATUS_BADGE, dayHeadline, dayStatus } from '@/lib/verdict-display';
 import { calculateCircularMean } from '@/lib/site-utils';
 
 interface FlyabilitySummaryProps {
@@ -44,13 +44,10 @@ export function FlyabilitySummary({
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
             <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_BADGE[dayScore.verdict]}`}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${STATUS_BADGE[dayStatus(dayScore)]}`}
             >
-              {VERDICT_WORD[dayScore.verdict]}
+              {dayHeadline(dayScore)}
             </span>
-            {dayScore.flyableWindow && (
-              <span className="text-sm font-medium">{dayScore.flyableWindow}</span>
-            )}
           </div>
 
           <p className="text-sm leading-relaxed">{verdictSummary(dayScore)}</p>

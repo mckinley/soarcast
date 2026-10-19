@@ -39,6 +39,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     goodDirections: site.idealWindDirections,
     okDirections: site.okWindDirections ?? [],
     maxWindSpeed: site.maxWindSpeed,
+    kind: row.siteKind,
+    goal: row.goal,
     notes: row.notes,
   };
   return { id: row.id, initial };

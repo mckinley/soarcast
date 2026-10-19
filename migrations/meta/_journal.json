@@ -29,6 +29,13 @@
       "when": 1792433836093,
       "tag": "0003_custom_site_directions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792442661123,
+      "tag": "0004_site_goals",
+      "breakpoints": true
     }
   ]
 }

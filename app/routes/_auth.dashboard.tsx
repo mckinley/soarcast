@@ -7,12 +7,13 @@ import { OnboardingFlow } from '@/components/onboarding-flow';
 import { userFavoriteSites, customSites, launchSites, settings } from '~/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { nearbySites, getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
-import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
+import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
 import { mapWithConcurrency } from '~/lib/utils';
 import type { Site, DayScore } from '~/types';
-import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import { customSiteToSite } from '~/lib/custom-sites';
+import { launchSiteToSite } from '~/lib/launch-sites';
+import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
 
 export interface SiteForecastData {
   site: Site;
@@ -60,21 +61,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Convert to Site format and build metadata
   const siteMetadata = new Map<string, { siteType: 'launch' | 'custom'; slug?: string }>();
 
-  const favoritesAsSites: Site[] = favorites.map((f) => {
+  // Followed sites' copies pick up pgsites changes, like what a site gives
+  const refreshedSites = await refreshLaunchSites(
+    db,
+    getPgsitesApiKey(env),
+    favorites.map((f) => f.site),
+  );
+  const favoritesAsSites: Site[] = favorites.map((f, i) => {
     siteMetadata.set(f.site.id, { siteType: 'launch', slug: f.site.slug });
-    return {
-      id: f.site.id,
-      name: f.site.name,
-      latitude: f.site.latitude,
-      longitude: f.site.longitude,
-      elevation: f.site.altitude || 0,
-      idealWindDirections: f.favorite.customIdealDirections || getIdealWindDirections(f.site),
-      okWindDirections: f.favorite.customIdealDirections ? [] : getOkWindDirections(f.site),
-      maxWindSpeed: f.favorite.customMaxWind || f.site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-      notes: f.favorite.notes ?? undefined,
-      createdAt: new Date(f.site.createdAt).toISOString(),
-      updatedAt: new Date(f.site.updatedAt).toISOString(),
-    };
+    return launchSiteToSite(refreshedSites[i], f.favorite);
   });
 
   const customSitesAsSites: Site[] = customs.map((site) => {
@@ -153,10 +148,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? {
         notifications: {
           enabled: false,
-          minScoreThreshold: userSettings.minScoreThreshold,
           daysAhead: userSettings.daysAhead,
           sitePreferences: {} as Record<string, boolean>,
-          siteMinRatings: {} as Record<string, 'Good' | 'Great' | 'Epic' | undefined>,
         },
         emailDigest: {
           enabled: userSettings.morningDigestEnabled,
@@ -212,10 +205,8 @@ export default function DashboardPage() {
   const defaultSettings = {
     notifications: {
       enabled: false,
-      minScoreThreshold: 70,
       daysAhead: 2,
       sitePreferences: {} as Record<string, boolean>,
-      siteMinRatings: {} as Record<string, 'Good' | 'Great' | 'Epic' | undefined>,
     },
     emailDigest: { enabled: false, digestTime: '08:00' },
     updatedAt: new Date().toISOString(),

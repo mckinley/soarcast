@@ -22,6 +22,18 @@ import {
   type CustomSiteInput,
 } from '@/lib/custom-sites';
 import type { TerrainResponse } from '~/app/routes/api.terrain';
+import {
+  GOAL_HINT,
+  GOAL_LABEL,
+  SITE_GOALS,
+  SITE_KIND_LABEL,
+  SITE_KINDS,
+  defaultGoal,
+} from '@/lib/site-goals';
+import type { SiteGoal, SiteKind } from '@/types';
+
+const SELECT_CLASS =
+  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring dark:bg-input/30';
 
 // Leaflet needs window, so the map only renders in the browser
 const MapPicker = lazy(() =>
@@ -101,6 +113,10 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
   );
   const [maxWind, setMaxWind] = useState(String(initial?.maxWindSpeed ?? DEFAULT_MAX_WIND_KMH));
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [kind, setKind] = useState<SiteKind | ''>(initial?.kind ?? '');
+  const [goal, setGoal] = useState<SiteGoal>(
+    initial?.goal ?? defaultGoal(initial?.kind ?? null, true),
+  );
   const [terrain, setTerrain] = useState<TerrainState>({ status: 'idle' });
 
   // A field's error from the last submit goes away once the pilot changes it
@@ -351,6 +367,48 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
         {shownErrors.maxWindSpeed && (
           <p className="text-sm text-red-500">{shownErrors.maxWindSpeed}</p>
         )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="kind">What the launch gives</Label>
+          <select
+            id="kind"
+            name="kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as SiteKind | '')}
+            className={SELECT_CLASS}
+          >
+            <option value="">Not sure: go by the weather</option>
+            {SITE_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {SITE_KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            A ridge-only launch never counts as a thermal day, and a sled-only one never soars.
+          </p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="goal">Worth going when</Label>
+          <select
+            id="goal"
+            name="goal"
+            value={goal}
+            onChange={(e) => setGoal(e.target.value as SiteGoal)}
+            className={SELECT_CLASS}
+          >
+            {SITE_GOALS.map((g) => (
+              <option key={g} value={g}>
+                {GOAL_LABEL[g]}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            {GOAL_HINT[goal]} Those days show as a go, and alerts come for them.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-2">

@@ -1,6 +1,7 @@
 import { sql, relations } from 'drizzle-orm';
 import { text, integer, real, sqliteTable, unique } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
+import type { SiteGoal, SiteKind } from '../types';
 
 // Better Auth's tables live in auth-schema.ts; app tables reference user.id.
 export * from './auth-schema';
@@ -34,6 +35,11 @@ export const launchSites = sqliteTable('launch_sites', {
   // Flying type flags — replaces flyingTypes JSON
   isParagliding: integer('is_paragliding', { mode: 'boolean' }).notNull().default(false),
   isHanggliding: integer('is_hanggliding', { mode: 'boolean' }).notNull().default(false),
+  // Paraglidingearth.com's tags for what the site gives (src/lib/site-goals.ts)
+  isThermal: integer('is_thermal', { mode: 'boolean' }).notNull().default(false),
+  isSoaring: integer('is_soaring', { mode: 'boolean' }).notNull().default(false),
+  isXc: integer('is_xc', { mode: 'boolean' }).notNull().default(false),
+  isHike: integer('is_hike', { mode: 'boolean' }).notNull().default(false),
   siteType: text('site_type'), // "takeoff", "landing", etc.
   source: text('source').notNull(), // "pgsites"
   pgsitesId: text('pgsites_id').notNull().unique(), // UUID from pgsites API
@@ -66,6 +72,10 @@ export const userFavoriteSites = sqliteTable(
     notes: text('notes'),
     customMaxWind: integer('custom_max_wind'), // km/h, overrides site default
     customIdealDirections: text('custom_ideal_directions', { mode: 'json' }).$type<number[]>(),
+    // The pilot's own say on what the site gives and what they want from it;
+    // null uses the site's tags and the default goal for them
+    siteKind: text('site_kind').$type<SiteKind>(),
+    goal: text('goal').$type<SiteGoal>(),
     notify: integer('notify', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -96,6 +106,8 @@ export const customSites = sqliteTable('custom_sites', {
     .notNull()
     .default(sql`'[]'`)
     .$type<number[]>(),
+  siteKind: text('site_kind').$type<SiteKind>(), // null: not said
+  goal: text('goal').$type<SiteGoal>(), // null: safe launch is enough
   notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
@@ -133,7 +145,6 @@ export const forecastsCache = sqliteTable(
  */
 export interface SiteNotificationPreferences {
   enabled?: boolean; // Default true
-  minRating?: 'Good' | 'Great' | 'Epic'; // Minimum rating to trigger notification
   notifyTime?: 'morning' | 'evening' | 'both'; // Default 'both'
 }
 
@@ -145,6 +156,7 @@ export const settings = sqliteTable('settings', {
     .notNull()
     .unique()
     .references(() => user.id, { onDelete: 'cascade' }),
+  // Unused since alerts follow each site's goal; kept so migrations stay additive
   minScoreThreshold: integer('min_score_threshold').notNull().default(70),
   daysAhead: integer('days_ahead').notNull().default(2),
   siteNotifications: text('site_notifications', { mode: 'json' })

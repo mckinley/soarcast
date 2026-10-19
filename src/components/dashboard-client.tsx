@@ -7,7 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
 import type { DayScore, Settings } from '@/types';
 import { addDays } from '@/lib/alert-schedule';
-import { VERDICT_BADGE, VERDICT_WORD, dayName, shortDate } from '@/lib/verdict-display';
+import {
+  STATUS_BADGE,
+  STATUS_DOT,
+  STATUS_WORD,
+  compareDays,
+  dayHeadline,
+  dayName,
+  dayStatus,
+  shortDate,
+} from '@/lib/verdict-display';
 import { LayoutGrid, Table, MapPinPlus } from 'lucide-react';
 
 /** Build the detail-page URL for a site (launch sites use their slug). */
@@ -15,7 +24,31 @@ function siteHref(siteType: string, slug: string | undefined, siteId: string): s
   return siteType === 'launch' && slug ? `/sites/${slug}` : `/sites/custom/${siteId}`;
 }
 
-const VERDICT_RANK: Record<DayScore['verdict'], number> = { go: 2, marginal: 1, no: 0 };
+/** What the colors mean: a go is set by each site's goal. */
+function StatusLegend() {
+  const items: Array<[keyof typeof STATUS_WORD, string]> = [
+    ['go', 'a go for your goal'],
+    ['flyable', 'flyable, less than your goal'],
+    ['marginal', 'marginal'],
+    ['no', 'not flyable'],
+  ];
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {items.map(([status, text]) => (
+        <li key={status} className="flex items-center gap-1.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[status]}`} />
+          {status === 'go' ? (
+            <>
+              <span className="font-medium text-foreground">{STATUS_WORD.go}</span>: {text}
+            </>
+          ) : (
+            text[0].toUpperCase() + text.slice(1)
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 interface DashboardClientProps {
   data: SiteForecastData[];
@@ -67,11 +100,11 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
     // Check if day is within notification window (daysAhead)
     if (dayIndex >= settings.notifications.daysAhead) return false;
 
-    // Check if score meets threshold
-    return score.overallScore >= settings.notifications.minScoreThreshold;
+    // Alerts come for days that are a go for the site's goal
+    return score.goalMet === true;
   };
 
-  // Today's best site: a flyable window first, then soaring quality
+  // Today's best site: a go for its goal first, then the better flight
   const bestSiteToday =
     data.length >= 2
       ? data.reduce<{
@@ -80,12 +113,7 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
         } | null>((best, item) => {
           const todayScore = item.scores.find((s) => s.date === item.today);
           if (!todayScore || todayScore.verdict === 'no') return best;
-          if (
-            !best ||
-            VERDICT_RANK[todayScore.verdict] > VERDICT_RANK[best.score.verdict] ||
-            (todayScore.verdict === best.score.verdict &&
-              todayScore.overallScore > best.score.overallScore)
-          ) {
+          if (!best || compareDays(todayScore, best.score) < 0) {
             return { siteData: item, score: todayScore };
           }
           return best;
@@ -112,15 +140,17 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
               {bestSiteToday.siteData.site.name}
             </Link>
             <span
-              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${VERDICT_BADGE[bestSiteToday.score.verdict]}`}
+              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[dayStatus(bestSiteToday.score)]}`}
             >
-              {VERDICT_WORD[bestSiteToday.score.verdict]} {bestSiteToday.score.flyableWindow}
+              {dayHeadline(bestSiteToday.score)}
             </span>
-            {bestSiteToday.score.wStar != null && bestSiteToday.score.wStar > 0 && (
-              <span className="text-xs text-muted-foreground">
-                Thermals {bestSiteToday.score.wStar.toFixed(1)} m/s
-              </span>
-            )}
+            {bestSiteToday.score.wStar != null &&
+              bestSiteToday.score.wStar > 0 &&
+              bestSiteToday.score.flight !== 'sled' && (
+                <span className="text-xs text-muted-foreground">
+                  Climbs about {bestSiteToday.score.wStar.toFixed(1)} m/s
+                </span>
+              )}
             {bestSiteToday.score.odRisk && bestSiteToday.score.odRisk !== 'none' && (
               <span className="text-xs text-orange-600 dark:text-orange-400">
                 Overdevelopment: {bestSiteToday.score.odRisk}
@@ -135,8 +165,9 @@ export function DashboardClient({ data, settings, isAuthenticated }: DashboardCl
         <div>
           <h1 className="text-3xl font-bold">Your week</h1>
           <p className="text-muted-foreground mt-1">
-            When each of your sites is flyable. Open a site for its windgram.
+            When each of your sites gives the flying you want from it. Open a site for its windgram.
           </p>
+          <StatusLegend />
         </div>
         <Button variant="outline" size="lg" asChild>
           <Link to="/sites/custom/new">

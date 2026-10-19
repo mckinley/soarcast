@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { DayScore } from '@/types';
 import { Bell } from 'lucide-react';
 import { verdictSummary } from '@/lib/forecast-engine';
-import { VERDICT_CELL, VERDICT_WORD, compactWindow, shortReason } from '@/lib/verdict-display';
+import { STATUS_CELL, cellDetail, cellLabel, dayStatus } from '@/lib/verdict-display';
 
 interface VerdictCellProps {
   score: DayScore | null;
@@ -11,7 +11,7 @@ interface VerdictCellProps {
   href?: string;
 }
 
-/** One site on one day: the verdict, its window or what stops it. */
+/** One site on one day: the flight it gives and when, or what stops it. Green is a go for the pilot's goal. */
 export function VerdictCell({ score, showNotification = false, href }: VerdictCellProps) {
   if (!score) {
     return (
@@ -21,8 +21,8 @@ export function VerdictCell({ score, showNotification = false, href }: VerdictCe
     );
   }
 
-  const detail = score.verdict === 'no' ? shortReason(score) : compactWindow(score.flyableWindow);
-  const className = `relative flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent px-1 text-center transition-all hover:border-primary/50 ${VERDICT_CELL[score.verdict]}`;
+  const detail = cellDetail(score);
+  const className = `relative flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent px-1 text-center transition-all hover:border-primary/50 ${STATUS_CELL[dayStatus(score)]}`;
 
   const content = (
     <>
@@ -31,7 +31,7 @@ export function VerdictCell({ score, showNotification = false, href }: VerdictCe
           <Bell className="h-3.5 w-3.5 text-primary fill-primary" />
         </div>
       )}
-      <div className="text-xs font-semibold leading-tight">{VERDICT_WORD[score.verdict]}</div>
+      <div className="text-xs font-semibold leading-tight">{cellLabel(score)}</div>
       {detail && <div className="text-[11px] leading-tight opacity-80">{detail}</div>}
     </>
   );

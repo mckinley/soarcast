@@ -1,29 +1,41 @@
 // Push and email alert content, built from the forecast engine's day
 // verdicts so alerts say the same thing as the dashboard and site pages.
+// An alert means a day is a go: flyable, with the flight the pilot's goal
+// for the site asks for.
 
 import type { AtmosphericProfile } from './weather-profile';
-import type { DayScore, Site } from '@/types';
+import type { DayScore, FlightType, Site } from '@/types';
 import { evaluateDays, launchProfileFromSite, verdictSummary } from './forecast-engine';
 import { addDays } from './alert-schedule';
+import {
+  FLIGHT_WORD,
+  compareDays,
+  dayHeadline,
+  dayStatus,
+  flightTime,
+  type DayStatus,
+} from './verdict-display';
 
 /** One day at one site, as alerts describe it. */
 export interface DayAnalysis {
   date: string; // YYYY-MM-DD
   verdict: DayScore['verdict'];
-  /** Quality label and score: only for alert thresholds, never shown */
-  rating: DayScore['label'];
-  score: number;
-  bestWindow: string | null; // flyable window, e.g. "11:00-16:00"
+  /** go when the day meets the pilot's goal for the site */
+  status: DayStatus;
+  /** "Go: thermals 12:00-16:00", "Flyable: sled ride 10:00-17:00", "Not flyable" */
+  headline: string;
+  flight: FlightType | null;
+  /** When the flight works: the soaring hours, or the window for a sled ride */
+  flightTime: string | null;
   limitingFactor: string | null;
   concerns: string[]; // e.g., ["Wind 31 km/h (limit 25), 13:00-17:00"]
   /** A hazard inside the flyable window: overdevelopment or strong shear */
   hazard: string | null;
-  highlights: string[]; // e.g., ["Thermals to about 2.4 m/s"]
-  wStar: number | null;
-  /** Top of lift above launch, feet */
-  liftAboveLaunchFt: number | null;
+  highlights: string[]; // e.g., ["Climbs about 2.4 m/s", "lift to ~4,500 ft above launch"]
   /** Plain-language verdict, as the site page words it */
   summary: string;
+  /** The engine's day, for ranking */
+  day: DayScore;
 }
 
 /**
@@ -40,6 +52,26 @@ export interface RichNotification {
 
 const FEET_PER_METER = 3.28084;
 
+function feet(meters: number): string {
+  return `~${Math.round(meters * FEET_PER_METER).toLocaleString('en-US')} ft`;
+}
+
+/** What's good about the flight, in a few words each. */
+function flightHighlights(day: DayScore): string[] {
+  const top = day.topOfLiftAboveLaunch;
+  if (day.flight === 'thermal' || day.flight === 'xc') {
+    const highlights: string[] = [];
+    if (day.wStar) highlights.push(`Climbs about ${day.wStar.toFixed(1)} m/s`);
+    if (top && top > 0) highlights.push(`lift to ${feet(top)} above launch`);
+    return highlights;
+  }
+  if (day.flight === 'ridge') return [`Ridge lift ${day.flightWindow}`];
+  if (day.flight === 'sled' && top !== null && top !== undefined) {
+    return [`Lift tops out ${feet(Math.max(0, top))} above launch`];
+  }
+  return [];
+}
+
 /**
  * Summarizes one day at a site for an alert, from the forecast engine's verdict.
  */
@@ -50,16 +82,6 @@ export function analyzeFlyingDay(
 ): DayAnalysis | null {
   const day = evaluateDays(profile, launchProfileFromSite(site)).find((d) => d.date === targetDate);
   if (!day) return null;
-
-  const liftAboveLaunchFt =
-    day.topOfLiftAboveLaunch && day.topOfLiftAboveLaunch > 0
-      ? Math.round(day.topOfLiftAboveLaunch * FEET_PER_METER)
-      : null;
-  const highlights: string[] = [];
-  if (day.wStar) highlights.push(`Thermals to about ${day.wStar.toFixed(1)} m/s`);
-  if (liftAboveLaunchFt) {
-    highlights.push(`Lift to ~${liftAboveLaunchFt.toLocaleString('en-US')}ft above launch`);
-  }
 
   const hazard =
     day.odRisk === 'high' || day.odRisk === 'moderate'
@@ -72,21 +94,26 @@ export function analyzeFlyingDay(
   return {
     date: targetDate,
     verdict: day.verdict,
-    rating: day.label,
-    score: day.overallScore,
-    bestWindow: day.flyableWindow,
+    status: dayStatus(day),
+    headline: dayHeadline(day),
+    flight: day.flight ?? null,
+    flightTime: day.verdict === 'no' ? null : (flightTime(day) ?? null),
     limitingFactor: day.limitingFactor,
     concerns,
     hazard,
-    highlights,
-    wStar: day.wStar ?? null,
-    liftAboveLaunchFt,
+    highlights: flightHighlights(day),
     summary: verdictSummary(day),
+    day,
   };
 }
 
+/** "Climbs about 2.4 m/s, lift to ~4,500 ft above launch" */
+export function highlightText(analysis: DayAnalysis): string | null {
+  return analysis.highlights.join(', ') || null;
+}
+
 /**
- * The push alert for a flyable day at one site.
+ * The push alert for a day that is a go at one site.
  * @param url - the site's page, e.g. /sites/tiger-mountain--<uuid>
  * @param today - the pilot's local date (YYYY-MM-DD), so "today" and "tomorrow" are theirs
  */
@@ -96,17 +123,25 @@ export function generateNotification(
   url: string,
   today: string,
 ): RichNotification {
-  const { date, bestWindow, highlights, concerns, verdict } = analysis;
+  const { date, flight, concerns, status } = analysis;
   const when = formatDateLabel(date, today);
-  const word = verdict === 'go' ? 'Flyable' : verdict === 'marginal' ? 'Marginal' : 'Not flyable';
 
   const parts: string[] = [];
-  if (highlights.length > 0) parts.push(`${highlights.slice(0, 2).join(', ')}.`);
-  const watch = verdict === 'go' ? analysis.hazard : concerns[0];
+  if (flight) {
+    const highlights = highlightText(analysis);
+    parts.push(
+      `${FLIGHT_WORD[flight]} ${analysis.flightTime ?? ''}`.trim() +
+        (highlights ? `, ${highlights[0].toLowerCase()}${highlights.slice(1)}.` : '.'),
+    );
+  }
+  const watch = status === 'go' ? analysis.hazard : concerns[0];
   if (watch) parts.push(`Watch for: ${watch}.`);
 
   return {
-    title: `${site.name}: ${word} ${when}${bestWindow ? ` ${bestWindow}` : ''}`,
+    title:
+      status === 'go'
+        ? `${site.name}: go ${when}`
+        : `${site.name} ${when}: ${analysis.headline.toLowerCase()}`,
     body: parts.join(' ') || analysis.summary,
     url,
     siteId: site.id,
@@ -125,59 +160,55 @@ export function formatDateLabel(dateStr: string, today: string): string {
   });
 }
 
+/** The digest's one-line answer: "Go today at Tiger Mountain". */
+export function digestTitle(statuses: Array<{ name: string; status: DayStatus }>): string {
+  const go = statuses.filter((s) => s.status === 'go');
+  if (go.length === 0) return 'No go today at your sites';
+  if (go.length === 1) return `Go today at ${go[0].name}`;
+  return `Go today at ${go.length} of your ${statuses.length} sites`;
+}
+
 /**
- * The morning push: which of the pilot's sites are flyable today, best first.
+ * The morning push: which of the pilot's sites are a go today, best first.
  */
 export function generateMorningDigest(
   analyses: Array<{ site: Site; analysis: DayAnalysis }>,
   targetDate: string,
 ): RichNotification {
-  const flyable = analyses
-    .filter((a) => a.analysis.verdict === 'go')
-    .sort((a, b) => b.analysis.score - a.analysis.score);
-  const marginal = analyses.filter((a) => a.analysis.verdict === 'marginal');
+  const ranked = [...analyses].sort((a, b) => compareDays(a.analysis.day, b.analysis.day));
+  const go = ranked.filter((a) => a.analysis.status === 'go');
+  const title = digestTitle(ranked.map((a) => ({ name: a.site.name, status: a.analysis.status })));
 
-  if (flyable.length === 0) {
-    return {
-      title: 'Not flyable today',
-      body:
-        marginal.length > 0
-          ? `Marginal at ${marginal
-              .slice(0, 3)
-              .map((m) => m.site.name)
-              .join(', ')}. ${marginal[0].analysis.limitingFactor ?? ''}`.trim()
-          : `None of your ${analyses.length} sites has a flyable window.`,
-      url: '/dashboard',
-      siteId: 'digest',
-      tag: `digest-${targetDate}`,
-      analysis: (marginal[0] ?? analyses[0]).analysis,
-    };
-  }
-
-  const top = flyable[0];
-  const parts = [
-    `${top.site.name} ${top.analysis.bestWindow}${
-      top.analysis.highlights[0] ? `, ${top.analysis.highlights[0].toLowerCase()}` : ''
-    }.`,
-  ];
-  if (flyable.length > 1) {
-    parts.push(
-      `Also flyable: ${flyable
-        .slice(1, 4)
-        .map((s) => `${s.site.name} ${s.analysis.bestWindow}`)
-        .join(', ')}.`,
-    );
+  let body: string;
+  if (go.length > 0) {
+    const [top, ...rest] = go;
+    const highlights = highlightText(top.analysis);
+    body = `${top.site.name}: ${top.analysis.headline.replace(/^Go: /, '')}${
+      highlights ? `, ${highlights[0].toLowerCase()}${highlights.slice(1)}` : ''
+    }.`;
+    if (rest.length > 0) {
+      body += ` Also a go: ${rest
+        .slice(0, 3)
+        .map((s) => `${s.site.name} ${s.analysis.flightTime ?? ''}`.trim())
+        .join(', ')}.`;
+    }
+  } else {
+    const flyable = ranked.filter((a) => a.analysis.verdict !== 'no');
+    body =
+      flyable.length > 0
+        ? `${flyable
+            .slice(0, 3)
+            .map((a) => `${a.site.name}: ${a.analysis.headline.toLowerCase()}`)
+            .join('. ')}.`
+        : `None of your ${analyses.length} sites has a flyable window.`;
   }
 
   return {
-    title:
-      flyable.length === 1
-        ? `Flyable today at ${top.site.name}`
-        : `Flyable today at ${flyable.length} of your sites`,
-    body: parts.join(' '),
+    title,
+    body,
     url: '/dashboard',
     siteId: 'digest',
     tag: `digest-${targetDate}`,
-    analysis: top.analysis,
+    analysis: (go[0] ?? ranked[0]).analysis,
   };
 }

@@ -3,10 +3,13 @@
 // one place SoarCast decides whether a day is flyable.
 
 import type { AtmosphericProfile } from '@/lib/weather-profile';
-import type { DayScore } from '@/types';
+import type { DayScore, FlightType } from '@/types';
+import { defaultGoal, meetsGoal } from '@/lib/site-goals';
 import { deriveLaunchConditions, type LaunchConditions } from './launch-conditions';
 import {
+  angleDifference,
   evaluateGates,
+  SECTOR_HALF_WIDTH,
   worstStatus,
   type GateName,
   type GateResult,
@@ -24,6 +27,21 @@ export interface HourVerdict {
 
 /** A day needs this many consecutive good hours to count as flyable. */
 export const MIN_WINDOW_HOURS = 2;
+
+/** Thermals a paraglider can climb in: about its own sink rate. */
+export const THERMAL_MIN_WSTAR = 1.0; // m/s
+/** Below this much lift above launch, a flight is a sled ride down. */
+export const SOAR_MIN_HEIGHT = 300; // m
+/** Strong climbs to a high ceiling for long enough to go somewhere. */
+export const XC_MIN_WSTAR = 1.8; // m/s
+export const XC_MIN_HEIGHT = 1000; // m above launch
+export const XC_MIN_HOURS = 3;
+/** Wind straight onto the launch it takes to hold a paraglider up in ridge lift. */
+export const RIDGE_MIN_KMH = 15;
+/** Hours of thermals or ridge lift that make a day soarable. */
+export const SOAR_MIN_HOURS = 2;
+/** At a ridge site, a ridge day this long is a great one. */
+export const GREAT_RIDGE_HOURS = 4;
 
 interface Window {
   start: number; // index into the day's hours
@@ -124,6 +142,58 @@ export function scoreToLabel(score: number): DayScore['label'] {
   return LABELS.find(([min]) => score >= min)![1];
 }
 
+interface Flight {
+  flight: FlightType;
+  flightWindow: string | null;
+  greatDay: boolean;
+}
+
+/**
+ * The best flight the window's hours give at this launch: an XC day,
+ * thermals, ridge soaring, or a sled ride. A site's kind rules some out: a
+ * ridge-only site never thermals, and a sled-only site never soars.
+ */
+function classifyFlight(
+  hours: HourVerdict[],
+  launch: LaunchProfile,
+  odRisk: DayScore['odRisk'],
+): Flight {
+  const kind = launch.kind ?? null;
+  const canThermal = kind !== 'ridge' && kind !== 'sled';
+  // Ridge lift needs the launch's own directions to know which wind is onto it
+  const canRidge = kind !== 'thermal' && kind !== 'sled' && launch.goodDirections.length > 0;
+
+  const liftAboveLaunch = (c: LaunchConditions) =>
+    c.topOfLiftMsl !== null ? c.topOfLiftMsl - launch.elevation : 0;
+  const thermals = (min: number, height: number) => (h: HourVerdict) =>
+    (h.conditions.wStar ?? 0) >= min && liftAboveLaunch(h.conditions) >= height;
+  const ridgeLift = (h: HourVerdict) =>
+    h.conditions.windSpeed >= RIDGE_MIN_KMH &&
+    launch.goodDirections.some(
+      (d) => angleDifference(h.conditions.windDirection, d) <= SECTOR_HALF_WIDTH,
+    );
+
+  const xc = canThermal ? longestRun(hours, thermals(XC_MIN_WSTAR, XC_MIN_HEIGHT)) : null;
+  if (windowLength(xc) >= XC_MIN_HOURS && odRisk !== 'high') {
+    return { flight: 'xc', flightWindow: formatWindow(hours, xc), greatDay: true };
+  }
+  const thermal = canThermal
+    ? longestRun(hours, thermals(THERMAL_MIN_WSTAR, SOAR_MIN_HEIGHT))
+    : null;
+  if (windowLength(thermal) >= SOAR_MIN_HOURS) {
+    return { flight: 'thermal', flightWindow: formatWindow(hours, thermal), greatDay: false };
+  }
+  const ridge = canRidge ? longestRun(hours, ridgeLift) : null;
+  if (windowLength(ridge) >= SOAR_MIN_HOURS) {
+    return {
+      flight: 'ridge',
+      flightWindow: formatWindow(hours, ridge),
+      greatDay: kind === 'ridge' && windowLength(ridge) >= GREAT_RIDGE_HOURS,
+    };
+  }
+  return { flight: 'sled', flightWindow: null, greatDay: false };
+}
+
 function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile): DayScore {
   const goWindow = longestRun(hours, (h) => h.status === 'pass');
   const anyWindow = longestRun(hours, (h) => h.status !== 'fail');
@@ -189,6 +259,13 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
         ? Math.round(31 + 0.19 * quality)
         : Math.round(0.3 * quality);
 
+  const flight = verdict === 'no' ? null : classifyFlight(inWindow, launch, odRisk);
+  const goal = launch.goal ?? defaultGoal(launch.kind);
+  const goalMet = meetsGoal(
+    { verdict, flight: flight?.flight ?? null, greatDay: flight?.greatDay ?? false },
+    goal,
+  );
+
   const summary = summarizeReasons(hours);
   const reasons = summary.map((r) => r.text);
   const limitingFactor =
@@ -215,6 +292,10 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
     peakCeilingMsl: peakTop,
     topOfLiftAboveLaunch:
       peakTop !== null && launch.elevation > 0 ? Math.round(heightAboveLaunch) : null,
+    flight: flight?.flight ?? null,
+    flightWindow: flight?.flightWindow ?? null,
+    greatDay: flight?.greatDay ?? false,
+    goalMet,
   };
 }
 

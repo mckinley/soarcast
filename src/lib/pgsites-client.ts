@@ -21,6 +21,11 @@ export interface PgSite {
   wind_nw: number;
   is_paragliding: number;
   is_hanggliding: number;
+  /** What the site gives, as tagged on Paragliding Earth; only /api/sites/:id returns these */
+  is_thermal?: number;
+  is_soaring?: number;
+  is_xc?: number;
+  is_hike?: number;
   description: string;
   pge_link: string;
   created_at: number;

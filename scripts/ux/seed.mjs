@@ -68,7 +68,7 @@ for (const s of sites) {
   const slug = slugify(s.name, s.id);
   siteSlugs.push({ name: s.name, slug, localId });
   sql.push(
-    `INSERT INTO launch_sites (id, name, slug, country_code, latitude, longitude, altitude, landing_altitude, landing_latitude, landing_longitude, wind_n, wind_ne, wind_e, wind_se, wind_s, wind_sw, wind_w, wind_nw, is_paragliding, is_hanggliding, site_type, source, pgsites_id, description, landing_description, pge_link, last_synced_at) VALUES (${[
+    `INSERT INTO launch_sites (id, name, slug, country_code, latitude, longitude, altitude, landing_altitude, landing_latitude, landing_longitude, wind_n, wind_ne, wind_e, wind_se, wind_s, wind_sw, wind_w, wind_nw, is_paragliding, is_hanggliding, is_thermal, is_soaring, is_xc, is_hike, site_type, source, pgsites_id, description, landing_description, pge_link, last_synced_at) VALUES (${[
       localId,
       s.name,
       slug,
@@ -89,6 +89,10 @@ for (const s of sites) {
       s.wind_nw ?? 0,
       s.is_paragliding ?? 1,
       s.is_hanggliding ?? 0,
+      s.is_thermal ?? 0,
+      s.is_soaring ?? 0,
+      s.is_xc ?? 0,
+      s.is_hike ?? 0,
       'takeoff',
       'pgsites',
       s.id,

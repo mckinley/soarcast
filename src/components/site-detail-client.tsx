@@ -3,7 +3,9 @@
 import { Card } from '@/components/ui/card';
 import { WindgramSection } from '@/components/windgram-section';
 import { verdictSummary } from '@/lib/forecast-engine';
-import { VERDICT_BADGE, VERDICT_WORD } from '@/lib/verdict-display';
+import { STATUS_BADGE, STATUS_WORD, dayStatus } from '@/lib/verdict-display';
+import { SiteGoalLine, type GoalTarget } from '@/components/site-goal-picker';
+import { defaultGoal } from '@/lib/site-goals';
 import type { Site, DayScore } from '@/types';
 
 interface SiteDetailClientProps {
@@ -11,6 +13,8 @@ interface SiteDetailClientProps {
   scores: DayScore[];
   /** Today's date where the site is (YYYY-MM-DD) */
   today: string;
+  /** Set when the pilot follows or owns the site, so they can change its goal */
+  goalTarget?: GoalTarget;
 }
 
 /** Shown when Open-Meteo can't be reached and nothing is cached. */
@@ -23,24 +27,26 @@ export function ForecastUnavailable() {
   );
 }
 
-export function SiteDetailClient({ site, scores, today }: SiteDetailClientProps) {
+export function SiteDetailClient({ site, scores, today, goalTarget }: SiteDetailClientProps) {
   const todayScore = scores.find((s) => s.date === today) ?? scores[0];
+  const goal = site.goal ?? defaultGoal(site.kind);
 
   return (
     <div className="space-y-6">
       {todayScore && (
-        <Card className="p-4">
+        <Card className="gap-3 p-4">
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
             <span
-              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_BADGE[todayScore.verdict]}`}
+              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-sm font-semibold ${STATUS_BADGE[dayStatus(todayScore)]}`}
             >
               {todayScore.date === today ? 'Today: ' : ''}
-              {VERDICT_WORD[todayScore.verdict]}
+              {STATUS_WORD[dayStatus(todayScore)]}
             </span>
             <p className="text-sm text-muted-foreground sm:flex-1 sm:min-w-0">
               {verdictSummary(todayScore)}
             </p>
           </div>
+          <SiteGoalLine target={goalTarget} goal={goal} />
         </Card>
       )}
 

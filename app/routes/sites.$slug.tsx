@@ -1,9 +1,9 @@
 import { useLoaderData, useFetcher, Link, redirect } from 'react-router';
 import type { Route } from './+types/sites.$slug';
-import type { DayScore } from '~/types';
+import type { DayScore, Site } from '~/types';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
-import { customSites, launchSites, userFavoriteSites } from '~/db/schema';
+import { customSites, launchSites, userFavoriteSites, type UserFavoriteSite } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
 import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
@@ -19,13 +19,11 @@ import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { OrientationBadges } from '@/components/orientation-badges';
 import { WindDirectionBadges } from '@/components/wind-direction-badges';
 import { ElevationDisplay } from '@/components/elevation-display';
-import {
-  searchSites,
-  getSiteById,
-  getPgsitesApiKey,
-  pgsitesSlug,
-  type PgSite,
-} from '~/lib/pgsites-client';
+import { searchSites, getSiteById, getPgsitesApiKey, type PgSite } from '~/lib/pgsites-client';
+import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
+import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
+import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals';
+import { SiteKindSelect } from '@/components/site-goal-picker';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -50,6 +48,10 @@ interface DetailSite {
   windNw: number;
   isParagliding: boolean;
   isHanggliding: boolean;
+  isThermal: boolean;
+  isSoaring: boolean;
+  isXc: boolean;
+  isHike: boolean;
   maxWindSpeed: number | null;
   description: string | null;
   landingDescription: string | null;
@@ -96,6 +98,10 @@ function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
     windNw: site.wind_nw,
     isParagliding: !!site.is_paragliding,
     isHanggliding: !!site.is_hanggliding,
+    isThermal: !!site.is_thermal,
+    isSoaring: !!site.is_soaring,
+    isXc: !!site.is_xc,
+    isHike: !!site.is_hike,
     maxWindSpeed: null,
     description: site.description || null,
     landingDescription: null,
@@ -134,6 +140,10 @@ function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSit
     windNw: site.windNw,
     isParagliding: site.isParagliding,
     isHanggliding: site.isHanggliding,
+    isThermal: site.isThermal,
+    isSoaring: site.isSoaring,
+    isXc: site.isXc,
+    isHike: site.isHike,
     maxWindSpeed: site.maxWindSpeed,
     description: site.description || null,
     landingDescription: site.landingDescription || null,
@@ -171,7 +181,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   let localSiteId: string | null = null;
 
   if (localSite) {
-    site = localSiteToDetailSite(localSite);
+    // A followed site's copy picks up pgsites changes, like what the site gives
+    const [fresh] = await refreshLaunchSites(db, apiKey, [localSite]);
+    site = localSiteToDetailSite(fresh);
     localSiteId = localSite.id;
   } else {
     // Alerts sent before they linked by slug point at /sites/<id>
@@ -213,38 +225,49 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
 
   // 2. Resolve favorites (needs session + site identity resolved above)
-  let isFavorited = false;
-  let customMaxWind: number | null = null;
+  let favorite: UserFavoriteSite | undefined;
 
   if (session?.user?.id) {
     // Check favorites — by local ID if cached, or by pgsites ID
+    if (!localSiteId) {
+      // Check if this pgsites site was favorited (look up by pgsitesId)
+      const cached = await db.query.launchSites.findFirst({
+        where: eq(launchSites.pgsitesId, site.id),
+      });
+      localSiteId = cached?.id ?? null;
+    }
     if (localSiteId) {
-      const favorite = await db.query.userFavoriteSites.findFirst({
+      favorite = await db.query.userFavoriteSites.findFirst({
         where: and(
           eq(userFavoriteSites.userId, session.user.id),
           eq(userFavoriteSites.siteId, localSiteId),
         ),
       });
-      isFavorited = !!favorite;
-      customMaxWind = favorite?.customMaxWind ?? null;
-    } else {
-      // Check if this pgsites site was favorited (look up by pgsitesId)
-      const cached = await db.query.launchSites.findFirst({
-        where: eq(launchSites.pgsitesId, site.id),
-      });
-      if (cached) {
-        localSiteId = cached.id;
-        const favorite = await db.query.userFavoriteSites.findFirst({
-          where: and(
-            eq(userFavoriteSites.userId, session.user.id),
-            eq(userFavoriteSites.siteId, cached.id),
-          ),
-        });
-        isFavorited = !!favorite;
-        customMaxWind = favorite?.customMaxWind ?? null;
-      }
     }
   }
+  const customMaxWind = favorite?.customMaxWind ?? null;
+
+  // What the engine rates: the listing, with the pilot's own limit, kind and goal
+  const listedKind = siteKindFromTags({
+    thermal: site.isThermal,
+    soaring: site.isSoaring,
+    xc: site.isXc,
+  });
+  const kind = favorite?.siteKind ?? listedKind;
+  const engineSite: Site = {
+    id: localSiteId || site.id,
+    name: site.name,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    elevation: site.altitude || 0,
+    idealWindDirections: favorite?.customIdealDirections || getIdealWindDirections(site),
+    okWindDirections: favorite?.customIdealDirections ? [] : getOkWindDirections(site),
+    maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
+    kind,
+    goal: favorite?.goal ?? defaultGoal(kind, site.isHike),
+    createdAt: site.createdAt,
+    updatedAt: site.updatedAt,
+  };
 
   // Day verdicts for every site, local or pgsites-only
   let scores: DayScore[] | null = null;
@@ -253,21 +276,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   try {
     setProfileDb(db);
     const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
-    scores = evaluateDays(
-      profile,
-      launchProfileFromSite({
-        id: localSiteId || site.id,
-        name: site.name,
-        latitude: site.latitude,
-        longitude: site.longitude,
-        elevation: site.altitude || 0,
-        idealWindDirections: getIdealWindDirections(site),
-        okWindDirections: getOkWindDirections(site),
-        maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-        createdAt: site.createdAt,
-        updatedAt: site.updatedAt,
-      }),
-    );
+    scores = evaluateDays(profile, launchProfileFromSite(engineSite));
     today = profileToday(profile);
   } catch (e) {
     console.error(`Forecast for ${site.name} failed:`, e);
@@ -276,8 +285,13 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   return {
     site,
+    engineSite,
+    listedKind,
+    ownKind: favorite?.siteKind ?? null,
     pgsitesId: localSite?.pgsitesId ?? site.id,
-    isFavorited,
+    isFavorited: !!favorite,
+    goalTarget:
+      favorite && localSiteId ? { siteId: localSiteId, source: 'launch' as const } : undefined,
     customMaxWind,
     isAuthenticated: !!session?.user?.id,
     scores,
@@ -315,34 +329,13 @@ export async function action({ request, context }: Route.ActionArgs) {
             return Response.json({ error: 'Site not found' }, { status: 404 });
           }
 
-          const slug = pgsitesSlug(pgSite.name, pgSite.id);
           const id = crypto.randomUUID();
 
           await db.insert(launchSites).values({
             id,
-            name: pgSite.name,
-            slug,
-            countryCode: pgSite.country_code,
-            latitude: pgSite.latitude,
-            longitude: pgSite.longitude,
-            altitude: pgSite.altitude,
-            landingAltitude: pgSite.landing_altitude,
-            landingLatitude: pgSite.landing_latitude,
-            landingLongitude: pgSite.landing_longitude,
-            windN: pgSite.wind_n,
-            windNe: pgSite.wind_ne,
-            windE: pgSite.wind_e,
-            windSe: pgSite.wind_se,
-            windS: pgSite.wind_s,
-            windSw: pgSite.wind_sw,
-            windW: pgSite.wind_w,
-            windNw: pgSite.wind_nw,
-            isParagliding: !!pgSite.is_paragliding,
-            isHanggliding: !!pgSite.is_hanggliding,
+            ...launchSiteValuesFromPgSite(pgSite),
             source: 'pgsites',
             pgsitesId: pgSite.id,
-            description: pgSite.description,
-            pgeLink: pgSite.pge_link,
           });
 
           localSite = await db.query.launchSites.findFirst({
@@ -448,8 +441,12 @@ function FavoriteButton({
 export default function SiteDetailPage() {
   const {
     site,
+    engineSite,
+    listedKind,
+    ownKind,
     pgsitesId,
     isFavorited,
+    goalTarget,
     customMaxWind,
     isAuthenticated,
     scores,
@@ -491,22 +488,7 @@ export default function SiteDetailPage() {
       {forecastError || !scores || !today ? (
         <ForecastUnavailable />
       ) : (
-        <SiteDetailClient
-          site={{
-            id: site.id,
-            name: site.name,
-            latitude: site.latitude,
-            longitude: site.longitude,
-            elevation: site.altitude || 0,
-            idealWindDirections: getIdealWindDirections(site),
-            okWindDirections: getOkWindDirections(site),
-            maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-            createdAt: site.createdAt,
-            updatedAt: site.updatedAt,
-          }}
-          scores={scores}
-          today={today}
-        />
+        <SiteDetailClient site={engineSite} scores={scores} today={today} goalTarget={goalTarget} />
       )}
 
       {/* Location & Details — always visible */}
@@ -524,6 +506,18 @@ export default function SiteDetailPage() {
                 <ElevationDisplay elevationMeters={site.landingAltitude} label="Landing" />
               </div>
             )}
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <span className="font-medium">What it gives:</span>
+              {goalTarget ? (
+                <SiteKindSelect target={goalTarget} kind={ownKind} listedKind={listedKind} />
+              ) : (
+                <span className="text-muted-foreground">
+                  {listedKind
+                    ? `${SITE_KIND_LABEL[listedKind]}, as listed on Paragliding Earth`
+                    : 'Not tagged on Paragliding Earth, so SoarCast goes by the weather'}
+                </span>
+              )}
+            </div>
             {(site.isParagliding || site.isHanggliding) && (
               <div>
                 <span className="font-medium">Flying Types:</span>{' '}

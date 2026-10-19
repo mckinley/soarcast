@@ -13,6 +13,9 @@ import {
 import { eq, and, asc } from 'drizzle-orm';
 import { SettingsClient } from '~/components/settings-client';
 import { isValidTimeZone } from '~/lib/alert-schedule';
+import { isSiteGoal, isSiteKind } from '~/lib/site-goals';
+import { customSiteToSite } from '~/lib/custom-sites';
+import { launchSiteKind, launchSiteToSite } from '~/lib/launch-sites';
 
 export function meta() {
   return [{ title: 'Settings | SoarCast' }];
@@ -21,10 +24,8 @@ export function meta() {
 const DEFAULT_SETTINGS = {
   notifications: {
     enabled: false,
-    minScoreThreshold: 70,
     daysAhead: 2,
     sitePreferences: {} as Record<string, boolean>,
-    siteMinRatings: {} as Record<string, 'Good' | 'Great' | 'Epic' | undefined>,
   },
   emailDigest: { enabled: false, digestTime: '08:00' },
   updatedAt: new Date().toISOString(),
@@ -57,19 +58,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (dbSettings) {
     const enabled = subs.length > 0;
     const legacySitePreferences: Record<string, boolean> = {};
-    const siteMinRatings: Record<string, 'Good' | 'Great' | 'Epic' | undefined> = {};
     for (const [siteId, prefs] of Object.entries(dbSettings.siteNotifications)) {
       legacySitePreferences[siteId] = prefs.enabled ?? true;
-      siteMinRatings[siteId] = prefs.minRating;
     }
 
     appSettings = {
       notifications: {
         enabled,
-        minScoreThreshold: dbSettings.minScoreThreshold,
         daysAhead: dbSettings.daysAhead,
         sitePreferences: legacySitePreferences,
-        siteMinRatings,
       },
       emailDigest: {
         enabled: dbSettings.morningDigestEnabled,
@@ -89,6 +86,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       customMaxWind: null,
       defaultMaxWind: c.maxWindSpeed,
       custom: true,
+      goal: customSiteToSite(c).goal!,
+      kind: c.siteKind,
     })),
     ...favorites.map((f) => ({
       id: f.site.id,
@@ -99,6 +98,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       customMaxWind: f.favorite.customMaxWind,
       defaultMaxWind: f.site.maxWindSpeed,
       custom: false,
+      goal: launchSiteToSite(f.site, f.favorite).goal!,
+      kind: f.favorite.siteKind,
+      listedKind: launchSiteKind(f.site),
     })),
   ];
 
@@ -126,11 +128,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   switch (intent) {
     case 'updateSettings': {
-      // Each control saves only its own field; a missing one must not reset the other
-      const threshold = parseInt(formData.get('minScoreThreshold') as string);
+      // Saves only the fields sent, so a missing one is never reset
       const days = parseInt(formData.get('daysAhead') as string);
       const changes = {
-        ...(threshold >= 0 && threshold <= 100 && { minScoreThreshold: threshold }),
         ...(days >= 1 && days <= 7 && { daysAhead: days }),
         updatedAt: new Date(),
       };
@@ -161,7 +161,6 @@ export async function action({ request, context }: Route.ActionArgs) {
         .insert(settings)
         .values({
           userId,
-          minScoreThreshold: current?.minScoreThreshold ?? 70,
           daysAhead: current?.daysAhead ?? 2,
           siteNotifications: updated,
           updatedAt: new Date(),
@@ -205,38 +204,30 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { success: true };
     }
 
-    case 'updateSiteMinRating': {
-      const siteId = formData.get('siteId') as string;
-      const minRating = (formData.get('rating') as string) || undefined;
+    // What the pilot wants from a site, and what it gives: saved on their
+    // favorite of a listed site, or on their own site. Empty resets to the default.
+    case 'updateSiteGoal':
+    case 'updateSiteKind': {
+      const siteId = formData.get('siteId');
+      const value = formData.get('value');
+      if (typeof siteId !== 'string' || !siteId) return { error: 'Missing site' };
+      const valid = intent === 'updateSiteGoal' ? isSiteGoal(value) : isSiteKind(value);
+      if (value !== '' && !valid) return { error: 'Unknown choice' };
+      const column = intent === 'updateSiteGoal' ? 'goal' : 'siteKind';
+      const change = { [column]: value === '' ? null : value };
 
-      const [current] = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.userId, userId))
-        .limit(1);
-
-      const currentPrefs = current?.siteNotifications?.[siteId] ?? {};
-      const updated: Record<string, SiteNotificationPreferences> = {
-        ...current?.siteNotifications,
-        [siteId]: {
-          ...currentPrefs,
-          minRating: minRating as 'Good' | 'Great' | 'Epic' | undefined,
-        },
-      };
-
-      await db
-        .insert(settings)
-        .values({
-          userId,
-          minScoreThreshold: current?.minScoreThreshold ?? 70,
-          daysAhead: current?.daysAhead ?? 2,
-          siteNotifications: updated,
-          updatedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: settings.userId,
-          set: { siteNotifications: updated, updatedAt: new Date() },
-        });
+      const custom = formData.get('source') === 'custom';
+      if (custom) {
+        await db
+          .update(customSites)
+          .set({ ...change, updatedAt: new Date() })
+          .where(and(eq(customSites.id, siteId), eq(customSites.userId, userId)));
+      } else {
+        await db
+          .update(userFavoriteSites)
+          .set(change)
+          .where(and(eq(userFavoriteSites.userId, userId), eq(userFavoriteSites.siteId, siteId)));
+      }
       return { success: true };
     }
 

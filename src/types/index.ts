@@ -1,5 +1,14 @@
 // Core data types for SoarCast
 
+/** What flying a launch can give: thermals, ridge lift, both, or only a glide down. */
+export type SiteKind = 'thermal' | 'ridge' | 'both' | 'sled';
+
+/** What a pilot wants from a site before a day counts as worth going. */
+export type SiteGoal = 'launch' | 'soar' | 'great';
+
+/** The kind of flight a day gives, worst to best. */
+export type FlightType = 'sled' | 'ridge' | 'thermal' | 'xc';
+
 export interface Site {
   id: string;
   name: string;
@@ -9,6 +18,10 @@ export interface Site {
   idealWindDirections: number[]; // degrees, e.g., [180, 225, 270]
   okWindDirections?: number[]; // degrees the launch works in, but not ideally
   maxWindSpeed: number; // km/h
+  /** What the launch can give; null or absent when nobody has said */
+  kind?: SiteKind | null;
+  /** What the pilot wants from it; absent uses the default for its kind */
+  goal?: SiteGoal;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -34,15 +47,21 @@ export interface DayScore {
   freezingConcern?: boolean;
   peakCeilingMsl?: number | null; // meters MSL
   topOfLiftAboveLaunch?: number | null; // meters
+  /** The best flight the window gives at this site; null when not flyable */
+  flight?: FlightType | null;
+  /** When that flight works, e.g. "12:00-16:00": the soaring hours inside the window */
+  flightWindow?: string | null;
+  /** XC conditions, or a long ridge day at a ridge site */
+  greatDay?: boolean;
+  /** Whether the day is a go for the pilot's goal at this site */
+  goalMet?: boolean;
 }
 
 export interface Settings {
   notifications: {
     enabled: boolean;
-    minScoreThreshold: number; // default 70
     daysAhead: number; // default 2
     sitePreferences: Record<string, boolean>; // siteId -> enabled
-    siteMinRatings: Record<string, 'Good' | 'Great' | 'Epic' | undefined>; // siteId -> minRating
   };
   emailDigest: {
     enabled: boolean; // morning email digest toggle

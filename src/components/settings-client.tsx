@@ -5,14 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { Settings } from '@/types';
+import type { Settings, SiteGoal, SiteKind } from '@/types';
+import { SiteGoalSelect, SiteKindSelect } from '@/components/site-goal-picker';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,6 +21,12 @@ interface SettingsSite {
   defaultMaxWind?: number | null;
   /** The user's own site: its wind limit is edited on the site itself */
   custom?: boolean;
+  /** What makes a day a go here: theirs, or the default for the site */
+  goal: SiteGoal;
+  /** What the pilot says the site gives; null uses the listing */
+  kind: SiteKind | null;
+  /** What the listing says it gives (listed sites) */
+  listedKind?: SiteKind | null;
 }
 
 interface SettingsClientProps {
@@ -38,20 +38,6 @@ interface SettingsClientProps {
 // Sent with digest changes so the digest arrives at the user's local time.
 function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
-/** Alert levels, as the minimum day score behind them (the engine's label cut-offs). */
-const ALERT_LEVELS = [
-  { value: 31, label: 'Any flyable day' },
-  { value: 51, label: 'Good soaring or better' },
-  { value: 71, label: 'Great soaring or better' },
-  { value: 86, label: 'Epic days only' },
-] as const;
-
-function nearestAlertLevel(threshold: number): number {
-  return ALERT_LEVELS.reduce((best, level) =>
-    Math.abs(level.value - threshold) < Math.abs(best.value - threshold) ? level : best,
-  ).value;
 }
 
 export function SettingsClient({ initialSettings, sites, vapidPublicKey }: SettingsClientProps) {
@@ -91,15 +77,6 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       setPushError('Push notifications are not supported in this browser');
     }
   }, []);
-
-  const handleUpdateThreshold = (value: string) => {
-    const threshold = parseInt(value, 10);
-    setSettings({
-      ...settings,
-      notifications: { ...settings.notifications, minScoreThreshold: threshold },
-    });
-    save('threshold', { intent: 'updateSettings', minScoreThreshold: String(threshold) });
-  };
 
   // Saved when the field is left, so typing "2" on the way to "12" saves nothing
   const commitDaysAhead = () => {
@@ -316,8 +293,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
           {pushEnabled && (
             <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <p>
-                ✓ Push notifications are on. You&apos;ll be notified when one of your sites is
-                flyable at the level you chose below.
+                ✓ Push notifications are on. You&apos;ll be notified when a day is a go for one of
+                your sites, by the goal you set for it below.
               </p>
             </div>
           )}
@@ -328,32 +305,13 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       <Card>
         <CardHeader>
           <CardTitle>Notification Preferences</CardTitle>
-          <CardDescription>Which days are worth an alert.</CardDescription>
+          <CardDescription>How far ahead to look for days worth an alert.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Alert level */}
-          <div className="space-y-2">
-            <Label htmlFor="threshold">Alert me about</Label>
-            <Select
-              value={String(nearestAlertLevel(settings.notifications.minScoreThreshold))}
-              onValueChange={handleUpdateThreshold}
-            >
-              <SelectTrigger id="threshold" className="max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ALERT_LEVELS.map((level) => (
-                  <SelectItem key={level.value} value={String(level.value)}>
-                    {level.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Flyable means a window of 2+ hours where wind, gusts, direction, rain, storms and
-              cloud all work for the launch. The soaring levels add how strong and high the lift is.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Alerts come for days that are a go at a site: flyable, with the flight you want from it.
+            Set what each site is worth going for under Your sites below.
+          </p>
 
           {/* Days Ahead Window */}
           <div className="space-y-2">
@@ -448,8 +406,11 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       {/* Per-Site Notification Toggles */}
       <Card>
         <CardHeader>
-          <CardTitle>Site Notifications</CardTitle>
-          <CardDescription>Enable or disable notifications for individual sites.</CardDescription>
+          <CardTitle>Your sites</CardTitle>
+          <CardDescription>
+            What each site gives, what makes a day worth going there, and whether to alert you about
+            it.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {sites.length === 0 ? (
@@ -484,82 +445,70 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                         }
                       />
                     </div>
-                    {isEnabled && (
-                      <div className="flex flex-wrap items-center gap-4 pl-8">
+                    <div className="flex flex-wrap items-center gap-4 sm:pl-8">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Label
+                          htmlFor={`goal-${site.id}`}
+                          className="text-sm text-muted-foreground whitespace-nowrap"
+                        >
+                          Worth going when:
+                        </Label>
+                        <SiteGoalSelect
+                          id={`goal-${site.id}`}
+                          target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+                          goal={site.goal}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Label
+                          htmlFor={`kind-${site.id}`}
+                          className="text-sm text-muted-foreground whitespace-nowrap"
+                        >
+                          What it gives:
+                        </Label>
+                        <SiteKindSelect
+                          id={`kind-${site.id}`}
+                          target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+                          kind={site.kind}
+                          listedKind={site.listedKind}
+                        />
+                      </div>
+                      {site.custom ? (
+                        <div className="text-sm text-muted-foreground">
+                          Wind limit {site.defaultMaxWind} km/h •{' '}
+                          <Link to={`/sites/custom/${site.id}/edit`} className="underline">
+                            Edit site
+                          </Link>
+                        </div>
+                      ) : (
                         <div className="flex items-center gap-2">
                           <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                            Alert level:
+                            Wind limit (km/h):
                           </Label>
-                          <Select
-                            value={settings.notifications.siteMinRatings[site.id] ?? 'any'}
-                            onValueChange={(value) => {
-                              const rating =
-                                value === 'any' ? undefined : (value as 'Good' | 'Great' | 'Epic');
-                              setSettings({
-                                ...settings,
-                                notifications: {
-                                  ...settings.notifications,
-                                  siteMinRatings: {
-                                    ...settings.notifications.siteMinRatings,
-                                    [site.id]: rating,
-                                  },
-                                },
-                              });
-                              save(`rating:${site.id}`, {
-                                intent: 'updateSiteMinRating',
-                                siteId: site.id,
-                                rating: rating ?? '',
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="w-[120px] h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="any">As above</SelectItem>
-                              <SelectItem value="Good">Good+</SelectItem>
-                              <SelectItem value="Great">Great+</SelectItem>
-                              <SelectItem value="Epic">Epic</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            type="number"
+                            min="10"
+                            max="100"
+                            placeholder={
+                              site.defaultMaxWind
+                                ? String(site.defaultMaxWind)
+                                : String(DEFAULT_MAX_WIND_KMH)
+                            }
+                            inputMode="numeric"
+                            value={siteCustomWinds[site.id] ?? ''}
+                            onChange={(e) =>
+                              setSiteCustomWinds((prev) => ({
+                                ...prev,
+                                [site.id]: e.target.value,
+                              }))
+                            }
+                            onBlur={() => commitCustomWind(site.id)}
+                            onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
+                            className="w-[80px] h-8"
+                          />
                         </div>
-                        {site.custom ? (
-                          <div className="text-sm text-muted-foreground">
-                            Wind limit {site.defaultMaxWind} km/h •{' '}
-                            <Link to={`/sites/custom/${site.id}/edit`} className="underline">
-                              Edit site
-                            </Link>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                              Wind limit (km/h):
-                            </Label>
-                            <Input
-                              type="number"
-                              min="10"
-                              max="100"
-                              placeholder={
-                                site.defaultMaxWind
-                                  ? String(site.defaultMaxWind)
-                                  : String(DEFAULT_MAX_WIND_KMH)
-                              }
-                              inputMode="numeric"
-                              value={siteCustomWinds[site.id] ?? ''}
-                              onChange={(e) =>
-                                setSiteCustomWinds((prev) => ({
-                                  ...prev,
-                                  [site.id]: e.target.value,
-                                }))
-                              }
-                              onBlur={() => commitCustomWind(site.id)}
-                              onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
-                              className="w-[80px] h-8"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -577,8 +526,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
                 SoarCast checks your sites at your digest time each morning and at 6 PM, in your
-                local time. You&apos;ll get a push notification for each site that is flyable at
-                your alert level within your notification window.
+                local time. You&apos;ll get a push notification for each site with a day in your
+                notification window that is a go for what you want from it.
               </p>
             </div>
           </div>

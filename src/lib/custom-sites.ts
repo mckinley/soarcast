@@ -3,9 +3,10 @@
 // like listed sites.
 
 import type { CustomSite } from '@/db/schema';
-import type { Site } from '@/types';
+import type { Site, SiteGoal, SiteKind } from '@/types';
 import { COMPASS_POINTS } from '@/lib/site-utils';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { defaultGoal, isSiteGoal, isSiteKind } from '@/lib/site-goals';
 
 export const MAX_NAME_LENGTH = 80;
 export const MAX_NOTES_LENGTH = 2000;
@@ -23,6 +24,9 @@ export function customSiteToSite(row: CustomSite): Site {
     idealWindDirections: row.idealWindDirections ?? [],
     okWindDirections: row.okWindDirections ?? [],
     maxWindSpeed: row.maxWindSpeed,
+    kind: row.siteKind,
+    // Pilots pin hike-and-fly peaks they're happy to sled off
+    goal: row.goal ?? defaultGoal(row.siteKind, true),
     notes: row.notes ?? undefined,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -48,6 +52,10 @@ export interface CustomSiteInput {
   goodDirections: number[];
   okDirections: number[];
   maxWindSpeed: number;
+  /** What the launch gives; null when the pilot isn't sure */
+  kind: SiteKind | null;
+  /** What makes a day worth going; null uses the default */
+  goal: SiteGoal | null;
   notes: string | null;
 }
 
@@ -122,6 +130,8 @@ export function parseCustomSiteForm(form: FormData): {
       goodDirections,
       okDirections,
       maxWindSpeed,
+      kind: isSiteKind(text(form, 'kind')) ? (text(form, 'kind') as SiteKind) : null,
+      goal: isSiteGoal(text(form, 'goal')) ? (text(form, 'goal') as SiteGoal) : null,
       notes: notes || null,
     },
     errors,

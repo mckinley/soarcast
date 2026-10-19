@@ -17,6 +17,8 @@ const valid = {
   good: '270,315',
   ok: '225,270',
   maxWindSpeed: '22',
+  kind: 'thermal',
+  goal: 'launch',
   notes: 'Launch is the open slope below Haystack.',
 };
 
@@ -32,8 +34,16 @@ describe('parseCustomSiteForm', () => {
       goodDirections: [270, 315],
       okDirections: [225], // 270 is already good
       maxWindSpeed: 22,
+      kind: 'thermal',
+      goal: 'launch',
       notes: 'Launch is the open slope below Haystack.',
     });
+  });
+
+  it('leaves an unknown site kind or goal unset', () => {
+    const { input } = parseCustomSiteForm(form({ ...valid, kind: '', goal: 'epic' }));
+    expect(input.kind).toBeNull();
+    expect(input.goal).toBeNull();
   });
 
   it('leaves a blank elevation for a terrain lookup and defaults the wind limit', () => {
@@ -84,6 +94,8 @@ describe('customSiteToSite', () => {
       maxWindSpeed: 22,
       idealWindDirections: [270],
       okWindDirections: [225, 315],
+      siteKind: null,
+      goal: null,
       notes: null,
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
@@ -96,6 +108,8 @@ describe('customSiteToSite', () => {
       goodDirections: [270],
       okDirections: [225, 315],
       maxWindSpeed: 22,
+      kind: null,
+      goal: 'launch', // a peak the pilot pinned: a safe launch is enough
     });
   });
 });

@@ -9,14 +9,18 @@ import {
   Link,
   Hr,
 } from '@react-email/components';
+import { digestTitle } from '@/lib/notifications';
+import type { DayStatus as DigestStatus } from '@/lib/verdict-display';
 
 export interface SiteDigestItem {
   name: string;
   /** The site's page: a path on SoarCast, or a full URL */
   url?: string;
-  verdict: 'go' | 'marginal' | 'no';
-  window?: string | null;
-  /** Thermals and lift on a flyable day, what stops it otherwise */
+  /** go: a go for the pilot's goal at the site; flyable: safe to launch, less than the goal */
+  status: DigestStatus;
+  /** "Go: thermals 12:00-16:00", "Flyable: sled ride 10:00-17:00", "Not flyable" */
+  headline: string;
+  /** The lift on a flyable day, what stops it otherwise */
   detail?: string | null;
   concern?: string | null;
 }
@@ -29,28 +33,21 @@ interface MorningDigestEmailProps {
 
 export const APP_URL = 'https://soarcast.mckinleyaviation.com';
 
-const VERDICT_TEXT: Record<SiteDigestItem['verdict'], string> = {
-  go: 'Flyable',
-  marginal: 'Marginal',
-  no: 'Not flyable',
-};
-const VERDICT_COLOR: Record<SiteDigestItem['verdict'], string> = {
+const STATUS_COLOR: Record<DigestStatus, string> = {
   go: '#15803d',
+  flyable: '#4d7c0f',
   marginal: '#b45309',
   no: '#64748b',
 };
-const VERDICT_ORDER: Record<SiteDigestItem['verdict'], number> = { go: 0, marginal: 1, no: 2 };
+const STATUS_ORDER: Record<DigestStatus, number> = { go: 0, flyable: 1, marginal: 2, no: 3 };
 
-/** The digest's one-line answer, also its subject: "Flyable today at Tiger Mountain". */
+/** The digest's one-line answer, also its subject: "Go today at Tiger Mountain". */
 export function digestHeadline(sites: SiteDigestItem[]): string {
-  const flyable = sites.filter((s) => s.verdict === 'go');
-  if (flyable.length === 0) return 'Not flyable today at your sites';
-  if (flyable.length === 1) return `Flyable today at ${flyable[0].name}`;
-  return `Flyable today at ${flyable.length} of your ${sites.length} sites`;
+  return digestTitle(sites);
 }
 
 export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDigestEmailProps) {
-  const ordered = [...sites].sort((a, b) => VERDICT_ORDER[a.verdict] - VERDICT_ORDER[b.verdict]);
+  const ordered = [...sites].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
   return (
     <Html>
       <Head>
@@ -108,11 +105,10 @@ export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDig
                       margin: '2px 0 0',
                       fontSize: '14px',
                       fontWeight: '600',
-                      color: VERDICT_COLOR[site.verdict],
+                      color: STATUS_COLOR[site.status],
                     }}
                   >
-                    {VERDICT_TEXT[site.verdict]}
-                    {site.window ? ` ${site.window}` : ''}
+                    {site.headline}
                   </Text>
                   {site.detail && (
                     <Text style={{ margin: '2px 0 0', color: '#6b7280', fontSize: '13px' }}>
@@ -127,6 +123,9 @@ export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDig
                 </Section>
               ))
             )}
+            <Text style={{ margin: '12px 0 0', color: '#9ca3af', fontSize: '12px' }}>
+              A go is a flyable day with the flying you said each site is worth going for.
+            </Text>
           </Section>
 
           <Hr style={{ borderColor: '#e5e7eb', margin: 0 }} />

@@ -246,6 +246,102 @@ describe('evaluateDays', () => {
   });
 });
 
+describe('flight type', () => {
+  it('calls strong, high thermals for hours an XC day', () => {
+    const day = today(profile());
+    expect(day.flight).toBe('xc');
+    expect(day.flightWindow).toBe('09:00-19:00');
+    expect(day.greatDay).toBe(true);
+  });
+
+  it('calls weaker thermals a thermal day, not a great one', () => {
+    const day = today(profile((h) => (h >= 9 && h <= 18 ? { wStar: 1.3 } : {})));
+    expect(day.flight).toBe('thermal');
+    expect(day.greatDay).toBe(false);
+  });
+
+  it('calls lift that barely clears launch a sled ride', () => {
+    // Tops out 80 m above a 600 m launch, the Mt. Si case
+    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 680 } : {})));
+    expect(day.verdict).toBe('go');
+    expect(day.flight).toBe('sled');
+    expect(verdictSummary(day)).toBe(
+      'Flyable 06:00-21:00: a sled ride, lift tops out 80 m above launch.',
+    );
+  });
+
+  it('finds ridge lift in steady wind onto the launch', () => {
+    const day = today(profile(() => ({ windSpeed: 18, wStar: 0.3 })));
+    expect(day.flight).toBe('ridge');
+    expect(day.flightWindow).toBe('06:00-21:00');
+    expect(day.greatDay).toBe(false);
+  });
+
+  it('makes a long ridge day great at a ridge site', () => {
+    const day = today(
+      profile(() => ({ windSpeed: 18, wStar: 0.3 })),
+      { ...swLaunch, kind: 'ridge' },
+    );
+    expect(day.greatDay).toBe(true);
+  });
+
+  it('finds no ridge lift in a cross wind', () => {
+    const day = today(profile(() => ({ windSpeed: 18, windDirection: 270, wStar: 0.3 })));
+    expect(day.flight).toBe('sled');
+  });
+
+  it('only gives what the site can: no ridge soaring at a thermal site', () => {
+    const day = today(
+      profile(() => ({ windSpeed: 18, wStar: 0.3 })),
+      { ...swLaunch, kind: 'thermal' },
+    );
+    expect(day.flight).toBe('sled');
+  });
+
+  it('keeps a sled-only site a sled ride on a big thermal day', () => {
+    const day = today(profile(), { ...swLaunch, kind: 'sled' });
+    expect(day.flight).toBe('sled');
+  });
+
+  it('has no flight on a day that is not flyable', () => {
+    const day = today(profile(() => ({ windSpeed: 15, windDirection: 45 })));
+    expect(day.flight).toBeNull();
+    expect(day.goalMet).toBe(false);
+  });
+});
+
+describe('goals', () => {
+  const sledDay = profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 680 } : {}));
+
+  it('makes a sled ride a go when a safe launch is enough', () => {
+    expect(today(sledDay, { ...swLaunch, goal: 'launch' }).goalMet).toBe(true);
+  });
+
+  it('does not make a sled ride a go when the goal is to soar', () => {
+    expect(today(sledDay, { ...swLaunch, goal: 'soar' }).goalMet).toBe(false);
+    expect(today(sledDay).goalMet).toBe(false); // soaring is the default goal
+  });
+
+  it('only makes great days a go when the goal is a great day', () => {
+    const thermalDay = profile((h) => (h >= 9 && h <= 18 ? { wStar: 1.3 } : {}));
+    expect(today(thermalDay, { ...swLaunch, goal: 'great' }).goalMet).toBe(false);
+    expect(today(profile(), { ...swLaunch, goal: 'great' }).goalMet).toBe(true);
+  });
+
+  it('never makes a marginal day a go', () => {
+    const day = today(
+      profile(() => ({ windSpeed: 22 })),
+      { ...swLaunch, goal: 'launch' },
+    );
+    expect(day.verdict).toBe('marginal');
+    expect(day.goalMet).toBe(false);
+  });
+
+  it('starts a sled-only site on "safe launch is enough"', () => {
+    expect(today(profile(), { ...swLaunch, kind: 'sled' }).goalMet).toBe(true);
+  });
+});
+
 describe('evaluateHours', () => {
   it('returns one verdict per hour with the gate results', () => {
     const hours = evaluateHours(profile(), swLaunch);
@@ -278,7 +374,7 @@ describe('verdictSummary', () => {
   it('describes a go day with its window and lift', () => {
     const day = today(profile());
     expect(verdictSummary(day)).toBe(
-      'Flyable 06:00-21:00. Thermals to about 2.2 m/s, lift to 1,100 m above launch.',
+      'Flyable 06:00-21:00: an XC day, thermals 09:00-19:00 climbing about 2.2 m/s to 1,100 m above launch.',
     );
   });
 

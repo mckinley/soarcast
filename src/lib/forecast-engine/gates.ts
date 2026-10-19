@@ -2,6 +2,7 @@
 // unflyable, whatever the thermals look like; a marginal gate means a
 // careful pilot could still go.
 
+import type { SiteGoal, SiteKind } from '@/types';
 import type { LaunchConditions } from './launch-conditions';
 
 export type GateStatus = 'pass' | 'marginal' | 'fail';
@@ -31,12 +32,16 @@ export interface LaunchProfile {
   /** Directions the launch is possible in, but not ideal. */
   okDirections: number[];
   maxWindSpeed: number; // km/h
+  /** What the launch can give; null or absent when unknown, so the weather decides */
+  kind?: SiteKind | null;
+  /** What the pilot wants from it; absent uses the default for its kind */
+  goal?: SiteGoal;
 }
 
 /** Below this, a paraglider can launch facing any way. */
 export const NIL_WIND_KMH = 6;
 /** Half-width of the sector around each listed direction (PGE uses 8 points, 45° apart). */
-const SECTOR_HALF_WIDTH = 22.5;
+export const SECTOR_HALF_WIDTH = 22.5;
 /** Cloud base must clear launch by this much to launch and climb out. */
 const CLOUD_CLEARANCE_M = 150;
 

@@ -9,9 +9,8 @@ import {
   settings as settingsTable,
 } from '~/db/schema';
 import { eq } from 'drizzle-orm';
-import { getIdealWindDirections, getOkWindDirections } from '~/lib/site-utils';
 import { customSiteToSite } from '~/lib/custom-sites';
-import { DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
+import { launchSiteToSite } from '~/lib/launch-sites';
 import {
   addDays,
   DEFAULT_DIGEST_TIME,
@@ -20,7 +19,12 @@ import {
   resolveTimeZone,
 } from '~/lib/alert-schedule';
 import { getAtmosphericProfile, PROFILE_DAYS, setProfileDb } from '~/lib/weather-profile';
-import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '~/lib/notifications';
+import {
+  analyzeFlyingDay,
+  generateNotification,
+  generateMorningDigest,
+  highlightText,
+} from '~/lib/notifications';
 import type { DayAnalysis } from '~/lib/notifications';
 import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
@@ -108,26 +112,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
         // Get user's monitored sites from both favorite launch sites and custom sites
         const favoriteSitesResult = await db
-          .select({
-            id: launchSites.id,
-            name: launchSites.name,
-            slug: launchSites.slug,
-            latitude: launchSites.latitude,
-            longitude: launchSites.longitude,
-            altitude: launchSites.altitude,
-            windN: launchSites.windN,
-            windNe: launchSites.windNe,
-            windE: launchSites.windE,
-            windSe: launchSites.windSe,
-            windS: launchSites.windS,
-            windSw: launchSites.windSw,
-            windW: launchSites.windW,
-            windNw: launchSites.windNw,
-            maxWindSpeed: launchSites.maxWindSpeed,
-            customMaxWind: userFavoriteSites.customMaxWind,
-            createdAt: launchSites.createdAt,
-            updatedAt: launchSites.updatedAt,
-          })
+          .select({ favorite: userFavoriteSites, site: launchSites })
           .from(userFavoriteSites)
           .innerJoin(launchSites, eq(userFavoriteSites.siteId, launchSites.id))
           .where(eq(userFavoriteSites.userId, user.id));
@@ -137,26 +122,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
           .from(customSites)
           .where(eq(customSites.userId, user.id));
 
-        // Map both to Site interface
+        // Each with the pilot's goal for it, which decides what is worth an alert
         const userSites: Site[] = [
-          ...favoriteSitesResult.map((s) => ({
-            id: s.id,
-            name: s.name,
-            latitude: s.latitude as number,
-            longitude: s.longitude as number,
-            elevation: s.altitude || 0,
-            idealWindDirections: getIdealWindDirections(s),
-            okWindDirections: getOkWindDirections(s),
-            maxWindSpeed: s.customMaxWind || s.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
-            createdAt: s.createdAt.toISOString(),
-            updatedAt: s.updatedAt.toISOString(),
-          })),
+          ...favoriteSitesResult.map((f) => launchSiteToSite(f.site, f.favorite)),
           ...customSitesResult.map(customSiteToSite),
         ];
         if (userSites.length === 0) continue;
         // Where an alert about each site opens
         const siteUrls = new Map<string, string>([
-          ...favoriteSitesResult.map((s) => [s.id, `/sites/${s.slug}`] as const),
+          ...favoriteSitesResult.map((f) => [f.site.id, `/sites/${f.site.slug}`] as const),
           ...customSitesResult.map((s) => [s.id, `/sites/custom/${s.id}`] as const),
         ]);
 
@@ -170,14 +144,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
             }> = [];
 
             for (const site of userSites) {
-              const sitePrefs = (
-                userSettings.siteNotifications as Record<
-                  string,
-                  { enabled?: boolean; minRating?: 'Good' | 'Great' | 'Epic' }
-                >
-              )[site.id];
-
-              if (sitePrefs?.enabled === false) continue;
+              if (userSettings.siteNotifications[site.id]?.enabled === false) continue;
 
               try {
                 const atmosphericResult = await getAtmosphericProfile(
@@ -245,14 +212,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
                   const emailSites = siteAnalyses.map(({ site, analysis }) => ({
                     name: site.name,
                     url: siteUrls.get(site.id),
-                    verdict: analysis.verdict,
-                    window: analysis.bestWindow,
+                    status: analysis.status,
+                    headline: analysis.headline,
                     detail:
-                      analysis.verdict === 'no'
-                        ? analysis.limitingFactor
-                        : analysis.highlights
-                            .map((h, i) => (i > 0 ? h[0].toLowerCase() + h.slice(1) : h))
-                            .join(', ') || null,
+                      analysis.verdict === 'no' ? analysis.limitingFactor : highlightText(analysis),
                     concern:
                       analysis.verdict === 'go'
                         ? analysis.hazard
@@ -286,17 +249,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         // Individual site notifications
         if (subscriptions.length === 0) continue;
         for (const site of userSites) {
-          const siteNotifications = userSettings.siteNotifications as Record<
-            string,
-            { enabled?: boolean; minRating?: 'Good' | 'Great' | 'Epic'; notifyTime?: string }
-          >;
-          const sitePrefs = siteNotifications[site.id];
-          if (sitePrefs?.enabled === false) continue;
-
-          const minRatingMap: Record<string, number> = { Good: 51, Great: 71, Epic: 86 };
-          const siteMinScore = sitePrefs?.minRating
-            ? minRatingMap[sitePrefs.minRating]
-            : userSettings.minScoreThreshold;
+          if (userSettings.siteNotifications[site.id]?.enabled === false) continue;
 
           try {
             const atmosphericResult = await getAtmosphericProfile(
@@ -318,7 +271,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
               const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, dateStr);
 
-              if (analysis && analysis.score >= siteMinScore) {
+              // A go: flyable, with the flight the pilot's goal for the site asks for
+              if (analysis?.status === 'go') {
                 const payload = JSON.stringify(
                   generateNotification(
                     siteObj,

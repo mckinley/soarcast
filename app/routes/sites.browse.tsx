@@ -5,6 +5,7 @@ import { getSession } from '~/app/lib/auth.server';
 import { launchSites, userFavoriteSites } from '~/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-client';
+import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
 import {
   searchSites,
   nearbySites,
@@ -131,34 +132,13 @@ export async function action({ request, context }: Route.ActionArgs) {
           return Response.json({ error: 'Site not found' }, { status: 404 });
         }
 
-        const slug = pgsitesSlug(pgSite.name, pgSite.id);
         const id = crypto.randomUUID();
 
         await db.insert(launchSites).values({
           id,
-          name: pgSite.name,
-          slug,
-          countryCode: pgSite.country_code,
-          latitude: pgSite.latitude,
-          longitude: pgSite.longitude,
-          altitude: pgSite.altitude,
-          landingAltitude: pgSite.landing_altitude,
-          landingLatitude: pgSite.landing_latitude,
-          landingLongitude: pgSite.landing_longitude,
-          windN: pgSite.wind_n,
-          windNe: pgSite.wind_ne,
-          windE: pgSite.wind_e,
-          windSe: pgSite.wind_se,
-          windS: pgSite.wind_s,
-          windSw: pgSite.wind_sw,
-          windW: pgSite.wind_w,
-          windNw: pgSite.wind_nw,
-          isParagliding: !!pgSite.is_paragliding,
-          isHanggliding: !!pgSite.is_hanggliding,
+          ...launchSiteValuesFromPgSite(pgSite),
           source: 'pgsites',
           pgsitesId: pgSite.id,
-          description: pgSite.description,
-          pgeLink: pgSite.pge_link,
         });
 
         localSite = await db.query.launchSites.findFirst({

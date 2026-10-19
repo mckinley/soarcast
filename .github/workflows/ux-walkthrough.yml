@@ -59,15 +59,17 @@ jobs:
                    takeoff_latitude, takeoff_longitude, takeoff_altitude,
                    landing_altitude, landing_latitude, landing_longitude,
                    wind_n, wind_ne, wind_e, wind_se, wind_s, wind_sw, wind_w, wind_nw,
-                   is_paragliding, is_hanggliding, substr(description, 1, 1500) AS description, pge_link
+                   is_paragliding, is_hanggliding, is_thermal, is_soaring, is_xc, is_hike,
+                   substr(description, 1, 1500) AS description, pge_link
             FROM sites
             WHERE pge_deleted_at IS NULL
               AND latitude BETWEEN 45.5 AND 49 AND longitude BETWEEN -124.8 AND -116.9
               AND (name LIKE '%Tiger%' OR name LIKE '%Chelan%' OR name LIKE 'Mt. Si%'
-                   OR name LIKE '%Blanchard%' OR name LIKE '%Dog Mountain%' OR name LIKE '%Rampart%')
+                   OR name LIKE '%Blanchard%' OR name LIKE '%Dog Mountain%' OR name LIKE '%Rampart%'
+                   OR name LIKE '%Mailbox%')
             ORDER BY CASE WHEN name LIKE '%Tiger%' THEN 0 WHEN name LIKE '%Chelan%' THEN 1 ELSE 2 END, name
-            LIMIT 8" > ../pgsites.json
-          jq -c '.[0].results[] | {name, latitude, longitude, altitude, wind: [.wind_n, .wind_ne, .wind_e, .wind_se, .wind_s, .wind_sw, .wind_w, .wind_nw]}' ../pgsites.json
+            LIMIT 9" > ../pgsites.json
+          jq -c '.[0].results[] | {name, latitude, longitude, altitude, wind: [.wind_n, .wind_ne, .wind_e, .wind_se, .wind_s, .wind_sw, .wind_w, .wind_nw], tags: {thermal: .is_thermal, soaring: .is_soaring, xc: .is_xc, hike: .is_hike}}' ../pgsites.json
 
       - name: Start a local copy with test pilots
         run: |

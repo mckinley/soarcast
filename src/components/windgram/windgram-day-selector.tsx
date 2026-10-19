@@ -2,12 +2,13 @@
 
 import type { DayScore } from '@/types';
 import {
-  VERDICT_DOT,
-  VERDICT_WORD,
-  compactWindow,
+  STATUS_DOT,
+  cellDetail,
+  cellLabel,
+  dayHeadline,
   dayName,
+  dayStatus,
   shortDate,
-  shortReason,
 } from '@/lib/verdict-display';
 
 interface WindgramDaySelectorProps {
@@ -19,7 +20,7 @@ interface WindgramDaySelectorProps {
   className?: string;
 }
 
-/** The week as tabs: each day's name, verdict and window, choosing the day the chart shows. */
+/** The week as tabs: each day's name, flight and when, choosing the day the chart shows. */
 export function WindgramDaySelector({
   days,
   today,
@@ -39,8 +40,8 @@ export function WindgramDaySelector({
         const isSelected = index === selectedDayIndex;
         const detail = score
           ? score.verdict === 'no'
-            ? (shortReason(score) ?? VERDICT_WORD.no)
-            : compactWindow(score.flyableWindow)
+            ? (cellDetail(score) ?? cellLabel(score))
+            : `${cellLabel(score)} ${cellDetail(score) ?? ''}`.trim()
           : null;
         return (
           <button
@@ -50,7 +51,7 @@ export function WindgramDaySelector({
             role="tab"
             aria-selected={isSelected}
             aria-controls="windgram-chart"
-            title={score ? VERDICT_WORD[score.verdict] : undefined}
+            title={score ? dayHeadline(score) : undefined}
             className={`flex min-w-[76px] shrink-0 flex-col items-start rounded-md border px-2.5 py-1.5 text-left transition-colors ${
               isSelected
                 ? 'border-primary bg-primary text-primary-foreground'
@@ -61,7 +62,7 @@ export function WindgramDaySelector({
             <span className="text-[11px] leading-tight opacity-80">{shortDate(date)}</span>
             {score && (
               <span className="mt-1 flex items-center gap-1 text-[11px] leading-tight">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${VERDICT_DOT[score.verdict]}`} />
+                <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[dayStatus(score)]}`} />
                 <span className="truncate">{detail}</span>
               </span>
             )}

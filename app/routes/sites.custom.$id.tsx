@@ -11,6 +11,7 @@ import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { DirectionLegend, LaunchDirectionPicker } from '@/components/launch-direction-picker';
 import { ElevationDisplay } from '@/components/elevation-display';
+import { SiteKindSelect } from '@/components/site-goal-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, Pencil } from 'lucide-react';
@@ -88,7 +89,12 @@ export default function CustomSiteDetailPage() {
       {forecastError || !scores || !today ? (
         <ForecastUnavailable />
       ) : (
-        <SiteDetailClient site={site} scores={scores} today={today} />
+        <SiteDetailClient
+          site={site}
+          scores={scores}
+          today={today}
+          goalTarget={{ siteId: site.id, source: 'custom' }}
+        />
       )}
 
       {/* Location & Details — always visible */}
@@ -100,6 +106,13 @@ export default function CustomSiteDetailPage() {
               <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
             </div>
           )}
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="font-medium">What it gives:</span>
+            <SiteKindSelect
+              target={{ siteId: site.id, source: 'custom' }}
+              kind={site.kind ?? null}
+            />
+          </div>
           <div>
             <div className="font-medium mb-2">Launch directions:</div>
             {site.idealWindDirections.length > 0 || (site.okWindDirections ?? []).length > 0 ? (

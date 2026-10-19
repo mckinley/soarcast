@@ -66,6 +66,33 @@ async function sitePage(page, shoot) {
   }
 }
 
+// Changing what a site is worth going for re-rates the week: the goal must
+// stick after a reload, and the today badge says whether it is a go
+async function changeGoal(page, shoot) {
+  const trigger = page.getByRole('combobox').first();
+  if (!(await trigger.count())) {
+    console.log('goal picker: NOT FOUND');
+    return;
+  }
+  const badge = () =>
+    page
+      .locator('span', { hasText: /^Today: / })
+      .first()
+      .textContent()
+      .catch(() => null);
+  const before = await badge();
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  await page.getByRole('option', { name: 'Safe launch is enough' }).click();
+  await page.waitForTimeout(2500);
+  await page.reload({ waitUntil: 'networkidle' }).catch(() => {});
+  await page.waitForTimeout(1500);
+  const after = await badge();
+  const goal = await page.getByRole('combobox').first().textContent();
+  console.log(`goal change: badge ${before} -> ${after}; picker now "${goal}"`);
+  await shoot('goal-safe-launch');
+}
+
 // A new pilot closes the welcome card; it must stay closed after a reload
 async function dismissOnboarding(page, shoot) {
   const close = page.getByRole('button', { name: 'Dismiss onboarding' });
@@ -104,7 +131,12 @@ function localPages() {
       user: 'ux-pilot',
       actions: sitePage,
     },
-    { name: 'site-followed-2', path: `/sites/${second.slug}`, user: 'ux-pilot' },
+    {
+      name: 'site-followed-2',
+      path: `/sites/${second.slug}`,
+      user: 'ux-pilot',
+      actions: changeGoal,
+    },
     { name: 'custom-site', path: `/sites/custom/${seed.customSiteId}`, user: 'ux-pilot' },
     {
       name: 'custom-new',
