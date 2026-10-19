@@ -38,6 +38,8 @@ export interface LaunchProfile {
   goal?: SiteGoal;
 }
 
+/** Thermals a paraglider can climb in: about its own sink rate. */
+export const THERMAL_MIN_WSTAR = 1.0; // m/s
 /** Below this, a paraglider can launch facing any way. */
 export const NIL_WIND_KMH = 6;
 /** Half-width of the sector around each listed direction (PGE uses 8 points, 45° apart). */
@@ -91,10 +93,14 @@ export function windGate(c: LaunchConditions, launch: LaunchProfile): GateResult
 
 export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult {
   const spread = c.windGust - c.windSpeed;
-  if (c.windGust > launch.maxWindSpeed + 10 || spread > 25) {
+  // In an hour with climbable thermals the model's gusts are mostly the
+  // thermals themselves, which pilots fly in: only how strong the gusts get
+  // counts then, not how far they run over the mean wind.
+  const thermic = (c.wStar ?? 0) >= THERMAL_MIN_WSTAR;
+  if (c.windGust > launch.maxWindSpeed + 10 || (!thermic && spread > 25)) {
     return { gate: 'gusts', status: 'fail', reason: `Gusts to ${c.windGust} km/h` };
   }
-  if (c.windGust > launch.maxWindSpeed || spread > 15) {
+  if (c.windGust > launch.maxWindSpeed || (!thermic && spread > 15)) {
     return { gate: 'gusts', status: 'marginal', reason: `Gusty, to ${c.windGust} km/h` };
   }
   return { gate: 'gusts', status: 'pass' };

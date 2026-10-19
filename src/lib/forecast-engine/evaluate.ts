@@ -10,6 +10,7 @@ import {
   angleDifference,
   evaluateGates,
   SECTOR_HALF_WIDTH,
+  THERMAL_MIN_WSTAR,
   worstStatus,
   type GateName,
   type GateResult,
@@ -28,10 +29,12 @@ export interface HourVerdict {
 /** A day needs this many consecutive good hours to count as flyable. */
 export const MIN_WINDOW_HOURS = 2;
 
-/** Thermals a paraglider can climb in: about its own sink rate. */
-export const THERMAL_MIN_WSTAR = 1.0; // m/s
-/** Below this much lift above launch, a flight is a sled ride down. */
-export const SOAR_MIN_HEIGHT = 300; // m
+/**
+ * Below this much lift above launch, a flight is a sled ride down, or a
+ * short scratch at best. At 300 m nearly every summer day at a foothill
+ * launch counted as soarable.
+ */
+export const SOAR_MIN_HEIGHT = 500; // m
 /** Strong climbs to a high ceiling for long enough to go somewhere. */
 export const XC_MIN_WSTAR = 1.8; // m/s
 export const XC_MIN_HEIGHT = 1000; // m above launch
@@ -60,6 +63,20 @@ function longestRun(hours: HourVerdict[], ok: (h: HourVerdict) => boolean): Wind
     }
   });
   return best;
+}
+
+/**
+ * The go window grown through the marginal daylight hours either side of
+ * it: the stretch a pilot could fly. One gusty or cross hour then no longer
+ * cuts the day's flight down to a short scrap of morning.
+ */
+function flyableStretch(hours: HourVerdict[], w: Window): HourVerdict[] {
+  const flyable = (h: HourVerdict) =>
+    h.status !== 'fail' && h.gates.every((g) => g.gate !== 'daylight' || g.status === 'pass');
+  let { start, end } = w;
+  while (start > 0 && flyable(hours[start - 1])) start--;
+  while (end < hours.length - 1 && flyable(hours[end + 1])) end++;
+  return hours.slice(start, end + 1);
 }
 
 function windowLength(w: Window | null): number {
@@ -126,8 +143,8 @@ function scoreWStar(wStar: number): number {
 }
 
 function scoreHeight(metersAboveLaunch: number): number {
-  // Under 300 m above launch is a sled ride; 1,500 m+ is plenty
-  return Math.max(0, Math.min(100, ((metersAboveLaunch - 300) / 1200) * 100));
+  // Under SOAR_MIN_HEIGHT above launch is a sled ride; 1,200 m more is plenty
+  return Math.max(0, Math.min(100, ((metersAboveLaunch - SOAR_MIN_HEIGHT) / 1200) * 100));
 }
 
 const LABELS: Array<[number, DayScore['label']]> = [
@@ -290,7 +307,8 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
         ? Math.round(31 + 0.19 * quality)
         : Math.round(0.3 * quality);
 
-  const flight = verdict === 'no' ? null : classifyFlight(inWindow, launch, odRisk);
+  const flightHours = verdict === 'go' && window ? flyableStretch(hours, window) : inWindow;
+  const flight = verdict === 'no' ? null : classifyFlight(flightHours, launch, odRisk);
   const goal = launch.goal ?? defaultGoal(launch.kind);
   const goalMet = meetsGoal(
     { verdict, flight: flight?.flight ?? null, greatDay: flight?.greatDay ?? false },

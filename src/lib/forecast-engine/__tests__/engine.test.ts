@@ -8,7 +8,7 @@ import {
   type LaunchProfile,
 } from '..';
 import { deriveLaunchConditions, interpolateAtHeight } from '../launch-conditions';
-import { directionGate, daylightGate } from '../gates';
+import { directionGate, daylightGate, gustGate } from '../gates';
 
 const DATE = '2026-07-18';
 const MODEL_ELEVATION = 200;
@@ -177,6 +177,14 @@ describe('gates', () => {
     );
   });
 
+  it('flies through thermal gusts but not through gusts over the limit', () => {
+    const gusty = { ...base, windSpeed: 8, windGust: 30 };
+    expect(gustGate({ ...gusty, wStar: 2.2 }, swLaunch).status).toBe('marginal'); // over 25
+    expect(gustGate({ ...gusty, windGust: 24, wStar: 2.2 }, swLaunch).status).toBe('pass');
+    expect(gustGate({ ...gusty, windGust: 24, wStar: 0.5 }, swLaunch).status).toBe('marginal');
+    expect(gustGate({ ...gusty, windGust: 36, wStar: 2.2 }, swLaunch).status).toBe('fail');
+  });
+
   it('fails an hour after sunset', () => {
     expect(daylightGate({ ...base, hour: 21 }, `${DATE}T05:30`, `${DATE}T21:00`).status).toBe(
       'fail',
@@ -268,6 +276,22 @@ describe('flight type', () => {
     expect(verdictSummary(day)).toBe(
       'Launch window 06:00-21:00: a sled ride, thermals top out 80 m above launch.',
     );
+  });
+
+  it('calls thermals that top out 400 m above launch a sled ride', () => {
+    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 1000 } : {})));
+    expect(day.flight).toBe('sled');
+    expect(day.sled).toEqual({ reason: 'low', liftAboveLaunch: 400 });
+  });
+
+  it('judges the flight over the marginal hours around a short launch window', () => {
+    // A chance of showers from 10:00 to 17:00 leaves 06:00-10:00 as the
+    // launch window, but the thermals from 09:00 are still there to fly
+    const day = today(profile((h) => (h >= 10 && h < 17 ? { precipitationProbability: 40 } : {})));
+    expect(day.verdict).toBe('go');
+    expect(day.flyableWindow).toBe('06:00-10:00');
+    expect(day.flight).toBe('xc');
+    expect(day.flightWindow).toBe('09:00-19:00');
   });
 
   it('finds ridge lift in steady wind onto the launch', () => {

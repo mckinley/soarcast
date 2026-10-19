@@ -12,8 +12,8 @@ export {
   MIN_WINDOW_HOURS,
   RIDGE_MIN_KMH,
   SOAR_MIN_HEIGHT,
-  THERMAL_MIN_WSTAR,
 } from './evaluate';
+export { THERMAL_MIN_WSTAR } from './gates';
 export type { HourVerdict } from './evaluate';
 export type { LaunchProfile, GateResult, GateStatus, GateName } from './gates';
 export type { LaunchConditions } from './launch-conditions';
