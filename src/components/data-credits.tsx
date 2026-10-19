@@ -1,10 +1,14 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
-// forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do.
+// forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
+// kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do.
 
 const link = 'underline underline-offset-2 hover:text-foreground';
 
 export const PGE_ATTRIBUTION =
   'Sites: <a href="https://www.paraglidingearth.com">Paragliding Earth</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>)';
+
+export const KK7_ATTRIBUTION =
+  'Thermals: <a href="https://thermal.kk7.ch">thermal.kk7.ch</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>)';
 
 export function ForecastCredit({ className = '' }: { className?: string }) {
   return (

@@ -60,3 +60,8 @@ echo "== aviationweather.gov METARs near launches"
 curl -sS --max-time 60 -A "$UA" "https://aviationweather.gov/api/data/metar?ids=KRNT,KSMP,KEAT,KS52&format=json" | jq -c '.[] | {icaoId, reportTime, wdir, wspd, wgst, name}'
 echo "== winds.mobi stations within 60 km of Tiger"
 curl -sS --max-time 60 "https://winds.mobi/api/2.3/stations/?near-lat=$LAT&near-lon=$LNG&near-distance=60000&limit=15" | jq -r '.[] | "\(._id)  \(.short // .name)  \(.alt)m"'
+echo "== kk7 thermal map tiles over Tiger (z8: TMS y 166, XYZ y 89)"
+for path in thermals_all_all/8/41/166 thermals_all_all/8/41/89 skyways_all_all/8/41/166 thermals_jul_07/8/41/166; do
+  curl -sS --max-time 60 -A "$UA" -o /dev/null -w "$path: %{http_code} %{content_type} %{size_download} bytes\n" \
+    "https://thermal.kk7.ch/tiles/$path.png?src=soarcast.mckinleyaviation.com"
+done

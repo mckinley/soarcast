@@ -2,6 +2,7 @@
 
 import { MapContainer, Marker } from 'react-leaflet';
 import { VectorBasemap } from '@/components/vector-basemap';
+import { ThermalOverlays } from '@/components/thermal-overlays';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -26,8 +27,15 @@ export function MapDisplay({ latitude, longitude }: MapDisplayProps) {
 
   return (
     <div className="h-[300px] rounded-md overflow-hidden border">
-      <MapContainer center={position} zoom={12} maxZoom={18} scrollWheelZoom={false} className="h-full w-full">
+      <MapContainer
+        center={position}
+        zoom={12}
+        maxZoom={18}
+        scrollWheelZoom={false}
+        className="h-full w-full"
+      >
         <VectorBasemap />
+        <ThermalOverlays hotspotsOn />
         <Marker position={position} icon={markerIcon} />
       </MapContainer>
     </div>

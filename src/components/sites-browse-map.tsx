@@ -1,5 +1,6 @@
 import { MapContainer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { VectorBasemap } from '@/components/vector-basemap';
+import { ThermalOverlays } from '@/components/thermal-overlays';
 import { PGE_ATTRIBUTION } from '@/components/data-credits';
 import { Icon, DivIcon, point } from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -99,6 +100,7 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
       className="h-full w-full"
     >
       <VectorBasemap attribution={PGE_ATTRIBUTION} />
+      <ThermalOverlays />
 
       {onBoundsChange && <BoundsChangeHandler onBoundsChange={onBoundsChange} />}
       {fitBounds && <FitBoundsOnChange sites={sites} />}
@@ -118,20 +120,14 @@ export function SitesBrowseMap({ sites, onBoundsChange, fitBounds = false }: Sit
             .map(([dir]) => dir);
 
           return (
-            <Marker
-              key={site.id}
-              position={[site.latitude, site.longitude]}
-              icon={markerIcon}
-            >
+            <Marker key={site.id} position={[site.latitude, site.longitude]} icon={markerIcon}>
               <Popup>
                 <div className="space-y-1.5 min-w-[160px]">
                   <p className="font-semibold leading-tight">{site.name}</p>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     {site.altitude && <p>{site.altitude}m elevation</p>}
                     {site.countryCode && <p>{site.countryCode}</p>}
-                    {activeOrientations.length > 0 && (
-                      <p>Wind: {activeOrientations.join(', ')}</p>
-                    )}
+                    {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
                   </div>
                   <Link
                     to={`/sites/${site.slug}`}
