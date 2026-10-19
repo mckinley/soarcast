@@ -47,3 +47,4 @@ next-env.d.ts
 
 .beads/
 !.env.development
+worker-startup.cpuprofile
