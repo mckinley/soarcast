@@ -1,12 +1,12 @@
 // Atmospheric profile data service using Open-Meteo pressure-level API
 // Fetches full vertical atmospheric profiles for windgram visualizations
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 // DB injection for CF Workers compatibility
-let _injectedDb: LibSQLDatabase<Record<string, unknown>> | null = null;
+let _injectedDb: DrizzleD1Database<Record<string, unknown>> | null = null;
 
-export function setProfileDb(db: LibSQLDatabase<Record<string, unknown>>) {
+export function setProfileDb(db: DrizzleD1Database<Record<string, unknown>>) {
   _injectedDb = db;
 }
 

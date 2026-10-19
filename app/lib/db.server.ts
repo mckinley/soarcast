@@ -1,20 +1,17 @@
-import { drizzle } from 'drizzle-orm/libsql/web';
-import { createClient } from '@libsql/client/web';
+import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '~/db/schema';
 
-// Cache the db instance per isolate (CF Workers reuse isolates)
-let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
-let _lastUrl: string | null = null;
+export type Db = DrizzleD1Database<typeof schema>;
 
-export function getDb(env: { TURSO_DATABASE_URL: string; TURSO_AUTH_TOKEN: string }) {
-  // Recreate if env changed (shouldn't happen in production, but safe for dev)
-  if (!_db || _lastUrl !== env.TURSO_DATABASE_URL) {
-    const client = createClient({
-      url: env.TURSO_DATABASE_URL,
-      authToken: env.TURSO_AUTH_TOKEN,
-    });
-    _db = drizzle(client, { schema });
-    _lastUrl = env.TURSO_DATABASE_URL;
+// Cache the Drizzle wrapper per isolate (CF Workers reuse isolates); the
+// D1 binding itself is the same object for the isolate's lifetime.
+let _db: Db | null = null;
+let _binding: D1Database | null = null;
+
+export function getDb(env: { DB: D1Database }): Db {
+  if (!_db || _binding !== env.DB) {
+    _db = drizzle(env.DB, { schema });
+    _binding = env.DB;
   }
   return _db;
 }

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `forecasts_cache_siteId_fetchDate_unique` ON `forecasts_cache` (`siteId`,`fetchDate`);

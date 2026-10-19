@@ -1,6 +1,6 @@
 interface Env {
-  TURSO_DATABASE_URL: string;
-  TURSO_AUTH_TOKEN: string;
+  /** The app database (`d1_databases` in wrangler.toml). */
+  DB: D1Database;
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   AUTH_GOOGLE_ID: string;

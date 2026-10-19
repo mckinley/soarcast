@@ -1,12 +1,10 @@
-import 'dotenv/config';
 import type { Config } from 'drizzle-kit';
 
+// `npx drizzle-kit generate` writes SQL migrations to migrations/, which
+// `wrangler d1 migrations apply soarcast` applies (the deploy workflow does
+// this with --remote; use --local for the dev database).
 export default {
   schema: './src/db/schema.ts',
-  out: './drizzle',
-  dialect: 'turso',
-  dbCredentials: {
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  },
+  out: './migrations',
+  dialect: 'sqlite',
 } satisfies Config;

@@ -3,18 +3,20 @@
 ## Project Overview
 
 SoarCast is a paragliding soaring forecast web app.
-Stack: React Router v7 + Cloudflare Workers + Turso/libSQL (Drizzle ORM) + Better Auth + shadcn/ui + Tailwind v4 + Leaflet + D3.
+Stack: React Router v7 + Cloudflare Workers + D1 (Drizzle ORM) + Better Auth + shadcn/ui + Tailwind v4 + Leaflet + D3.
+Everything runs on Cloudflare; don't add infrastructure outside it.
 
 ---
 
 ## Key Architecture
 
 - **Framework:** React Router v7 with SSR on Cloudflare Workers
-- **Auth:** Better Auth with GitHub OAuth (`app/lib/auth.server.ts`)
-- **DB:** Turso (libsql/SQLite), Drizzle ORM (`src/db/schema.ts`)
-- **DB Access:** Via `getDb(env)` from `app/lib/db.server.ts` — never use the global `src/db/index.ts` on CF Workers
+- **Auth:** Better Auth with GitHub and Google OAuth (`app/lib/auth.server.ts`)
+- **DB:** Cloudflare D1 (`DB` binding, database `soarcast`), Drizzle ORM (`src/db/schema.ts`, Better Auth tables in `src/db/auth-schema.ts`). App tables reference Better Auth's `user.id`.
+- **DB Access:** Via `getDb(env)` from `app/lib/db.server.ts`. D1 has no interactive transactions (use `db.batch`), at most 100 bound parameters per query, and can't bind a `Date` (use Drizzle `timestamp`/`timestamp_ms` columns).
+- **Migrations:** `npx drizzle-kit generate --name <change>` writes `migrations/NNNN_*.sql`; the deploy workflow runs `wrangler d1 migrations apply soarcast --remote` before deploying, so keep migrations additive. Locally: `npx wrangler d1 migrations apply soarcast --local`.
 - **Weather:** Open-Meteo API, free, no key needed (`src/lib/weather.ts`) — call `setWeatherDb(db)` before using
-- **Scoring:** XC soaring score algorithm (`src/lib/scoring.ts`)
+- **Rating:** `src/lib/forecast-engine` is the only place a day is rated (gates, window, quality, hazards)
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
 - **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR)
 - **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
@@ -23,7 +25,7 @@ Stack: React Router v7 + Cloudflare Workers + Turso/libSQL (Drizzle ORM) + Bette
 ## CF Workers Patterns
 
 - Environment variables come from `context.cloudflare.env` in loaders/actions, NOT `process.env`
-- Database: `const db = getDb(env)` — creates/caches a Turso client per isolate
+- Database: `const db = getDb(env)` — wraps the D1 binding in Drizzle, cached per isolate
 - Auth: `const session = await requireAuth(request, env)` or `getSession(request, env)`
 - Weather functions need `setWeatherDb(db)` called before use in each loader/action
 - Routes at `app/routes/` use RR7 flat file convention
@@ -50,15 +52,15 @@ Or push to main — GitHub Actions auto-deploys.
 
 ## Environment Variables
 
-Set via `wrangler secret put <NAME>`:
+Set via `wrangler secret put <NAME>` (local dev: `.dev.vars`, see `.dev.vars.example`):
 
 ```
-TURSO_DATABASE_URL
-TURSO_AUTH_TOKEN
 BETTER_AUTH_SECRET
 AUTH_GITHUB_ID / AUTH_GITHUB_SECRET
+AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 CRON_SECRET
+PGSITES_API_KEY
 ```
 
 Email needs no secret: the `EMAIL` binding in `wrangler.toml` sends through Cloudflare Email Sending, and `mckinleyaviation.com` must be onboarded there.

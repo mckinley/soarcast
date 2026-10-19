@@ -12,6 +12,14 @@ binding = "ASSETS"
 [vars]
 BETTER_AUTH_URL = "https://soarcast.mckinleyaviation.com"
 
+# The app database: users, favorites, settings and forecast caches.
+# Migrations in migrations/ are applied by the deploy workflow.
+[[d1_databases]]
+binding = "DB"
+database_name = "soarcast"
+database_id = "e92d8ad3-7ca9-47aa-b26b-e2288ec3b963"
+migrations_dir = "migrations"
+
 [[routes]]
 pattern = "soarcast.mckinleyaviation.com"
 custom_domain = true

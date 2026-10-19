@@ -19,6 +19,14 @@ jobs:
 
       - run: npm run build
 
+      # New files in migrations/ only; wrangler records applied ones in d1_migrations.
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply soarcast --remote
+
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -46,3 +54,19 @@ jobs:
           test "$status" = 200
           if grep -q 'Error loading forecast' page.html; then echo "The page shows Error loading forecast"; exit 1; fi
           grep -qE '>(Flyable|Marginal|Not flyable)' page.html
+
+      # Starting a sign-in writes to the database, so this catches a broken
+      # database as well as a missing OAuth client id. Google is printed only.
+      - name: Smoke test sign-in
+        run: |
+          for provider in github google; do
+            curl -sS -o "signin-$provider.json" -w "%{http_code}" -X POST \
+              -H 'content-type: application/json' -H 'origin: https://soarcast.mckinleyaviation.com' \
+              -d "{\"provider\":\"$provider\",\"callbackURL\":\"/dashboard\"}" \
+              https://soarcast.mckinleyaviation.com/api/auth/sign-in/social > "status-$provider.txt"
+            echo "$provider: HTTP $(cat status-$provider.txt)"
+            head -c 300 "signin-$provider.json"; echo
+          done
+          test "$(cat status-github.txt)" = 200
+          grep -q 'github.com/login/oauth/authorize?' signin-github.json
+          if grep -qE 'client_id=(undefined)?&' signin-github.json; then echo "No GitHub client id"; exit 1; fi

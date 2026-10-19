@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { getDb } from '~/app/lib/db.server';
 import {
-  users,
+  user as userTable,
   launchSites,
   userFavoriteSites,
   customSites,
@@ -43,7 +43,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       env.VAPID_PRIVATE_KEY,
     );
 
-    const allUsers = await db.select().from(users);
+    const allUsers = await db.select().from(userTable);
     let totalNotificationsSent = 0;
     let totalErrors = 0;
 

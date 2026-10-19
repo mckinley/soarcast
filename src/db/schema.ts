@@ -1,55 +1,9 @@
 import { sql, relations } from 'drizzle-orm';
-import { text, integer, real, sqliteTable, primaryKey, unique } from 'drizzle-orm/sqlite-core';
+import { text, integer, real, sqliteTable, unique } from 'drizzle-orm/sqlite-core';
+import { user } from './auth-schema';
 
-// NextAuth adapter tables
-export const users = sqliteTable('users', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: text('name'),
-  email: text('email').notNull().unique(),
-  emailVerified: integer('emailVerified', { mode: 'timestamp_ms' }),
-  image: text('image'),
-});
-
-export const accounts = sqliteTable('accounts', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  type: text('type').notNull(),
-  provider: text('provider').notNull(),
-  providerAccountId: text('providerAccountId').notNull(),
-  refresh_token: text('refresh_token'),
-  access_token: text('access_token'),
-  expires_at: integer('expires_at'),
-  token_type: text('token_type'),
-  scope: text('scope'),
-  id_token: text('id_token'),
-  session_state: text('session_state'),
-});
-
-export const sessions = sqliteTable('sessions', {
-  sessionToken: text('sessionToken').primaryKey(),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
-});
-
-export const verificationTokens = sqliteTable(
-  'verificationTokens',
-  {
-    identifier: text('identifier').notNull(),
-    token: text('token').notNull(),
-    expires: integer('expires', { mode: 'timestamp_ms' }).notNull(),
-  },
-  (table) => ({
-    compositePk: primaryKey({ columns: [table.identifier, table.token] }),
-  }),
-);
+// Better Auth's tables live in auth-schema.ts; app tables reference user.id.
+export * from './auth-schema';
 
 // Application tables
 
@@ -105,7 +59,7 @@ export const userFavoriteSites = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => user.id, { onDelete: 'cascade' }),
     siteId: text('site_id')
       .notNull()
       .references(() => launchSites.id, { onDelete: 'cascade' }),
@@ -129,36 +83,13 @@ export const customSites = sqliteTable('custom_sites', {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text('user_id')
     .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => user.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   latitude: text('latitude').notNull(), // Store as text to preserve precision
   longitude: text('longitude').notNull(),
   elevation: integer('elevation').notNull(), // meters
   maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
   idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
-
-// Legacy sites table - kept for backward compatibility during transition
-export const sites = sqliteTable('sites', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  latitude: text('latitude').notNull(),
-  longitude: text('longitude').notNull(),
-  elevation: integer('elevation').notNull(), // meters
-  idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
-  maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
-  notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -205,7 +136,7 @@ export const settings = sqliteTable('settings', {
   userId: text('user_id')
     .notNull()
     .unique()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => user.id, { onDelete: 'cascade' }),
   minScoreThreshold: integer('min_score_threshold').notNull().default(70),
   daysAhead: integer('days_ahead').notNull().default(2),
   siteNotifications: text('site_notifications', { mode: 'json' })
@@ -216,7 +147,9 @@ export const settings = sqliteTable('settings', {
     .notNull()
     .default(false),
   morningDigestTime: text('morning_digest_time').default('08:00'), // HH:MM format in user's local timezone
-  onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' }).notNull().default(false),
+  onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -228,7 +161,7 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text('user_id')
     .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => user.id, { onDelete: 'cascade' }),
   endpoint: text('endpoint').notNull().unique(),
   keys: text('keys', { mode: 'json' }).notNull().$type<{ p256dh: string; auth: string }>(),
   createdAt: integer('created_at', { mode: 'timestamp' })
@@ -257,15 +190,6 @@ export const atmosphericProfilesCache = sqliteTable(
 );
 
 // Export types for use in application code
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type Account = typeof accounts.$inferSelect;
-export type NewAccount = typeof accounts.$inferInsert;
-
-export type Session = typeof sessions.$inferSelect;
-export type NewSession = typeof sessions.$inferInsert;
-
 export type LaunchSite = typeof launchSites.$inferSelect;
 export type NewLaunchSite = typeof launchSites.$inferInsert;
 
@@ -274,9 +198,6 @@ export type NewUserFavoriteSite = typeof userFavoriteSites.$inferInsert;
 
 export type CustomSite = typeof customSites.$inferSelect;
 export type NewCustomSite = typeof customSites.$inferInsert;
-
-export type Site = typeof sites.$inferSelect;
-export type NewSite = typeof sites.$inferInsert;
 
 export type ForecastCache = typeof forecastsCache.$inferSelect;
 export type NewForecastCache = typeof forecastsCache.$inferInsert;
@@ -296,9 +217,9 @@ export const launchSitesRelations = relations(launchSites, ({ many }) => ({
 }));
 
 export const userFavoriteSitesRelations = relations(userFavoriteSites, ({ one }) => ({
-  user: one(users, {
+  user: one(user, {
     fields: [userFavoriteSites.userId],
-    references: [users.id],
+    references: [user.id],
   }),
   site: one(launchSites, {
     fields: [userFavoriteSites.siteId],

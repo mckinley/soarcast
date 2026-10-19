@@ -2,17 +2,17 @@
 import { Forecast } from '@/types';
 import { forecastsCache } from '@/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 // Accept a db instance for CF Workers compatibility.
 // Callers must pass getDb(env) from their route context.
-let _injectedDb: LibSQLDatabase<Record<string, unknown>> | null = null;
+let _injectedDb: DrizzleD1Database<Record<string, unknown>> | null = null;
 
-export function setWeatherDb(db: LibSQLDatabase<Record<string, unknown>>) {
+export function setWeatherDb(db: DrizzleD1Database<Record<string, unknown>>) {
   _injectedDb = db;
 }
 
-function getDb(): LibSQLDatabase<Record<string, unknown>> {
+function getDb(): DrizzleD1Database<Record<string, unknown>> {
   if (!_injectedDb) {
     throw new Error(
       'Weather DB not initialized. Call setWeatherDb(getDb(env)) before using weather functions.',

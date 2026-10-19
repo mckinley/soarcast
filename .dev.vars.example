@@ -1,0 +1,22 @@
+# Copy to .dev.vars (gitignored) for `npm run dev`. Production values are
+# Worker secrets: `npx wrangler secret put <NAME>`.
+
+# Better Auth. BETTER_AUTH_URL is a [vars] entry in wrangler.toml for production.
+BETTER_AUTH_SECRET=generate-with-openssl-rand-base64-32
+BETTER_AUTH_URL=http://localhost:6712
+
+# OAuth apps. Callback: {BETTER_AUTH_URL}/api/auth/callback/github (or /google)
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+
+# Web push: npx web-push generate-vapid-keys
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+
+# Protects POST /api/notifications/check
+CRON_SECRET=
+
+# pgsites API (site database at pgsites.mckinleyaviation.com)
+PGSITES_API_KEY=
