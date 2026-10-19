@@ -44,6 +44,9 @@ type Pages = {
       "*": string;
     };
   };
+  "/api/health": {
+    params: {};
+  };
   "/api/sites": {
     params: {};
   };
@@ -71,7 +74,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/sites/custom/:id" | "/sites/browse" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile" | "/api/sites/near" | "/dashboard" | "/settings";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/sites/custom/:id" | "/sites/browse" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/api/sites" | "/api/sites/:slug" | "/api/sites/:slug/profile" | "/api/sites/near" | "/dashboard" | "/settings";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -104,6 +107,10 @@ type RouteFiles = {
   "routes/api.auth.$.tsx": {
     id: "routes/api.auth.$";
     page: "/api/auth/*";
+  };
+  "routes/api.health.tsx": {
+    id: "routes/api.health";
+    page: "/api/health";
   };
   "routes/api.sites.tsx": {
     id: "routes/api.sites";
@@ -149,6 +156,7 @@ type RouteModules = {
   "routes/auth.signin": typeof import("./app/routes/auth.signin.tsx");
   "routes/sites.$slug": typeof import("./app/routes/sites.$slug.tsx");
   "routes/api.auth.$": typeof import("./app/routes/api.auth.$.tsx");
+  "routes/api.health": typeof import("./app/routes/api.health.tsx");
   "routes/api.sites": typeof import("./app/routes/api.sites.tsx");
   "routes/api.sites.$slug": typeof import("./app/routes/api.sites.$slug.tsx");
   "routes/api.sites.$slug.profile": typeof import("./app/routes/api.sites.$slug.profile.tsx");

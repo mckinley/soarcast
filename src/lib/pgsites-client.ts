@@ -27,7 +27,11 @@ export interface PgSite {
   updated_at: number;
 }
 
-async function fetchApi<T>(apiKey: string, path: string, params?: Record<string, string | number>): Promise<T> {
+async function fetchApi<T>(
+  apiKey: string,
+  path: string,
+  params?: Record<string, string | number>,
+): Promise<T> {
   const url = new URL(path, BASE_URL);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -48,10 +52,18 @@ async function fetchApi<T>(apiKey: string, path: string, params?: Record<string,
   return response.json() as Promise<T>;
 }
 
-export async function searchSites(apiKey: string, query: string, limit?: number): Promise<PgSite[]> {
+export async function searchSites(
+  apiKey: string,
+  query: string,
+  limit?: number,
+): Promise<PgSite[]> {
   const params: Record<string, string | number> = { q: query };
   if (limit !== undefined) params.limit = limit;
-  const result = await fetchApi<{ sites: PgSite[]; query: string }>(apiKey, '/api/sites/search', params);
+  const result = await fetchApi<{ sites: PgSite[]; query: string }>(
+    apiKey,
+    '/api/sites/search',
+    params,
+  );
   return result.sites;
 }
 
@@ -59,7 +71,7 @@ export async function getSitesByCountry(
   apiKey: string,
   country: string,
   limit?: number,
-  offset?: number
+  offset?: number,
 ): Promise<{ sites: PgSite[]; total: number }> {
   const params: Record<string, string | number> = { country };
   if (limit !== undefined) params.limit = limit;
@@ -83,19 +95,23 @@ export async function nearbySites(
   lat: number,
   lng: number,
   radius?: number,
-  limit?: number
+  limit?: number,
 ): Promise<PgSite[]> {
   const params: Record<string, string | number> = { lat, lng };
   if (radius !== undefined) params.radius = radius;
   if (limit !== undefined) params.limit = limit;
-  const result = await fetchApi<{ sites: PgSite[]; center: { lat: number; lng: number }; radius_km: number }>(apiKey, '/api/sites/near', params);
+  const result = await fetchApi<{
+    sites: PgSite[];
+    center: { lat: number; lng: number };
+    radius_km: number;
+  }>(apiKey, '/api/sites/near', params);
   return result.sites;
 }
 
 export async function getAllSites(
   apiKey: string,
   limit?: number,
-  offset?: number
+  offset?: number,
 ): Promise<{ sites: PgSite[]; total: number }> {
   const params: Record<string, string | number> = {};
   if (limit !== undefined) params.limit = limit;
@@ -104,6 +120,13 @@ export async function getAllSites(
 }
 
 /** Get the pgsites API key from the Cloudflare Worker environment. */
+/** pgsites' sync progress; `last_modified_check` is the YYYYMMDD of the last daily sync. */
+export async function getSyncStatus(
+  apiKey: string,
+): Promise<{ last_modified_check: string | null; total_sites: number }> {
+  return fetchApi(apiKey, '/api/sync/status');
+}
+
 export function getPgsitesApiKey(env: { PGSITES_API_KEY?: string }): string {
   return env.PGSITES_API_KEY || '';
 }

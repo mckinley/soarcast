@@ -11,6 +11,8 @@ interface Env {
   VAPID_PRIVATE_KEY: string;
   CRON_SECRET: string;
   PGSITES_API_KEY: string;
+  /** Where health-check failures are emailed (worker.ts); optional. */
+  HEALTH_ALERT_TO?: string;
   /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it. */
   EMAIL: SendEmail;
 }

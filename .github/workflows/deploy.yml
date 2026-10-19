@@ -70,3 +70,10 @@ jobs:
           test "$(cat status-github.txt)" = 200
           grep -q 'github.com/login/oauth/authorize?' signin-github.json
           if grep -qE 'client_id=(undefined)?&' signin-github.json; then echo "No GitHub client id"; exit 1; fi
+
+      # Informational: the same checks the hourly cron runs (and emails about).
+      - name: Health report
+        run: |
+          curl -sS -H "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://soarcast.mckinleyaviation.com/api/health || true
+          echo

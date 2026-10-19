@@ -228,3 +228,13 @@ export const userFavoriteSitesRelations = relations(userFavoriteSites, ({ one })
     references: [launchSites.id],
   }),
 }));
+
+// Small operational key/value state: the last alerts run and the health
+// check's last result (worker.ts scheduled, /api/health).
+export const appState = sqliteTable('app_state', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});

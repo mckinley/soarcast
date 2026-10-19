@@ -21,6 +21,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 - **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR)
 - **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
 - **Alerts:** an hourly Cron Trigger (`[triggers]` in `wrangler.toml`) runs `worker.ts` `scheduled`, which posts to `/api/notifications/check`. Each user's morning run (digest) is at their digest hour and the evening run at 18:00, in their `settings.timeZone` (`src/lib/alert-schedule.ts`). `?run=morning|evening` with the `CRON_SECRET` bearer forces a run for everyone.
+- **Health:** after the alerts run, the cron calls `/api/health` (CRON_SECRET bearer): D1 write, Open-Meteo forecast, pgsites search and daily sync age, last alerts run. It emails the `HEALTH_ALERT_TO` secret when the result changes (failing or recovered) and throws, so the cron shows as failed in Cloudflare. State is in the `app_state` table.
 - **Push notifications:** VAPID keys; send with `sendPush` (`src/lib/push-send.ts`). Never call web-push's `sendNotification`: it uses node:https, which Workers don't implement.
 
 ## CF Workers Patterns
@@ -62,6 +63,7 @@ AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 CRON_SECRET
 PGSITES_API_KEY
+HEALTH_ALERT_TO   (optional: where health-check failures are emailed)
 ```
 
 Email needs no secret: the `EMAIL` binding in `wrangler.toml` sends through Cloudflare Email Sending, and `mckinleyaviation.com` must be onboarded there.

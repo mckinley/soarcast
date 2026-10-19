@@ -20,3 +20,6 @@ CRON_SECRET=
 
 # pgsites API (site database at pgsites.mckinleyaviation.com)
 PGSITES_API_KEY=
+
+# Optional: where the hourly health check emails failures and recoveries
+HEALTH_ALERT_TO=
