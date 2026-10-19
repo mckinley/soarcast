@@ -43,7 +43,7 @@ export function SiteGoalSelect({
   const value = (pending as SiteGoal | undefined) || goal;
   return (
     <Select value={value} onValueChange={save}>
-      <SelectTrigger id={id} size="sm" className="w-[200px]">
+      <SelectTrigger id={id} size="sm" className="w-[264px] max-w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -79,7 +79,7 @@ export function SiteKindSelect({
       : 'Not sure: go by the weather';
   return (
     <Select value={value} onValueChange={(v) => save(v === 'listed' ? '' : v)}>
-      <SelectTrigger id={id} size="sm" className="w-[200px]">
+      <SelectTrigger id={id} size="sm" className="w-[264px] max-w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

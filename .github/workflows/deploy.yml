@@ -50,10 +50,10 @@ jobs:
         run: |
           status=$(curl -sS -o page.html -w '%{http_code}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain")
           echo "HTTP $status"
-          grep -oE '>(Flyable|Marginal|Not flyable)[^<]{0,100}' page.html | head -3 || true
+          grep -oE '>(Launch window|Marginal|Not flyable)[^<]{0,100}' page.html | head -3 || true
           test "$status" = 200
           if grep -q 'Forecast unavailable' page.html; then echo "The page shows Forecast unavailable"; exit 1; fi
-          grep -qE '>(Flyable|Marginal|Not flyable)' page.html
+          grep -qE '>(Launch window|Marginal|Not flyable)' page.html
 
       # Adding your own site reads the terrain at the pin. Mount Rainier's
       # summit must come back above 4,000 m with a steep face. Listed launches

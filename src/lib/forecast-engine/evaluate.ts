@@ -3,7 +3,7 @@
 // one place SoarCast decides whether a day is flyable.
 
 import type { AtmosphericProfile } from '@/lib/weather-profile';
-import type { DayScore, FlightType } from '@/types';
+import type { DayScore, FlightType, SiteKind, SledReason } from '@/types';
 import { defaultGoal, meetsGoal } from '@/lib/site-goals';
 import { deriveLaunchConditions, type LaunchConditions } from './launch-conditions';
 import {
@@ -146,6 +146,26 @@ interface Flight {
   flight: FlightType;
   flightWindow: string | null;
   greatDay: boolean;
+  sled: DayScore['sled'];
+}
+
+/** Why the window's hours give only a sled ride at this launch. */
+function sledReason(
+  hours: HourVerdict[],
+  kind: SiteKind | null,
+  liftAboveLaunch: (c: LaunchConditions) => number,
+): NonNullable<DayScore['sled']> {
+  const reason = (r: SledReason, lift: number | null = null) => ({
+    reason: r,
+    liftAboveLaunch: lift,
+  });
+  if (kind === 'sled') return reason('sled-site');
+  if (kind === 'ridge') return reason('ridge-wind');
+  const climbable = hours.filter((h) => (h.conditions.wStar ?? 0) >= THERMAL_MIN_WSTAR);
+  if (climbable.length === 0) return reason('weak');
+  const top = Math.round(Math.max(...climbable.map((h) => liftAboveLaunch(h.conditions))));
+  if (top <= 0) return reason('below-launch', top);
+  return reason(top < SOAR_MIN_HEIGHT ? 'low' : 'short', top);
 }
 
 /**
@@ -175,13 +195,18 @@ function classifyFlight(
 
   const xc = canThermal ? longestRun(hours, thermals(XC_MIN_WSTAR, XC_MIN_HEIGHT)) : null;
   if (windowLength(xc) >= XC_MIN_HOURS && odRisk !== 'high') {
-    return { flight: 'xc', flightWindow: formatWindow(hours, xc), greatDay: true };
+    return { flight: 'xc', flightWindow: formatWindow(hours, xc), greatDay: true, sled: null };
   }
   const thermal = canThermal
     ? longestRun(hours, thermals(THERMAL_MIN_WSTAR, SOAR_MIN_HEIGHT))
     : null;
   if (windowLength(thermal) >= SOAR_MIN_HOURS) {
-    return { flight: 'thermal', flightWindow: formatWindow(hours, thermal), greatDay: false };
+    return {
+      flight: 'thermal',
+      flightWindow: formatWindow(hours, thermal),
+      greatDay: false,
+      sled: null,
+    };
   }
   const ridge = canRidge ? longestRun(hours, ridgeLift) : null;
   if (windowLength(ridge) >= SOAR_MIN_HOURS) {
@@ -189,9 +214,15 @@ function classifyFlight(
       flight: 'ridge',
       flightWindow: formatWindow(hours, ridge),
       greatDay: kind === 'ridge' && windowLength(ridge) >= GREAT_RIDGE_HOURS,
+      sled: null,
     };
   }
-  return { flight: 'sled', flightWindow: null, greatDay: false };
+  return {
+    flight: 'sled',
+    flightWindow: null,
+    greatDay: false,
+    sled: sledReason(hours, kind, liftAboveLaunch),
+  };
 }
 
 function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile): DayScore {
@@ -294,6 +325,7 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
       peakTop !== null && launch.elevation > 0 ? Math.round(heightAboveLaunch) : null,
     flight: flight?.flight ?? null,
     flightWindow: flight?.flightWindow ?? null,
+    sled: flight?.sled ?? null,
     greatDay: flight?.greatDay ?? false,
     goalMet,
   };

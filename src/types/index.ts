@@ -9,6 +9,12 @@ export type SiteGoal = 'launch' | 'soar' | 'great';
 /** The kind of flight a day gives, worst to best. */
 export type FlightType = 'sled' | 'ridge' | 'thermal' | 'xc';
 
+/**
+ * Why a flyable day is only a sled ride: the site never soars, a ridge site
+ * lacks wind onto it, or thermals are too weak, too low or too short-lived.
+ */
+export type SledReason = 'sled-site' | 'ridge-wind' | 'weak' | 'below-launch' | 'low' | 'short';
+
 export interface Site {
   id: string;
   name: string;
@@ -51,6 +57,8 @@ export interface DayScore {
   flight?: FlightType | null;
   /** When that flight works, e.g. "12:00-16:00": the soaring hours inside the window */
   flightWindow?: string | null;
+  /** On a sled-ride day, why it doesn't soar, and how high climbable thermals reach (m above launch) */
+  sled?: { reason: SledReason; liftAboveLaunch: number | null } | null;
   /** XC conditions, or a long ridge day at a ridge site */
   greatDay?: boolean;
   /** Whether the day is a go for the pilot's goal at this site */

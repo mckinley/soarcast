@@ -266,7 +266,7 @@ describe('flight type', () => {
     expect(day.verdict).toBe('go');
     expect(day.flight).toBe('sled');
     expect(verdictSummary(day)).toBe(
-      'Flyable 06:00-21:00: a sled ride, lift tops out 80 m above launch.',
+      'Launch window 06:00-21:00: a sled ride, thermals top out 80 m above launch.',
     );
   });
 
@@ -301,6 +301,27 @@ describe('flight type', () => {
   it('keeps a sled-only site a sled ride on a big thermal day', () => {
     const day = today(profile(), { ...swLaunch, kind: 'sled' });
     expect(day.flight).toBe('sled');
+  });
+
+  it('says why a day is only a sled ride', () => {
+    const why = (p: AtmosphericProfile, launch = swLaunch) => {
+      const day = today(p, launch);
+      expect(day.flight).toBe('sled');
+      return verdictSummary(day).split(': ')[1];
+    };
+    expect(why(profile(() => ({ wStar: 0.6 })))).toBe('a sled ride, thermals too weak to climb.');
+    expect(why(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 550 } : {})))).toBe(
+      'a sled ride, thermals top out below launch.',
+    );
+    // A ridge site on a light-wind thermal day
+    expect(why(profile(), { ...swLaunch, kind: 'ridge' })).toBe(
+      'a sled ride, not enough wind onto the ridge to soar.',
+    );
+    expect(why(profile(), { ...swLaunch, kind: 'sled' })).toBe('a sled ride.');
+    // Climbable thermals for one hour only
+    expect(why(profile((h) => ({ wStar: h === 12 ? 1.5 : 0.5 })))).toBe(
+      'a sled ride, lift too short-lived to stay up.',
+    );
   });
 
   it('has no flight on a day that is not flyable', () => {
@@ -374,7 +395,7 @@ describe('verdictSummary', () => {
   it('describes a go day with its window and lift', () => {
     const day = today(profile());
     expect(verdictSummary(day)).toBe(
-      'Flyable 06:00-21:00: an XC day, thermals 09:00-19:00 climbing about 2.2 m/s to 1,100 m above launch.',
+      'Launch window 06:00-21:00: an XC day, thermals 09:00-19:00 climbing about 2.2 m/s to 1,100 m above launch.',
     );
   });
 

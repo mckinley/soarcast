@@ -27,23 +27,17 @@ function siteHref(siteType: string, slug: string | undefined, siteId: string): s
 /** What the colors mean: a go is set by each site's goal. */
 function StatusLegend() {
   const items: Array<[keyof typeof STATUS_WORD, string]> = [
-    ['go', 'a go for your goal'],
-    ['flyable', 'flyable, less than your goal'],
-    ['marginal', 'marginal'],
-    ['no', 'not flyable'],
+    ['go', 'Go: the flying you want there'],
+    ['flyable', 'Flyable, but less than you want'],
+    ['marginal', 'Marginal'],
+    ['no', 'Not flyable'],
   ];
   return (
     <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
       {items.map(([status, text]) => (
         <li key={status} className="flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[status]}`} />
-          {status === 'go' ? (
-            <>
-              <span className="font-medium text-foreground">{STATUS_WORD.go}</span>: {text}
-            </>
-          ) : (
-            text[0].toUpperCase() + text.slice(1)
-          )}
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[status]}`} />
+          <span>{text}</span>
         </li>
       ))}
     </ul>

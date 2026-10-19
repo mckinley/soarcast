@@ -4,7 +4,6 @@
 
 import type { DayScore, Site } from '@/types';
 import type { LaunchProfile } from './gates';
-import { SOAR_MIN_HEIGHT, THERMAL_MIN_WSTAR } from './evaluate';
 
 export {
   evaluateDays,
@@ -48,15 +47,36 @@ export function flightSummary(day: DayScore): string | null {
     case 'ridge':
       return `ridge soaring ${day.flightWindow} in wind onto the launch`;
     case 'sled': {
-      const top = day.topOfLiftAboveLaunch;
-      if ((day.wStar ?? 0) < THERMAL_MIN_WSTAR) return 'a sled ride, thermals too weak to climb';
-      if (top !== null && top !== undefined && top < SOAR_MIN_HEIGHT) {
-        return `a sled ride, lift tops out ${Math.max(0, top).toLocaleString('en-US')} m above launch`;
-      }
-      return 'a sled ride, lift too short-lived to stay up';
+      const why = day.sled && sledReasonText(day.sled, (m) => `${m.toLocaleString('en-US')} m`);
+      return why ? `a sled ride, ${why}` : 'a sled ride';
     }
     default:
       return null;
+  }
+}
+
+/**
+ * Why a day is only a sled ride, in a few words: "thermals top out 120 m
+ * above launch"; null at a sled-only site. `height` writes a height in the
+ * reader's units.
+ */
+export function sledReasonText(
+  sled: NonNullable<DayScore['sled']>,
+  height: (meters: number) => string,
+): string | null {
+  switch (sled.reason) {
+    case 'sled-site':
+      return null; // the pilot or the listing said so
+    case 'ridge-wind':
+      return 'not enough wind onto the ridge to soar';
+    case 'weak':
+      return 'thermals too weak to climb';
+    case 'below-launch':
+      return 'thermals top out below launch';
+    case 'low':
+      return `thermals top out ${height(sled.liftAboveLaunch ?? 0)} above launch`;
+    case 'short':
+      return 'lift too short-lived to stay up';
   }
 }
 
@@ -72,5 +92,6 @@ export function verdictSummary(day: DayScore): string {
       .replace(/\s+/g, ' ')
       .replace(' ,', ',');
   }
-  return `Flyable ${day.flyableWindow}${flight ? `: ${flight}` : ''}.`;
+  // "Launch window", not "Flyable": screens say Flyable for a day below the pilot's goal
+  return `Launch window ${day.flyableWindow}${flight ? `: ${flight}` : ''}.`;
 }

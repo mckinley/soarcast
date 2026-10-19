@@ -5,7 +5,12 @@
 
 import type { AtmosphericProfile } from './weather-profile';
 import type { DayScore, FlightType, Site } from '@/types';
-import { evaluateDays, launchProfileFromSite, verdictSummary } from './forecast-engine';
+import {
+  evaluateDays,
+  launchProfileFromSite,
+  sledReasonText,
+  verdictSummary,
+} from './forecast-engine';
 import { addDays } from './alert-schedule';
 import {
   FLIGHT_WORD,
@@ -66,9 +71,8 @@ function flightHighlights(day: DayScore): string[] {
     return highlights;
   }
   if (day.flight === 'ridge') return [`Ridge lift ${day.flightWindow}`];
-  if (day.flight === 'sled' && top !== null && top !== undefined) {
-    return [`Lift tops out ${feet(Math.max(0, top))} above launch`];
-  }
+  const why = day.flight === 'sled' && day.sled ? sledReasonText(day.sled, feet) : null;
+  if (why) return [`${why[0].toUpperCase()}${why.slice(1)}`];
   return [];
 }
 
