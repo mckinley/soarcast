@@ -45,14 +45,14 @@ jobs:
           test "$status" = 200
           grep -q '"sunriseByDay"' body.json
 
-      # A site page must render a verdict, not "Error loading forecast".
+      # A site page must render a verdict, not "Forecast unavailable".
       - name: Smoke test a site page
         run: |
           status=$(curl -sS -o page.html -w '%{http_code}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain")
           echo "HTTP $status"
           grep -oE '>(Flyable|Marginal|Not flyable)[^<]{0,100}' page.html | head -3 || true
           test "$status" = 200
-          if grep -q 'Error loading forecast' page.html; then echo "The page shows Error loading forecast"; exit 1; fi
+          if grep -q 'Forecast unavailable' page.html; then echo "The page shows Forecast unavailable"; exit 1; fi
           grep -qE '>(Flyable|Marginal|Not flyable)' page.html
 
       # Adding your own site reads the terrain at the pin. Mount Rainier's

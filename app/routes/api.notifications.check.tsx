@@ -19,7 +19,7 @@ import {
   localDate,
   resolveTimeZone,
 } from '~/lib/alert-schedule';
-import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
+import { getAtmosphericProfile, PROFILE_DAYS, setProfileDb } from '~/lib/weather-profile';
 import { analyzeFlyingDay, generateNotification, generateMorningDigest } from '~/lib/notifications';
 import type { DayAnalysis } from '~/lib/notifications';
 import type { AtmosphericProfile } from '~/lib/weather-profile';
@@ -300,12 +300,18 @@ export async function action({ request, context }: ActionFunctionArgs) {
             const atmosphericResult = await getAtmosphericProfile(
               site.latitude,
               site.longitude,
-              userSettings.daysAhead,
+              Math.min(userSettings.daysAhead + 1, PROFILE_DAYS),
             );
 
             const siteObj = site;
 
-            for (let dayOffset = 0; dayOffset < userSettings.daysAhead; dayOffset++) {
+            // By the evening run today is over: look from tomorrow
+            const firstDay = isMorningRun ? 0 : 1;
+            for (
+              let dayOffset = firstDay;
+              dayOffset < firstDay + userSettings.daysAhead;
+              dayOffset++
+            ) {
               const dateStr = addDays(todayStr, dayOffset);
 
               const analysis = analyzeFlyingDay(atmosphericResult.profile, siteObj, dateStr);
