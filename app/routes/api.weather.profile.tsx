@@ -73,7 +73,17 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     return Response.json(
       {
         error: 'Failed to fetch atmospheric profile',
-        detail: error instanceof Error ? error.message : String(error),
+        // Drizzle's "Failed query" message ends with the full params; the
+        // database's own reason is on `cause`
+        detail:
+          error instanceof Error
+            ? [
+                error.cause instanceof Error ? error.cause.message : null,
+                error.message.slice(0, 200),
+              ]
+                .filter(Boolean)
+                .join(' | ')
+            : String(error),
         status: 500,
       },
       { status: 500 },
