@@ -1,0 +1,111 @@
+name: UX walkthrough
+
+# Screenshots every screen on a phone and a desktop viewport, signed out on
+# production and signed in on a local copy seeded with test pilots, so the
+# app's UX can be reviewed without a browser. Results (PNGs, report.json with
+# timings, errors and page text) are pushed to refs/ux-walkthrough/latest:
+#   git fetch origin +refs/ux-walkthrough/latest:refs/ux-walkthrough/latest
+
+on:
+  push:
+    branches: ['claude/project-thread-s0ayin']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ux-walkthrough
+  cancel-in-progress: true
+
+jobs:
+  walkthrough:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Production, signed out
+        continue-on-error: true
+        run: node scripts/ux/walkthrough.mjs prod https://soarcast.mckinleyaviation.com ux-out/prod
+
+      # Real Washington launches for the test pilots to follow, read from the
+      # pgsites database (SELECT only).
+      - name: Copy test sites from pgsites
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p ux-tmp/pg
+          cat > ux-tmp/pg/wrangler.toml <<'EOF'
+          name = "ux-pgsites-reader"
+          [[d1_databases]]
+          binding = "PG"
+          database_name = "paragliding-sites"
+          database_id = "b7a6fb40-1aa2-4824-b589-2243c38487fc"
+          EOF
+          cd ux-tmp/pg
+          ../../node_modules/.bin/wrangler d1 execute paragliding-sites --remote --json --command "
+            SELECT id, pge_site_id, name, country_code, latitude, longitude, altitude,
+                   takeoff_latitude, takeoff_longitude, takeoff_altitude,
+                   landing_altitude, landing_latitude, landing_longitude,
+                   wind_n, wind_ne, wind_e, wind_se, wind_s, wind_sw, wind_w, wind_nw,
+                   is_paragliding, is_hanggliding, substr(description, 1, 1500) AS description, pge_link
+            FROM sites
+            WHERE pge_deleted_at IS NULL
+              AND latitude BETWEEN 45.5 AND 49 AND longitude BETWEEN -124.8 AND -116.9
+              AND (name LIKE '%Tiger%' OR name LIKE '%Chelan%' OR name LIKE 'Mt. Si%'
+                   OR name LIKE '%Blanchard%' OR name LIKE '%Dog Mountain%' OR name LIKE '%Rampart%')
+            ORDER BY CASE WHEN name LIKE '%Tiger%' THEN 0 WHEN name LIKE '%Chelan%' THEN 1 ELSE 2 END, name
+            LIMIT 8" > ../pgsites.json
+          jq -c '.[0].results[] | {name, latitude, longitude, altitude, wind: [.wind_n, .wind_ne, .wind_e, .wind_se, .wind_s, .wind_sw, .wind_w, .wind_nw]}' ../pgsites.json
+
+      - name: Start a local copy with test pilots
+        run: |
+          secret=$(openssl rand -base64 32)
+          cron=$(openssl rand -hex 16)
+          echo "::add-mask::$secret"
+          vapid=$(npx web-push generate-vapid-keys --json)
+          {
+            echo "BETTER_AUTH_SECRET=$secret"
+            echo "BETTER_AUTH_URL=http://localhost:8790"
+            echo "CRON_SECRET=$cron"
+            echo "VAPID_PUBLIC_KEY=$(echo "$vapid" | jq -r .publicKey)"
+            echo "VAPID_PRIVATE_KEY=$(echo "$vapid" | jq -r .privateKey)"
+          } > .dev.vars
+          echo "CRON_SECRET=$cron" >> "$GITHUB_ENV"
+          BETTER_AUTH_SECRET="$secret" node scripts/ux/seed.mjs ux-tmp/pgsites.json ux-tmp
+          npx wrangler d1 migrations apply soarcast --local
+          npx wrangler d1 execute soarcast --local --file ux-tmp/seed.sql
+          npm run build
+          nohup npx wrangler dev --port 8790 > ux-tmp/wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:8790/ && break; sleep 2; done
+          curl -sS -o /dev/null -w 'local app: HTTP %{http_code}\n' http://localhost:8790/
+
+      - name: Local copy, signed in
+        continue-on-error: true
+        env:
+          WRANGLER_LOG: ux-tmp/wrangler.log
+        run: node scripts/ux/walkthrough.mjs local http://localhost:8790 ux-out/local ux-tmp/seed.json
+
+      - name: Publish to refs/ux-walkthrough/latest
+        if: always()
+        run: |
+          mkdir -p ux-out/local
+          tail -n 3000 ux-tmp/wrangler.log > ux-out/local/wrangler.log 2>/dev/null || true
+          cd ux-out
+          git init -q -b shots
+          git add -A
+          git -c user.name='ux-walkthrough' -c user.email='actions@users.noreply.github.com' \
+            commit -qm "UX walkthrough of ${GITHUB_SHA::7} (run ${GITHUB_RUN_ID})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/ux-walkthrough/latest
