@@ -1,0 +1,21 @@
+name: Data probe
+
+# Read-only check of which forecast, history and live-data sources answer for
+# a real launch, and which variables come back. For planning data sources.
+
+on:
+  push:
+    branches: ['claude/project-thread-s0ayin']
+    paths: ['scripts/probe/**', '.github/workflows/data-probe.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/probe/data-sources.sh
