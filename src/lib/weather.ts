@@ -231,25 +231,30 @@ export async function getForecast(
   try {
     const freshForecast = await fetchWeatherForecast(siteId, latitude, longitude);
 
-    // Store in Turso cache (upsert pattern)
-    await getDb()
-      .insert(forecastsCache)
-      .values({
-        siteId,
-        siteType,
-        fetchDate: today,
-        data: freshForecast,
-        fetchedAt: new Date(freshForecast.fetchedAt),
-        expiresAt: new Date(freshForecast.expiresAt),
-      })
-      .onConflictDoUpdate({
-        target: [forecastsCache.siteId, forecastsCache.siteType, forecastsCache.fetchDate],
-        set: {
+    // Store in Turso cache (upsert pattern). A failed write, such as Turso
+    // blocking writes, must not cost the pilot the forecast we already have.
+    try {
+      await getDb()
+        .insert(forecastsCache)
+        .values({
+          siteId,
+          siteType,
+          fetchDate: today,
           data: freshForecast,
           fetchedAt: new Date(freshForecast.fetchedAt),
           expiresAt: new Date(freshForecast.expiresAt),
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [forecastsCache.siteId, forecastsCache.siteType, forecastsCache.fetchDate],
+          set: {
+            data: freshForecast,
+            fetchedAt: new Date(freshForecast.fetchedAt),
+            expiresAt: new Date(freshForecast.expiresAt),
+          },
+        });
+    } catch (cacheError) {
+      console.error('Could not cache the forecast:', cacheError);
+    }
 
     return {
       forecast: freshForecast,

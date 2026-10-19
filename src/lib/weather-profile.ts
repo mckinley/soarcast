@@ -673,24 +673,29 @@ export async function getAtmosphericProfile(
   try {
     const freshProfile = await fetchAtmosphericProfile(latitude, longitude, days);
 
-    // Store in cache (upsert pattern)
-    await db
-      .insert(atmosphericProfilesCache)
-      .values({
-        locationKey: cacheKey,
-        fetchDate: today,
-        data: freshProfile,
-        fetchedAt: new Date(freshProfile.fetchedAt),
-        expiresAt: new Date(freshProfile.expiresAt),
-      })
-      .onConflictDoUpdate({
-        target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
-        set: {
+    // Store in cache (upsert pattern). A failed write, such as Turso
+    // blocking writes, must not cost the pilot the profile we already have.
+    try {
+      await db
+        .insert(atmosphericProfilesCache)
+        .values({
+          locationKey: cacheKey,
+          fetchDate: today,
           data: freshProfile,
           fetchedAt: new Date(freshProfile.fetchedAt),
           expiresAt: new Date(freshProfile.expiresAt),
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
+          set: {
+            data: freshProfile,
+            fetchedAt: new Date(freshProfile.fetchedAt),
+            expiresAt: new Date(freshProfile.expiresAt),
+          },
+        });
+    } catch (cacheError) {
+      console.error('Could not cache the atmospheric profile:', cacheError);
+    }
 
     return {
       profile: freshProfile,
