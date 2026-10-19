@@ -37,16 +37,37 @@ const VIEWPORTS = {
 const MAX_CHUNKS = 10;
 
 async function clickTabs(page, shoot) {
-  const tabs = page.getByRole('tab');
-  const count = await tabs.count();
-  for (let i = 0; i < count; i++) {
-    const tab = tabs.nth(i);
-    if ((await tab.getAttribute('aria-selected')) === 'true') continue;
-    const label = ((await tab.innerText()) || `tab${i}`).trim();
+  // Read the labels first: switching tabs re-renders the tab list
+  const labels = await page
+    .getByRole('tab')
+    .evaluateAll((els) =>
+      els
+        .filter((el) => el.getAttribute('aria-selected') !== 'true')
+        .map((el) => el.textContent.trim()),
+    );
+  for (const label of labels) {
+    const tab = page.getByRole('tab', { name: label, exact: true }).first();
+    if (!(await tab.count())) continue;
     await tab.scrollIntoViewIfNeeded();
     await tab.click();
     await page.waitForTimeout(1500);
     await shoot(`tab-${label}`, { fromElement: tab });
+  }
+}
+
+async function sitePage(page, shoot) {
+  await clickTabs(page, shoot);
+  const windgram = page.getByRole('tab', { name: 'Windgram', exact: true }).first();
+  if (await windgram.count()) {
+    await windgram.click();
+    await page.waitForTimeout(800);
+  }
+  // A day later in the week, from the windgram's day picker
+  const later = page.getByRole('button', { name: /^(Sat|Sun)/ }).first();
+  if (await later.count()) {
+    await later.click();
+    await page.waitForTimeout(1500);
+    await shoot('later-day', { fromElement: later });
   }
 }
 
@@ -57,7 +78,7 @@ function prodPages() {
     { name: 'dashboard-signed-out', path: '/dashboard' },
     { name: 'browse', path: '/sites/browse', settle: 4000 },
     { name: 'browse-search', path: '/sites/browse?search=chelan', settle: 4000 },
-    { name: 'site-tiger', path: '/sites/tiger-mountain', actions: clickTabs },
+    { name: 'site-tiger', path: '/sites/tiger-mountain', actions: sitePage },
     { name: 'site-chelan', path: '/sites/chelan-butte' },
     { name: 'site-valle', path: '/sites/valle-de-bravo' },
     { name: 'site-missing', path: '/sites/not-a-real-site-xyz' },
@@ -73,7 +94,7 @@ function localPages() {
       name: 'site-followed',
       path: `/sites/${first.slug}`,
       user: 'ux-pilot',
-      actions: clickTabs,
+      actions: sitePage,
     },
     { name: 'site-followed-2', path: `/sites/${second.slug}`, user: 'ux-pilot' },
     { name: 'custom-site', path: `/sites/custom/${seed.customSiteId}`, user: 'ux-pilot' },
@@ -117,29 +138,35 @@ function localPages() {
 
 const report = [];
 
+// Screenshots the page in viewport-sized slices from the full-page render, so
+// long pages read top to bottom. Anything wider than the viewport is cut off,
+// as it is for the user (horizontalOverflowPx records how much).
 async function capture(page, name, extra = {}) {
   const shots = [];
-  const total = await page.evaluate(() => document.documentElement.scrollHeight);
-  const vh = page.viewportSize().height;
+  const { width, height: vh } = page.viewportSize();
+  const size = await page.evaluate(() => ({
+    total: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+    overflow: document.documentElement.scrollWidth - window.innerWidth,
+  }));
   const start = extra.fromElement
     ? Math.max(
         0,
-        (await extra.fromElement.evaluate(
-          (el) => el.getBoundingClientRect().top + window.scrollY,
-        )) - 80,
+        Math.floor(
+          await extra.fromElement.evaluate((el) => el.getBoundingClientRect().top + window.scrollY),
+        ) - 80,
       )
     : 0;
-  const step = Math.floor(vh * 0.9);
-  for (let i = 0, y = start; i < MAX_CHUNKS && y < total; i++, y += step) {
-    await page.evaluate((top) => window.scrollTo(0, top), y);
-    await page.waitForTimeout(350);
+  const max = extra.fromElement ? 4 : MAX_CHUNKS;
+  for (let i = 0, y = start; i < max && y < size.total; i++, y += vh) {
     const file = `${name}-${String(i + 1).padStart(2, '0')}.png`;
-    await page.screenshot({ path: path.join(outDir, file) });
+    await page.screenshot({
+      path: path.join(outDir, file),
+      fullPage: true,
+      clip: { x: 0, y, width, height: Math.min(vh, size.total - y) },
+    });
     shots.push(file);
-    if (extra.fromElement && i >= 3) break;
   }
-  await page.evaluate(() => window.scrollTo(0, 0));
-  return { shots, pageHeight: total };
+  return { shots, pageHeight: size.total, horizontalOverflowPx: Math.max(0, size.overflow) };
 }
 
 async function visit(context, vpName, spec) {
@@ -164,7 +191,7 @@ async function visit(context, vpName, spec) {
   try {
     const res = await page.goto(base + spec.path, {
       waitUntil: 'domcontentloaded',
-      timeout: 60000,
+      timeout: 120000,
     });
     entry.status = res?.status();
     entry.finalUrl = page.url().replace(base, '');
@@ -216,22 +243,6 @@ async function visit(context, vpName, spec) {
   await page.close();
 }
 
-function decodeEmailHtml(eml) {
-  const parts = eml.split(/\r?\n--[^\r\n]+\r?\n/);
-  const htmlPart = parts.find((p) => /content-type:\s*text\/html/i.test(p)) ?? eml;
-  const [head, ...rest] = htmlPart.split(/\r?\n\r?\n/);
-  let body = rest.join('\n\n');
-  if (/content-transfer-encoding:\s*quoted-printable/i.test(head)) {
-    body = body
-      .replace(/=\r?\n/g, '')
-      .replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
-    body = Buffer.from(body, 'latin1').toString('utf8');
-  } else if (/content-transfer-encoding:\s*base64/i.test(head)) {
-    body = Buffer.from(body.replace(/\s+/g, ''), 'base64').toString('utf8');
-  }
-  return body;
-}
-
 async function digestEmail(browser) {
   const res = await fetch(`${base}/api/notifications/check?run=morning`, {
     method: 'POST',
@@ -242,12 +253,12 @@ async function digestEmail(browser) {
   report.push({ viewport: '-', name: 'alerts-run', status: res.status, text: body.slice(0, 4000) });
   await new Promise((r) => setTimeout(r, 3000));
   const log = process.env.WRANGLER_LOG ? fs.readFileSync(process.env.WRANGLER_LOG, 'utf8') : '';
-  const emlFiles = [...new Set(log.match(/\/[^\s'"]+\.eml/g) ?? [])];
-  console.log(`emails written: ${emlFiles.join(', ') || 'none'}`);
-  for (const [i, file] of emlFiles.entries()) {
-    const eml = fs.readFileSync(file, 'utf8');
-    fs.writeFileSync(path.join(outDir, `email-${i + 1}.eml.txt`), eml);
-    const html = decodeEmailHtml(eml);
+  // Local dev writes each email's HTML and text parts to files and logs their paths
+  const htmlFiles = [...new Set([...log.matchAll(/HTML: (\S+\.html)/g)].map((m) => m[1]))];
+  console.log(`emails written: ${htmlFiles.join(', ') || 'none'}`);
+  for (const [i, file] of htmlFiles.entries()) {
+    const html = fs.readFileSync(file, 'utf8');
+    fs.writeFileSync(path.join(outDir, `email-${i + 1}.html`), html);
     for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
       const ctx = await browser.newContext(vp);
       const page = await ctx.newPage();
