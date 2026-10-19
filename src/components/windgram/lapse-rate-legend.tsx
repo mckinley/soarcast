@@ -17,9 +17,11 @@ export function LapseRateLegend({ className = '' }: LapseRateLegendProps) {
   const legend = getLapseRateLegend(isDark);
 
   return (
-    <div className={`flex items-center gap-4 text-sm ${className}`}>
+    <div
+      className={`flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm ${className}`}
+    >
       <span className="font-medium text-muted-foreground">Stability:</span>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
         {legend.map((entry) => (
           <div key={entry.label} className="flex items-center gap-1.5">
             <div

@@ -30,14 +30,14 @@ export function SiteDetailClient({ site, scores, today }: SiteDetailClientProps)
     <div className="space-y-6">
       {todayScore && (
         <Card className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
             <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_BADGE[todayScore.verdict]}`}
+              className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-sm font-semibold ${VERDICT_BADGE[todayScore.verdict]}`}
             >
               {todayScore.date === today ? 'Today: ' : ''}
               {VERDICT_WORD[todayScore.verdict]}
             </span>
-            <p className="text-sm text-muted-foreground flex-1 min-w-0">
+            <p className="text-sm text-muted-foreground sm:flex-1 sm:min-w-0">
               {verdictSummary(todayScore)}
             </p>
           </div>
