@@ -461,7 +461,11 @@ export async function fetchAtmosphericProfile(
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText}`);
+      // Open-Meteo explains a rejected request in the body: {"error":true,"reason":"..."}
+      const reason = (await response.text().catch(() => '')).slice(0, 300);
+      throw new Error(
+        `Open-Meteo API error: ${response.status} ${response.statusText} ${reason}`.trim(),
+      );
     }
 
     const data: OpenMeteoProfileResponse = await response.json();

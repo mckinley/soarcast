@@ -24,3 +24,15 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+      # The forecast pages depend on Open-Meteo answering the Worker; check
+      # the live profile API end to end so a rejected request shows up here.
+      - name: Smoke test the forecast API
+        run: |
+          sleep 20
+          url="https://soarcast.mckinleyaviation.com/api/weather/profile?lat=47.49&lng=-121.79&days=1"
+          status=$(curl -sS -o body.json -w '%{http_code}' "$url")
+          echo "HTTP $status"
+          head -c 600 body.json; echo
+          test "$status" = 200
+          grep -q '"sunriseByDay"' body.json

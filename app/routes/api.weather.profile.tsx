@@ -71,7 +71,11 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   } catch (error) {
     console.error('Error fetching atmospheric profile:', error);
     return Response.json(
-      { error: 'Failed to fetch atmospheric profile', status: 500 },
+      {
+        error: 'Failed to fetch atmospheric profile',
+        detail: error instanceof Error ? error.message : String(error),
+        status: 500,
+      },
       { status: 500 },
     );
   }
