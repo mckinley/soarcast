@@ -6,15 +6,6 @@ set -u
 LAT=47.4875; LNG=-121.9913
 UA='SoarCast data probe (github.com/mckinley/soarcast)'
 
-# TEMP: why the track record for Cartago (SKGO) failed
-for st in "4.758 -75.956" "4.455 -75.766" "47.49512 -122.21443"; do
-  set -- $st
-  url="https://previous-runs-api.open-meteo.com/v1/forecast?latitude=$1&longitude=$2&hourly=precipitation_previous_day1,wind_speed_10m_previous_day1,wind_direction_10m_previous_day1&start_date=2025-10-20&end_date=2026-10-19&timezone=auto"
-  echo "== previous runs $st"
-  curl -sS --max-time 60 -A "$UA" -o pr.json -w 'HTTP %{http_code} %{size_download} bytes %{time_total}s\n' "$url"
-  head -c 300 pr.json; echo
-done
-
 # Prints, per hourly variable, how many of its values are non-null
 counts() { jq -c '(.error // empty), (.reason // empty), (.hourly // {} | to_entries | map(select(.key != "time")) | map({(.key): (.value | map(select(. != null)) | length)}) | add)' 2>/dev/null; }
 
