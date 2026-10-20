@@ -1,9 +1,15 @@
 // Flying areas pilots travel to, for "Where to fly" on the Planning page, and
-// the launches each one is rated at. The season build
+// the launches each one is rated at. There's no standard way to divide the
+// world into flying areas, so this is our own hand-picked list of trip
+// destinations: an area is a few launches within AREA_RADIUS_KM of its
+// middle, so a trip based in one place can fly whichever suits the day. An
+// area is a go on a day when any of its launches is. The season build
 // (scripts/seasons/build.ts) finds each launch in pgsites (a listed site
 // matching `match` within 30 km of the point, in the country) and rates its
-// past two years like any other site. An area is a go on a day when any of
-// its launches is.
+// past two years like any other site.
+
+/** Every launch in an area is within this distance of the area's middle. */
+export const AREA_RADIUS_KM = 100;
 
 export interface Destination {
   slug: string;
@@ -22,6 +28,9 @@ export interface Destination {
 export interface Area {
   slug: string;
   name: string;
+  /** The middle of its launches */
+  latitude: number;
+  longitude: number;
   launches: Array<Omit<Destination, 'area'>>;
 }
 
@@ -37,7 +46,14 @@ function d(
 }
 
 function area(slug: string, name: string, launches: Area['launches']): Area {
-  return { slug, name, launches };
+  const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+  return {
+    slug,
+    name,
+    latitude: mean(launches.map((l) => l.latitude)),
+    longitude: mean(launches.map((l) => l.longitude)),
+    launches,
+  };
 }
 
 export const AREAS: Area[] = [
@@ -109,10 +125,10 @@ export const AREAS: Area[] = [
   area('turkey', 'Turkish Riviera', [
     d('oludeniz', 'Ölüdeniz (Babadağ)', 'tr', 36.53, 29.17, ['%Babada%', '%deniz%']),
   ]),
-  area('balkans', 'Balkans', [
+  area('north-macedonia', 'North Macedonia', [
     d('krusevo', 'Kruševo', 'mk', 41.37, 21.24, ['%Kru%evo%']),
-    d('sopot', 'Sopot', 'bg', 42.67, 24.75, ['%Sopot%']),
   ]),
+  area('bulgaria', 'Bulgaria', [d('sopot', 'Sopot', 'bg', 42.67, 24.75, ['%Sopot%'])]),
   area('caucasus', 'Caucasus', [d('gudauri', 'Gudauri', 'ge', 42.47, 44.48, ['%Gudauri%'])]),
   // The Americas
   area('central-mexico', 'Central Mexico', [
@@ -120,11 +136,15 @@ export const AREAS: Area[] = [
       '%Pe%on%',
       '%Valle de Bravo%',
     ]),
-    d('tapalpa', 'Tapalpa', 'mx', 19.95, -103.77, ['%Tapalpa%']),
   ]),
-  area('colombia', 'Colombia', [
+  area('jalisco', 'Jalisco', [d('tapalpa', 'Tapalpa', 'mx', 19.95, -103.77, ['%Tapalpa%'])]),
+  area('cauca-valley', 'Cauca Valley', [
     d('roldanillo', 'Roldanillo', 'co', 4.42, -76.13, ['%Roldanillo%']),
+  ]),
+  area('antioquia', 'Antioquia', [
     d('medellin', 'Medellín (San Félix)', 'co', 6.34, -75.62, ['%San F%lix%', '%Medell%']),
+  ]),
+  area('santander', 'Santander', [
     d('bucaramanga', 'Bucaramanga (Ruitoque)', 'co', 7.03, -73.1, ['%Ruitoque%', '%Bucaramanga%']),
   ]),
   area('northeast-brazil', 'Northeast Brazil', [
@@ -160,8 +180,10 @@ export const AREAS: Area[] = [
   area('southern-california', 'Southern California', [
     d('torrey-pines', 'Torrey Pines', 'us', 32.89, -117.25, ['%Torrey%']),
   ]),
-  area('pacific-northwest', 'Pacific Northwest', [
+  area('central-washington', 'Central Washington', [
     d('chelan', 'Chelan Butte', 'us', 47.8, -120.05, ['%Chelan%']),
+  ]),
+  area('southern-oregon', 'Southern Oregon', [
     d('woodrat', 'Woodrat Mountain', 'us', 42.23, -123.03, ['%Woodrat%']),
   ]),
   area('appalachians', 'Southern Appalachians', [
@@ -180,18 +202,22 @@ export const AREAS: Area[] = [
   area('nepal', 'Nepal', [
     d('pokhara', 'Pokhara (Sarangkot)', 'np', 28.24, 83.95, ['%Sarangkot%', '%Pokhara%']),
   ]),
-  area('thailand', 'Northern Thailand', [
+  area('northern-thailand', 'Northern Thailand', [
     d('chiang-mai', 'Chiang Mai (Doi Pha-Phueng)', 'th', 18.84, 99.18, [
       '%Pha-Phueng%',
       '%Pha Phueng%',
     ]),
+  ]),
+  area('phetchabun', 'Phetchabun', [
     d('phu-thap-boek', 'Phu Thap Boek', 'th', 16.9, 101.11, ['%Thap Boek%']),
   ]),
   area('victorian-alps', 'Victorian Alps', [
     d('bright', 'Bright (Mystic)', 'au', -36.74, 146.97, ['%Mystic%', '%Bright%']),
   ]),
-  area('new-south-wales', 'New South Wales', [
+  area('north-west-slopes', 'North West Slopes', [
     d('manilla', 'Manilla (Mt Borah)', 'au', -30.69, 150.69, ['%Borah%', '%Manilla%']),
+  ]),
+  area('illawarra', 'Illawarra coast', [
     d('stanwell-park', 'Stanwell Park', 'au', -34.23, 150.99, ['%Stanwell%', '%Bald Hill%']),
   ]),
   area('southern-lakes', 'Southern Lakes, New Zealand', [
