@@ -265,7 +265,7 @@ async function findDestinationSite(dest: Destination): Promise<PgRow | null> {
        WHERE pge_deleted_at IS NULL AND country_code = ? AND name LIKE ?
          AND latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?`,
       [
-        dest.countryCode,
+        dest.countryCode.toUpperCase(), // sites.country_code is uppercase
         pattern,
         dest.latitude - dLat,
         dest.latitude + dLat,
@@ -335,7 +335,7 @@ async function ownJobs(): Promise<Job[]> {
       jobFor(`pg:${f.site.pgsitesId}`, launchSiteToSite(f.site, f.favorite), {
         label: 'followed site',
         name: f.site.name,
-        countryCode: f.site.countryCode,
+        countryCode: f.site.countryCode?.toLowerCase() ?? null,
         destination: null,
       }),
     ),
@@ -363,7 +363,7 @@ async function destinationJobs(): Promise<Job[]> {
       jobFor(`pg:${row.id}`, siteFromPgRow(row), {
         label: `destination ${dest.slug} (${row.name})`,
         name: row.name,
-        countryCode: row.country_code,
+        countryCode: row.country_code.toLowerCase(),
         destination: dest.slug,
       }),
     );
