@@ -130,6 +130,18 @@ export function seasonMonths(days: SeasonDay[], goal: SiteGoal): SeasonMonth[] {
   return months;
 }
 
+/** A site's season for the pilot's goal: what pages show, without the day list. */
+export interface SeasonSummary {
+  months: SeasonMonth[];
+  best: { text: string; share: number } | null;
+  /** Go days for the goal in a typical week around the site's today */
+  typicalWeek: number | null;
+  fromDate: string;
+  toDate: string;
+  /** False when the row was rated with other launch settings than the pilot's now */
+  sameSettings: boolean;
+}
+
 const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**

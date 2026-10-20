@@ -14,6 +14,8 @@ import { ElevationDisplay } from '@/components/elevation-display';
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
+import { seasonForSite, seasonSiteRef } from '~/app/lib/seasons.server';
+import { SeasonCard } from '@/components/season-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, Pencil } from 'lucide-react';
@@ -55,13 +57,18 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     forecastError = true;
   }
 
-  // Without a forecast, comps split into past and coming by the UTC date
+  // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
-  return { site, scores, today, forecastError, comps: await compsPromise, compsToday };
+  const [comps, season] = await Promise.all([
+    compsPromise,
+    seasonForSite(db, seasonSiteRef('custom', site.id), site, compsToday),
+  ]);
+  return { site, scores, today, forecastError, comps, compsToday, season };
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, scores, today, forecastError, comps, compsToday } = useLoaderData<typeof loader>();
+  const { site, scores, today, forecastError, comps, compsToday, season } =
+    useLoaderData<typeof loader>();
 
   return (
     <div className="space-y-6">
@@ -102,8 +109,17 @@ export default function CustomSiteDetailPage() {
           today={today}
           goalTarget={{ siteId: site.id, source: 'custom' }}
           comps={comps}
+          typicalWeek={season?.typicalWeek ?? null}
         />
       )}
+
+      <SeasonCard
+        season={season}
+        goal={site.goal ?? 'launch'}
+        today={compsToday}
+        comps={comps}
+        followed
+      />
 
       <SiteCompsCard comps={comps} today={compsToday} />
 

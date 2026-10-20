@@ -93,7 +93,7 @@ export const DESTINATIONS: Destination[] = [
   d('golden', 'Golden (Mount 7)', 'ca', 51.25, -116.92, ['%Mount 7%', '%Mt%7%', '%Golden%']),
   // Asia, Oceania and Africa
   d('bir', 'Bir Billing', 'in', 32.07, 76.73, ['%Billing%', '%Bir%']),
-  d('kamshet', 'Kamshet', 'in', 18.76, 73.55, ['%Kamshet%']),
+  d('kamshet', 'Kamshet', 'in', 18.76, 73.55, ['%Shelar%', '%Tower Hill%', '%Kamshet%']),
   d('pokhara', 'Pokhara (Sarangkot)', 'np', 28.24, 83.95, ['%Sarangkot%', '%Pokhara%']),
   d('bright', 'Bright (Mystic)', 'au', -36.74, 146.97, ['%Mystic%', '%Bright%']),
   d('manilla', 'Manilla (Mt Borah)', 'au', -30.69, 150.69, ['%Borah%', '%Manilla%']),
