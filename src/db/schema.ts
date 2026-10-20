@@ -230,6 +230,28 @@ export const trackRecordLocations = sqliteTable('track_record_locations', {
   checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
 });
 
+// A site's past days rated by the engine on archived forecasts, written by
+// the "Season build" workflow (scripts/seasons/build.ts) and summed into
+// months on site pages and the Year page (src/lib/seasons.ts).
+export const siteSeasons = sqliteTable('site_seasons', {
+  // "<siteRef>|<launchProfileKey>": one row per launch and the way it's rated
+  key: text('key').primaryKey(),
+  // "pg:<pgsites id>" for listed sites, "custom:<custom_sites.id>" for your own
+  siteRef: text('site_ref').notNull(),
+  // Listed sites only (custom sites stay private to their table)
+  name: text('name'),
+  countryCode: text('country_code'),
+  latitude: real('latitude').notNull(),
+  longitude: real('longitude').notNull(),
+  // Slug in src/lib/destinations.ts when the site is a destination
+  destination: text('destination'),
+  // encodeSeasonDays(): one entry per past day
+  days: text('days').notNull(),
+  fromDate: text('from_date').notNull(),
+  toDate: text('to_date').notNull(),
+  builtAt: integer('built_at', { mode: 'timestamp' }).notNull(),
+});
+
 // Export types for use in application code
 export type LaunchSite = typeof launchSites.$inferSelect;
 export type NewLaunchSite = typeof launchSites.$inferInsert;
@@ -248,6 +270,8 @@ export type NewSettings = typeof settings.$inferInsert;
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+export type SiteSeason = typeof siteSeasons.$inferSelect;
 
 export type AtmosphericProfileCache = typeof atmosphericProfilesCache.$inferSelect;
 export type NewAtmosphericProfileCache = typeof atmosphericProfilesCache.$inferInsert;
