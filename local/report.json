@@ -1,0 +1,634 @@
+[
+  {
+    "viewport": "-",
+    "name": "track-record-tiger",
+    "status": 200,
+    "ms": 2375,
+    "text": "{\"record\":{\"station\":{\"id\":\"KRNT\",\"name\":\"Renton Muni\",\"latitude\":47.49512,\"longitude\":-122.21443,\"elevation\":7},\"from\":\"2025-10-20\",\"to\":\"2026-10-19\",\"months\":[{\"month\":1,\"days\":31,\"rainForecastDays\":9,\"rainSeenDays\":12,\"rainBothDays\":7,\"windHours\":246,\"windAbsErrorSum\":1248.0359999999991,\"windBiasSum\":303.2280000000001,\"directionHours\":92,\"directionRightHours\":73},{\"month\":2,\"days\":28,\"rainForecastDays\":9,\"rainSeenDays\":10,\"rainBothDays\":5,\"windHours\":221,\"windAbsErrorSum\":1006.68,\"windBiasSum\":1.7519999999999776,\"directionHours\":124,\"directionRightHours\":106},{\"month\":3,\"days\":31,\"rainForecastDays\":15,\"rainSeenDays\":19,\"rainBothDays\":13,\"windHours\":247,\"windAbsErrorSum\":1133.1680000000001,\"windBiasSum\":173.22399999999996,\"directionHours\":152,\"directionRightHours\":126},{\"month\":4,\"days\":30,\"rainForecastDays\":5,\"rainSeenDays\":7,\"rainBothDays\":4,\"windHours\":236,\"windAbsErrorSum\":1080.1799999999998,\"windBiasSum\":-278.988,\"directionHours\":163,\"directionRightHours\":138},{\"month\":5,\"days\":31,\"rainForecastDays\":6,\"rainSeenDays\":5,\"rainBothDays\":4,\"windHours\":243,\"windAbsErrorSum\":935.6000000000003,\"windBiasSum\":-138.71200000000016,\"directionHours\":175,\"directionRightHours\":148},{\"month\":6,\"days\":30,\"rainForecastDays\":3,\"rainSeenDays\":6,\"rainBothDays\":3,\"windHours\":234,\"windAbsErrorSum\":992.2040000000002,\"windBiasSum\":-185.6439999999999,\"directionHours\":178,\"directionRightHours\":150},{\"month\":7,\"days\":30,\"rainForecastDays\":0,\"rainSeenDays\":2,\"rainBothDays\":0,\"windHours\":234,\"windAbsErrorSum\":974.8920000000003,\"windBiasSum\":-339.6999999999997,\"directionHours\":175,\"directionRightHours\":146},{\"month\":8,\"days\":30,\"rainForecastDays\":0,\"rainSeenDays\":2,\"rainBothDays\":0,\"windHours\":234,\"windAbsErrorSum\":814.0400000000003,\"windBiasSum\":-358.5679999999999,\"directionHours\":161,\"directionRightHours\":132},{\"month\":9,\"days\":30,\"rainForecastDays\":6,\"rainSeenDays\":4,\"rainBothDays\":4,\"windHours\":239,\"windAbsErrorSum\":1056.9,\"windBiasSum\":-221.02000000000007,\"directionHours\":167,\"directionRightHours\":137},{\"month\":10,\"days\":30,\"rainForecastDays\":5,\"rainSeenDays\":10,\"rainBothDays\":5,\"windHours\":239,\"windAbsErrorSum\":1135.511999999999,\"windBiasSum\":76.53600000000003,\"directionHours\":127,\"directionRightHours\":92},{\"month\":11,\"days\":30,\"rainForecastDays\":12,\"rainSeenDays\":14,\"rainBothDays\":12,\"windHours\":238,\"windAbsErrorSum\":1123.9160000000004,\"windBiasSum\":190.47600000000006,\"directionHours\":106,\"directionRightHours\":77},{\"month\":12,\"days\":31,\"rainForecastDays\":13,\"rainSeenDays\":20,\"rainBothDays\":13,\"windHours\":247,\"windAbsErrorSum\":1346.2879999999998,\"windBiasSum\":336.96000000000004,\"directionHours\":133,\"directionRightHours\":109}]},\"distanceKm\":15.4}"
+  },
+  {
+    "viewport": "-",
+    "name": "track-record-roldanillo",
+    "status": 200,
+    "ms": 1421,
+    "text": "{\"record\":{\"station\":{\"id\":\"SKGO\",\"name\":\"Cartago//Santa Ana Arpt\",\"latitude\":4.758,\"longitude\":-75.956,\"elevation\":908},\"from\":\"2025-10-20\",\"to\":\"2026-10-19\",\"months\":[{\"month\":1,\"days\":30,\"rainForecastDays\":21,\"rainSeenDays\":7,\"rainBothDays\":5,\"windHours\":228,\"windAbsErrorSum\":568.3640000000003,\"windBiasSum\":-208.26799999999997,\"directionHours\":32,\"directionRightHours\":17},{\"month\":2,\"days\":27,\"rainForecastDays\":19,\"rainSeenDays\":7,\"rainBothDays\":6,\"windHours\":213,\"windAbsErrorSum\":615.8720000000003,\"windBiasSum\":-284.15999999999997,\"directionHours\":24,\"directionRightHours\":10},{\"month\":3,\"days\":31,\"rainForecastDays\":20,\"rainSeenDays\":4,\"rainBothDays\":4,\"windHours\":246,\"windAbsErrorSum\":822.8280000000002,\"windBiasSum\":-522.0040000000002,\"directionHours\":59,\"directionRightHours\":26},{\"month\":4,\"days\":30,\"rainForecastDays\":19,\"rainSeenDays\":4,\"rainBothDays\":3,\"windHours\":236,\"windAbsErrorSum\":716.8400000000005,\"windBiasSum\":-205.23200000000006,\"directionHours\":28,\"directionRightHours\":6},{\"month\":5,\"days\":31,\"rainForecastDays\":27,\"rainSeenDays\":7,\"rainBothDays\":7,\"windHours\":244,\"windAbsErrorSum\":665.2639999999997,\"windBiasSum\":10.75199999999999,\"directionHours\":21,\"directionRightHours\":4},{\"month\":6,\"days\":30,\"rainForecastDays\":22,\"rainSeenDays\":9,\"rainBothDays\":7,\"windHours\":236,\"windAbsErrorSum\":690.6439999999997,\"windBiasSum\":-240.98,\"directionHours\":33,\"directionRightHours\":12},{\"month\":7,\"days\":30,\"rainForecastDays\":16,\"rainSeenDays\":3,\"rainBothDays\":3,\"windHours\":237,\"windAbsErrorSum\":799.824,\"windBiasSum\":-315.23199999999986,\"directionHours\":43,\"directionRightHours\":13},{\"month\":8,\"days\":27,\"rainForecastDays\":14,\"rainSeenDays\":5,\"rainBothDays\":4,\"windHours\":215,\"windAbsErrorSum\":830.3400000000004,\"windBiasSum\":-508.5320000000003,\"directionHours\":63,\"directionRightHours\":19},{\"month\":9,\"days\":22,\"rainForecastDays\":18,\"rainSeenDays\":4,\"rainBothDays\":4,\"windHours\":176,\"windAbsErrorSum\":733.0599999999997,\"windBiasSum\":-498.4999999999999,\"directionHours\":68,\"directionRightHours\":20},{\"month\":10,\"days\":25,\"rainForecastDays\":21,\"rainSeenDays\":8,\"rainBothDays\":8,\"windHours\":193,\"windAbsErrorSum\":643.744,\"windBiasSum\":-373.096,\"directionHours\":44,\"directionRightHours\":15},{\"month\":11,\"days\":26,\"rainForecastDays\":25,\"rainSeenDays\":10,\"rainBothDays\":10,\"windHours\":206,\"windAbsErrorSum\":594.1639999999999,\"windBiasSum\":-188.18000000000006,\"directionHours\":38,\"directionRightHours\":15},{\"month\":12,\"days\":31,\"rainForecastDays\":16,\"rainSeenDays\":3,\"rainBothDays\":3,\"windHours\":244,\"windAbsErrorSum\":653.2520000000005,\"windBiasSum\":-163.964,\"directionHours\":32,\"directionRightHours\":12}]},\"distanceKm\":47.7}"
+  },
+  {
+    "viewport": "phone",
+    "name": "dashboard",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/dashboard",
+    "domContentLoadedMs": 1575,
+    "settledMs": 2285,
+    "timing": {
+      "ttfbMs": 1504,
+      "loadMs": 1614,
+      "transferKb": 12
+    },
+    "title": "Dashboard | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nTODAY'S BEST\nMt. Si\nFlyable: sled ride 13:00-18:00\nOverdevelopment: moderate\nYour week\n\nWhen each of your sites gives the flying you want from it. Open a site for its windgram.\n\nGo: the flying you want there\nFlyable, but less than you want\nMarginal\nNot flyable\nAdd your own site\nCards\nTable\nGranite Mountain\nYour site • 1716m • 25km/h max • Safe launch is enough\nNot flyable\n\nToday: Wind 31 km/h (limit 25), 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nBlanchard\n396m • 25km/h max • Soarable\nNot flyable\n\nToday: NE wind (31°), off the launch, 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nChelan Butte\n1117m • 25km/h max • Soarable\nMarginal\n\nToday: marginal 14:00-19:00, NE wind (60°), off the launch, 07:00-19:00\n\nLoading...\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nMailbox Peak\n1400m • 25km/h max • Soarable\nMarginal\n\nToday: marginal 15:00-17:00, Wind 29 km/h (limit 25), 08:00-19:00\n\nLoading...\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nMt. Si\n916m • 25km/h max • Soarable\nFlyable\n\nToday: a sled ride, thermals top out below launch\n\nLoading...\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nRampart Ridge\n1358m • 25km/h max • Soarable\nNot flyable\n\nToday: Gusts to 46 km/h, 07:00-19:00\n\nLoading...\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nTiger Mountain\n543m • 25km/h max • Soarable\nMarginal\n\nToday: marginal 11:00-17:00, NE wind (51°), cross on launch, 07:00-19:00\n\nLoading...\nToday\nWed\nThu\nFri\nSat\nSun\nMon\n\nWeather data by Open-Meteo.com (CC BY 4.0)",
+    "shots": [
+      "phone-dashboard-01.png",
+      "phone-dashboard-02.png",
+      "phone-dashboard-03.png"
+    ],
+    "pageHeight": 2313,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "phone-dashboard--tab-table-01.png",
+      "phone-dashboard--tab-table-02.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-followed",
+    "path": "/sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04",
+    "status": 200,
+    "finalUrl": "/sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04",
+    "domContentLoadedMs": 493,
+    "settledMs": 1858,
+    "timing": {
+      "ttfbMs": 432,
+      "loadMs": 499,
+      "transferKb": 9
+    },
+    "title": "Tiger Mountain | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nBack to Browse\nFavorited\nTiger Mountain\n\nUS\n\nToday: Marginal\n\nMarginal 11:00-17:00, fly with care. NE wind (51°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in.\nHow far to trust the forecast here\nRain forecasts: Good\nWind: Good\n\nIn October: The forecast called rain in the flying hours on 5 of 30 days, and rain fell on 5 of them; it also fell on 5 days forecast dry. Wind was off by 5 km/h on average, direction within 45° 72% of the time.\n\nThe forecast from the day before against reports from Renton Muni (KRNT), 15.4 km away, 10:00-17:00 local time, 2025-10-20 to 2026-10-19.\n\nMonth by month\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 11-17\nTomorrow\nOct 21\nSled 11-18\nThu\nOct 22\nThermals 12-18\nFri\nOct 23\nThermals 14-18\nSat\nOct 24\nThermals 14-17\nSun\nOct 25\nThermals 13-16\nMon\nOct 26\nThermals 12-16\nMarginal 11:00-17:00\n\nMarginal 11:00-17:00, fly with care. NE wind (51°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nNE wind (51°), cross on launch, 07:00-19:00\nWind 22 km/h, near the 25 km/h limit, 07:00-08:00\nGusty, to 32 km/h, 07:00-08:00\nThermal Strength\n1.1 m/s\nModerate at 12:00\nMax Altitude\n861m\n2,825 ft ASL\nCloud Base\n897m AGL\n2,943 ft AGL\nFreezing Level\n3,121m MSL\nSafe\nBest Window\n11:00-17:00\n(6 hrs)\nOD Risk\nLow\nWind Shear\nLow\nLapse Rate (850-700)\n1.9°C/1000ft\nStable\nLift m/s\n0\n0.6\n1.0\n1.1\n1.1\n0.6\n0\n5°\n10°\nLaunch 1,781'\nModel ground 1,709'\n2,000'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n500m\n750m\n1000m\n1250m\n1500m\n1750m\n2000m\n2250m\n2500m\n2750m\n3000m\n7a\n9a\n11a\n1p\n3p\n5p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 543m\n(ft)\nLanding: 60m\n(ft)\nWhat it gives:\nAs listed: Thermals and ridge\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●●\nNE\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●●\nIdeal Wind Directions:\n↑\nN (0°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.4995°, -122.0090°\nSite Description\nTwo take-off areas, N and S. South take-off is lower than N (NW) by about 200'. Some HG activity from N launch. NO POWERED CRAFT.\nGoogle Maps\nhttp://maps.google.com/?q=Issaquah,+WA&ie=UTF8&t=h&om=1&z=16&ll=47.497546,-122.009525&spn=0.007495,0.021501&iwloc=addr\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "phone-site-followed-01.png",
+      "phone-site-followed-02.png",
+      "phone-site-followed-03.png",
+      "phone-site-followed-04.png",
+      "phone-site-followed-05.png"
+    ],
+    "pageHeight": 3671,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "phone-site-followed--later-day-01.png",
+      "phone-site-followed--later-day-02.png",
+      "phone-site-followed--later-day-03.png",
+      "phone-site-followed--later-day-04.png"
+    ],
+    "consoleErrors": [
+      "warning: [.WebGL-0x1a6c00144800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x1a6c00144800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x1a6c00144800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x1a6c00144800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    ],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-followed-2",
+    "path": "/sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6",
+    "status": 200,
+    "finalUrl": "/sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6",
+    "domContentLoadedMs": 485,
+    "networkIdleTimedOut": true,
+    "settledMs": 25486,
+    "timing": {
+      "ttfbMs": 431,
+      "loadMs": 504,
+      "transferKb": 8
+    },
+    "title": "Chelan Butte | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nBack to Browse\nFavorited\nChelan Butte\n\nUS\n\nToday: Marginal\n\nMarginal 14:00-19:00, fly with care. NE wind (60°), off the launch, 07:00-19:00. A sled ride, thermals top out 306 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in.\nHow far to trust the forecast here\n\nChecking how the forecast has done at the nearest airport...\n\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 14-19\nTomorrow\nOct 21\nSled 08-18\nThu\nOct 22\nSled 08-17\nFri\nOct 23\nXC 13-16\nSat\nOct 24\nThermals 14-16\nSun\nOct 25\nMarginal 07-13\nMon\nOct 26\nSled 13-17\nMarginal 14:00-19:00\n\nMarginal 14:00-19:00, fly with care. NE wind (60°), off the launch, 07:00-19:00. A sled ride, thermals top out 306 m above launch.\n\nNE wind (60°), off the launch, 07:00-19:00\nWind 24 km/h, near the 25 km/h limit, 07:00-12:00\nGusty, to 28 km/h, 07:00-12:00\nThermal Strength\n1.4 m/s\nModerate at 14:00\nMax Altitude\n1,423m\n4,669 ft ASL\nCloud Base\n2075m AGL\n6,808 ft AGL\nFreezing Level\n3,067m MSL\nSafe\nBest Window\n14:00-19:00\n(5 hrs)\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.5°C/1000ft\nStable\nLift m/s\n0\n0.5\n1.1\n1.3\n1.3\n0.9\n0\n0°\n5°\n10°\nLaunch 3,665'\nModel ground 2,569'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n1000m\n1500m\n2000m\n2500m\n3000m\n3500m\n4000m\n7a\n9a\n11a\n1p\n3p\n5p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,117m\n(ft)\nLanding: 532m\n(ft)\nWhat it gives:\nAs listed: Thermals\nFlying Types: paragliding\nOrientations:\nN\n●\nE\n●\nSE\n●●\nS\n●●\nSW\n●●\nW\n●\nNW\n●●\nIdeal Wind Directions:\n↑\nSE (135°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.8042°, -120.0390°\nSite Description\nbeware of dust devils!!\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "phone-site-followed-2-01.png",
+      "phone-site-followed-2-02.png",
+      "phone-site-followed-2-03.png",
+      "phone-site-followed-2-04.png"
+    ],
+    "pageHeight": 3331,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "phone-site-followed-2--goal-safe-launch-01.png",
+      "phone-site-followed-2--goal-safe-launch-02.png",
+      "phone-site-followed-2--goal-safe-launch-03.png",
+      "phone-site-followed-2--goal-safe-launch-04.png",
+      "phone-site-followed-2--goal-safe-launch-05.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": [
+      "failed http://localhost:8790/api/track-record.data?lat=47.8042&lng=-120.0390&_routes=routes%2Fapi.track-record: net::ERR_ABORTED",
+      "failed http://localhost:8790/api/weather/profile?lat=47.8042&lng=-120.039&days=7: net::ERR_ABORTED"
+    ]
+  },
+  {
+    "viewport": "phone",
+    "name": "custom-site",
+    "path": "/sites/custom/00000000-0000-4000-8000-00000000c0de",
+    "status": 200,
+    "finalUrl": "/sites/custom/00000000-0000-4000-8000-00000000c0de",
+    "domContentLoadedMs": 349,
+    "settledMs": 5017,
+    "timing": {
+      "ttfbMs": 285,
+      "loadMs": 353,
+      "transferKb": 8
+    },
+    "title": "Granite Mountain | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nBack to Dashboard\nEdit\nGranite Mountain\n\nYour site. Only you can see it.\n\nToday: Not flyable\n\nNot flyable. Wind 31 km/h (limit 25), 07:00-19:00.\n\nWorth going when\nSafe launch is enough\nAny day you can launch safely, even if it is only a sled ride.\nHow far to trust the forecast here\nRain forecasts: Good\nWind: Poor\n\nIn October: The forecast called rain in the flying hours on 8 of 30 days, and rain fell on 7 of them; it also fell on 6 days forecast dry. Wind was off by 10 km/h on average (it reads 10 km/h high).\n\nThe forecast from the day before against reports from Stampede Pass (KSMP), 17.5 km away, 10:00-17:00 local time, 2025-10-20 to 2026-10-19.\n\nMonth by month\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nToo windy\nTomorrow\nOct 21\nRidge 08-11\nThu\nOct 22\nSled 08-11\nFri\nOct 23\nWrong wind\nSat\nOct 24\nSled 08-18\nSun\nOct 25\nSled 08-10\nMon\nOct 26\nWrong wind\nNot flyable\n\nNot flyable. Wind 31 km/h (limit 25), 07:00-19:00.\n\nWind 31 km/h (limit 25), 07:00-19:00\nGusts to 49 km/h, 07:00-19:00\nSE wind (157°), cross on launch, 07:00-12:00, 13:00-14:00 and 15:00-19:00\nThermal Strength\n1.4 m/s\nModerate at 13:00\nMax Altitude\n1,493m\n4,898 ft ASL\nCloud Base\n1713m AGL\n5,620 ft AGL\nFreezing Level\n3,147m MSL\nSafe\nBest Window\n—\nNo window\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.7°C/1000ft\nStable\nLift m/s\n0\n0.6\n1.2\n1.4\n1.4\n0.9\n0\n0°\n5°\n10°\n15°\nLaunch 5,630'\nModel ground 2,766'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n1000m\n1250m\n1500m\n1750m\n2000m\n2250m\n2500m\n2750m\n3000m\n3250m\n3500m\n7a\n9a\n11a\n1p\n3p\n5p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,716m\n(ft)\nWhat it gives:\nNot sure: go by the weather\nLaunch directions:\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\nNotes:\n\nHike up the lookout trail; launch on the south meadow below the lookout.\n\nMax Wind Speed: 25 km/h\nLocation: 47.3979°, -121.4864°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap",
+    "shots": [
+      "phone-custom-site-01.png",
+      "phone-custom-site-02.png",
+      "phone-custom-site-03.png",
+      "phone-custom-site-04.png"
+    ],
+    "pageHeight": 3325,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "custom-new",
+    "path": "/sites/custom/new",
+    "status": 200,
+    "finalUrl": "/sites/custom/new",
+    "domContentLoadedMs": 274,
+    "settledMs": 1672,
+    "timing": {
+      "ttfbMs": 221,
+      "loadMs": 287,
+      "transferKb": 7
+    },
+    "title": "Add your own site | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nBack to Dashboard\nAdd your own site\n\nPin a launch that isn't listed, like a hike-and-fly peak. Only you can see it, and SoarCast rates it and sends alerts for it like any site you follow.\n\nName\nLaunch location\nSearch\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\nTap the map where you launch, then drag the pin to fine-tune it.\n\nOr paste coordinates (latitude, longitude)\nLaunch elevation (m)\n\nSoarCast reads the wind at this height, so the launch height matters.\n\nWind directions the launch works in\n\nTap a direction the wind comes from to cycle: works well, works cross, off.\n\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\n\nWith no directions set, SoarCast treats the launch as working in any wind direction.\n\nWind limit (km/h)\n\nHours with more wind than this at launch height count as unflyable.\n\nWhat the launch gives\nNot sure: go by the weather\nThermals\nRidge soaring\nThermals and ridge\nSled rides only\n\nA ridge-only launch never counts as a thermal day, and a sled-only one never soars.\n\nWorth going when\nSafe launch is enough\nSoarable\nOnly a great day\n\nAny day you can launch safely, even if it is only a sled ride. Those days show as a go, and alerts come for them.\n\nNotes\nAdd site\nCancel",
+    "shots": [
+      "phone-custom-new-01.png",
+      "phone-custom-new-02.png",
+      "phone-custom-new-03.png"
+    ],
+    "pageHeight": 1966,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "phone-custom-new--pin-dropped-01.png",
+      "phone-custom-new--pin-dropped-02.png",
+      "phone-custom-new--pin-dropped-03.png",
+      "phone-custom-new--submitted-empty-01.png",
+      "phone-custom-new--submitted-empty-02.png",
+      "phone-custom-new--submitted-empty-03.png"
+    ],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    ],
+    "failedRequests": [
+      "400 POST http://localhost:8790/sites/custom/new.data"
+    ]
+  },
+  {
+    "viewport": "phone",
+    "name": "custom-edit",
+    "path": "/sites/custom/00000000-0000-4000-8000-00000000c0de/edit",
+    "status": 200,
+    "finalUrl": "/sites/custom/00000000-0000-4000-8000-00000000c0de/edit",
+    "domContentLoadedMs": 276,
+    "networkIdleTimedOut": true,
+    "settledMs": 25278,
+    "timing": {
+      "ttfbMs": 221,
+      "loadMs": 279,
+      "transferKb": 7
+    },
+    "title": "Edit Granite Mountain | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nBack to Granite Mountain\nEdit Granite Mountain\nName\nLaunch location\nSearch\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\nTap the map where you launch, then drag the pin to fine-tune it.\n\nOr paste coordinates (latitude, longitude)\nLaunch elevation (m)\n\nSoarCast reads the wind at this height, so the launch height matters.\n\nWind directions the launch works in\n\nTap a direction the wind comes from to cycle: works well, works cross, off.\n\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\nWind limit (km/h)\n\nHours with more wind than this at launch height count as unflyable.\n\nWhat the launch gives\nNot sure: go by the weather\nThermals\nRidge soaring\nThermals and ridge\nSled rides only\n\nA ridge-only launch never counts as a thermal day, and a sled-only one never soars.\n\nWorth going when\nSafe launch is enough\nSoarable\nOnly a great day\n\nAny day you can launch safely, even if it is only a sled ride. Those days show as a go, and alerts come for them.\n\nNotes\nSave changes\nCancel\nDelete site",
+    "shots": [
+      "phone-custom-edit-01.png",
+      "phone-custom-edit-02.png",
+      "phone-custom-edit-03.png"
+    ],
+    "pageHeight": 1943,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "settings",
+    "path": "/settings",
+    "status": 200,
+    "finalUrl": "/settings",
+    "domContentLoadedMs": 798,
+    "settledMs": 1447,
+    "timing": {
+      "ttfbMs": 736,
+      "loadMs": 801,
+      "transferKb": 9
+    },
+    "title": "Settings | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nSettings\n\nWhen and how SoarCast tells you a site is flyable.\n\nPush Notifications\nReceive browser notifications when good flying conditions are forecasted.\nEnable Push Notifications\n\nGet a notification on this device when one of your sites looks flyable.\n\nEnable\nNotification Preferences\nHow far ahead to look for days worth an alert.\n\nAlerts come for days that are a go at a site: flyable, with the flight you want from it. Set what each site is worth going for under Your sites below.\n\nNotification Window\n(1-7 days, default: 2)\n\nHow far in advance to check for qualifying days (e.g., 2 = today and tomorrow).\n\nEmail Morning Digest\nReceive a daily email at your delivery time showing today's flyability for your sites.\nEnable Email Digest\n\nEach morning: which of your sites are flyable today, and when.\n\nDelivery Time\n\nYour local time; it goes out at the start of that hour.\n\nYour sites\nWhat each site gives, what makes a day worth going there, and whether to alert you about it.\nGranite Mountain\n47.3979, -121.4864 • 1716m\nWorth going when:\nSafe launch is enough\nWhat it gives:\nNot sure: go by the weather\nWind limit 25 km/h • Edit site\nMt. Si\n47.5053, -121.7440 • 916m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: not tagged\nWind limit (km/h):\nMailbox Peak\n47.4617, -121.6400 • 1400m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: not tagged\nWind limit (km/h):\nChelan Butte\n47.8042, -120.0390 • 1117m\nWorth going when:\nSafe launch is enough\nWhat it gives:\nAs listed: Thermals\nWind limit (km/h):\nTiger Mountain\n47.4995, -122.0090 • 543m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Thermals and ridge\nWind limit (km/h):\nBlanchard\n48.6097, -122.4260 • 396m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Ridge soaring\nWind limit (km/h):\nRampart Ridge\n47.3861, -121.3640 • 1358m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Thermals and ridge\nWind limit (km/h):\n\nHow Notifications Work\n\nSoarCast checks your sites at your digest time each morning and at 6 PM, in your local time. You'll get a push notification for each site with a day in your notification window that is a go for what you want from it.",
+    "shots": [
+      "phone-settings-01.png",
+      "phone-settings-02.png",
+      "phone-settings-03.png",
+      "phone-settings-04.png",
+      "phone-settings-05.png"
+    ],
+    "pageHeight": 3564,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "browse-signed-in",
+    "path": "/sites/browse",
+    "status": 200,
+    "finalUrl": "/sites/browse",
+    "domContentLoadedMs": 488,
+    "settledMs": 2641,
+    "timing": {
+      "ttfbMs": 419,
+      "loadMs": 491,
+      "transferKb": 24
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nTP\nSearch\nFilters\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\n0 sites in view\n\nPan or zoom the map to explore sites\n\nNot listed? Add your own site",
+    "shots": [
+      "phone-browse-signed-in-01.png",
+      "phone-browse-signed-in-02.png"
+    ],
+    "pageHeight": 904,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "failedRequests": [
+      "500 GET http://localhost:8790/api/sites/near?lat=47.44000&lng=-121.97000&radius=1063&limit=1000"
+    ]
+  },
+  {
+    "viewport": "phone",
+    "name": "missing-page",
+    "path": "/sites/not-a-real-site-xyz",
+    "status": 404,
+    "finalUrl": "/sites/not-a-real-site-xyz",
+    "domContentLoadedMs": 238,
+    "settledMs": 819,
+    "timing": {
+      "ttfbMs": 187,
+      "loadMs": 245,
+      "transferKb": 20
+    },
+    "title": "",
+    "text": "Toggle navigation\nToggle theme\nTP\nPage not found\n\nThat page doesn't exist, or the site has moved.\n\nYour sites\nBrowse sites",
+    "shots": [
+      "phone-missing-page-01.png"
+    ],
+    "pageHeight": 844,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [
+      "404 GET http://localhost:8790/sites/not-a-real-site-xyz"
+    ]
+  },
+  {
+    "viewport": "phone",
+    "name": "new-user-dashboard",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/dashboard",
+    "domContentLoadedMs": 343,
+    "settledMs": 973,
+    "timing": {
+      "ttfbMs": 224,
+      "loadMs": 366,
+      "transferKb": 5
+    },
+    "title": "Dashboard | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nNP\nWelcome to SoarCast\n\nNo sites yet. Follow a launch and it shows up here with the days and hours it's flyable this week, or pin your own launch if it isn't listed.\n\nBrowse Launch Sites\nAdd your own site",
+    "shots": [
+      "phone-new-user-dashboard-01.png"
+    ],
+    "pageHeight": 844,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "dashboard",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/dashboard",
+    "domContentLoadedMs": 517,
+    "settledMs": 1339,
+    "timing": {
+      "ttfbMs": 464,
+      "loadMs": 560,
+      "transferKb": 12
+    },
+    "title": "Dashboard | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nTODAY'S BEST\nMt. Si\nFlyable: sled ride 13:00-18:00\nOverdevelopment: moderate\nYour week\n\nWhen each of your sites gives the flying you want from it. Open a site for its windgram.\n\nGo: the flying you want there\nFlyable, but less than you want\nMarginal\nNot flyable\nAdd your own site\nCards\nTable\nGranite Mountain\nYour site • 1716m • 25km/h max • Safe launch is enough\nNot flyable\n\nToday: Wind 31 km/h (limit 25), 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nBlanchard\n396m • 25km/h max • Soarable\nNot flyable\n\nToday: NE wind (31°), off the launch, 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nChelan Butte\n1117m • 25km/h max • Safe launch is enough\nMarginal\n\nToday: marginal 14:00-19:00, NE wind (60°), off the launch, 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nMailbox Peak\n1400m • 25km/h max • Soarable\nMarginal\n\nToday: marginal 15:00-17:00, Wind 29 km/h (limit 25), 08:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nMt. Si\n916m • 25km/h max • Soarable\nFlyable\n\nToday: a sled ride, thermals top out below launch\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nRampart Ridge\n1358m • 25km/h max • Soarable\nNot flyable\n\nToday: Gusts to 46 km/h, 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\nTiger Mountain\n543m • 25km/h max • Soarable\nMarginal\n\nToday: marginal 11:00-17:00, NE wind (51°), cross on launch, 07:00-19:00\n\nToday\nWed\nThu\nFri\nSat\nSun\nMon\n\nWeather data by Open-Meteo.com (CC BY 4.0)",
+    "shots": [
+      "desktop-dashboard-01.png",
+      "desktop-dashboard-02.png"
+    ],
+    "pageHeight": 1133,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "desktop-dashboard--tab-table-01.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-followed",
+    "path": "/sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04",
+    "status": 200,
+    "finalUrl": "/sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04",
+    "domContentLoadedMs": 480,
+    "settledMs": 1983,
+    "timing": {
+      "ttfbMs": 427,
+      "loadMs": 496,
+      "transferKb": 9
+    },
+    "title": "Tiger Mountain | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nBack to Browse\nFavorited\nTiger Mountain\n\nUS\n\nToday: Marginal\n\nMarginal 11:00-17:00, fly with care. NE wind (51°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in.\nHow far to trust the forecast here\nRain forecasts: Good\nWind: Good\n\nIn October: The forecast called rain in the flying hours on 5 of 30 days, and rain fell on 5 of them; it also fell on 5 days forecast dry. Wind was off by 5 km/h on average, direction within 45° 72% of the time.\n\nThe forecast from the day before against reports from Renton Muni (KRNT), 15.4 km away, 10:00-17:00 local time, 2025-10-20 to 2026-10-19.\n\nMonth by month\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 11-17\nTomorrow\nOct 21\nSled 11-18\nThu\nOct 22\nThermals 12-18\nFri\nOct 23\nThermals 14-18\nSat\nOct 24\nThermals 14-17\nSun\nOct 25\nThermals 13-16\nMon\nOct 26\nThermals 12-16\nMarginal 11:00-17:00\n\nMarginal 11:00-17:00, fly with care. NE wind (51°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nNE wind (51°), cross on launch, 07:00-19:00\nWind 22 km/h, near the 25 km/h limit, 07:00-08:00\nGusty, to 32 km/h, 07:00-08:00\nThermal Strength\n1.1 m/s\nModerate at 12:00\nMax Altitude\n861m\n2,825 ft ASL\nCloud Base\n897m AGL\n2,943 ft AGL\nFreezing Level\n3,121m MSL\nSafe\nBest Window\n11:00-17:00\n(6 hrs)\nOD Risk\nLow\nWind Shear\nLow\nLapse Rate (850-700)\n1.9°C/1000ft\nStable\nLift m/s\n0\n0.2\n0.6\n0.9\n1.0\n1.1\n1.1\n1.1\n1.1\n1.0\n0.6\n0.2\n0\n5°\n10°\nLaunch 1,781'\nModel ground 1,709'\n2,000'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n600m\n800m\n1000m\n1200m\n1400m\n1600m\n1800m\n2000m\n2200m\n2400m\n2600m\n2800m\n3000m\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 543m\n(ft)\nLanding: 60m\n(ft)\nWhat it gives:\nAs listed: Thermals and ridge\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●●\nNE\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●●\nIdeal Wind Directions:\n↑\nN (0°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.4995°, -122.0090°\nSite Description\nTwo take-off areas, N and S. South take-off is lower than N (NW) by about 200'. Some HG activity from N launch. NO POWERED CRAFT.\nGoogle Maps\nhttp://maps.google.com/?q=Issaquah,+WA&ie=UTF8&t=h&om=1&z=16&ll=47.497546,-122.009525&spn=0.007495,0.021501&iwloc=addr\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "desktop-site-followed-01.png",
+      "desktop-site-followed-02.png",
+      "desktop-site-followed-03.png",
+      "desktop-site-followed-04.png"
+    ],
+    "pageHeight": 2949,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "desktop-site-followed--later-day-01.png",
+      "desktop-site-followed--later-day-02.png",
+      "desktop-site-followed--later-day-03.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-followed-2",
+    "path": "/sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6",
+    "status": 200,
+    "finalUrl": "/sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6",
+    "domContentLoadedMs": 429,
+    "settledMs": 1871,
+    "timing": {
+      "ttfbMs": 378,
+      "loadMs": 446,
+      "transferKb": 8
+    },
+    "title": "Chelan Butte | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nBack to Browse\nFavorited\nChelan Butte\n\nUS\n\nToday: Marginal\n\nMarginal 14:00-19:00, fly with care. NE wind (60°), off the launch, 07:00-19:00. A sled ride, thermals top out 306 m above launch.\n\nWorth going when\nSafe launch is enough\nAny day you can launch safely, even if it is only a sled ride.\nHow far to trust the forecast here\nRain forecasts: Too little to say\nWind: Fair\n\nIn October: The forecast called rain in the flying hours on 2 of 30 days, and rain fell on 2 of them; it also fell on 2 days forecast dry. Wind was off by 7 km/h on average (it reads 3 km/h high), direction within 45° 75% of the time.\n\nThe forecast from the day before against reports from Wenatchee/Pangborn Mem (KEAT), 46.8 km away, 10:00-17:00 local time, 2025-10-20 to 2026-10-19.\n\nMonth by month\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 14-19\nTomorrow\nOct 21\nSled 08-18\nThu\nOct 22\nSled 08-17\nFri\nOct 23\nXC 13-16\nSat\nOct 24\nThermals 14-16\nSun\nOct 25\nMarginal 07-13\nMon\nOct 26\nSled 13-17\nMarginal 14:00-19:00\n\nMarginal 14:00-19:00, fly with care. NE wind (60°), off the launch, 07:00-19:00. A sled ride, thermals top out 306 m above launch.\n\nNE wind (60°), off the launch, 07:00-19:00\nWind 24 km/h, near the 25 km/h limit, 07:00-12:00\nGusty, to 28 km/h, 07:00-12:00\nThermal Strength\n1.4 m/s\nModerate at 14:00\nMax Altitude\n1,423m\n4,669 ft ASL\nCloud Base\n2075m AGL\n6,808 ft AGL\nFreezing Level\n3,067m MSL\nSafe\nBest Window\n14:00-19:00\n(5 hrs)\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.5°C/1000ft\nStable\nLift m/s\n0\n0.2\n0.5\n0.8\n1.1\n1.2\n1.3\n1.4\n1.3\n1.2\n0.9\n0\n0\n0°\n5°\n10°\nLaunch 3,665'\nModel ground 2,569'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n750m\n1000m\n1250m\n1500m\n1750m\n2000m\n2250m\n2500m\n2750m\n3000m\n3250m\n3500m\n3750m\n4000m\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,117m\n(ft)\nLanding: 532m\n(ft)\nWhat it gives:\nAs listed: Thermals\nFlying Types: paragliding\nOrientations:\nN\n●\nE\n●\nSE\n●●\nS\n●●\nSW\n●●\nW\n●\nNW\n●●\nIdeal Wind Directions:\n↑\nSE (135°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.8042°, -120.0390°\nSite Description\nbeware of dust devils!!\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "desktop-site-followed-2-01.png",
+      "desktop-site-followed-2-02.png",
+      "desktop-site-followed-2-03.png",
+      "desktop-site-followed-2-04.png"
+    ],
+    "pageHeight": 2909,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "desktop-site-followed-2--goal-safe-launch-01.png",
+      "desktop-site-followed-2--goal-safe-launch-02.png",
+      "desktop-site-followed-2--goal-safe-launch-03.png",
+      "desktop-site-followed-2--goal-safe-launch-04.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": [
+      "failed http://localhost:8790/api/weather/profile?lat=47.8042&lng=-120.039&days=7: net::ERR_ABORTED"
+    ]
+  },
+  {
+    "viewport": "desktop",
+    "name": "custom-site",
+    "path": "/sites/custom/00000000-0000-4000-8000-00000000c0de",
+    "status": 200,
+    "finalUrl": "/sites/custom/00000000-0000-4000-8000-00000000c0de",
+    "domContentLoadedMs": 325,
+    "settledMs": 1473,
+    "timing": {
+      "ttfbMs": 269,
+      "loadMs": 330,
+      "transferKb": 8
+    },
+    "title": "Granite Mountain | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nBack to Dashboard\nEdit\nGranite Mountain\n\nYour site. Only you can see it.\n\nToday: Not flyable\n\nNot flyable. Wind 31 km/h (limit 25), 07:00-19:00.\n\nWorth going when\nSafe launch is enough\nAny day you can launch safely, even if it is only a sled ride.\nHow far to trust the forecast here\nRain forecasts: Good\nWind: Poor\n\nIn October: The forecast called rain in the flying hours on 8 of 30 days, and rain fell on 7 of them; it also fell on 6 days forecast dry. Wind was off by 10 km/h on average (it reads 10 km/h high).\n\nThe forecast from the day before against reports from Stampede Pass (KSMP), 17.5 km away, 10:00-17:00 local time, 2025-10-20 to 2026-10-19.\n\nMonth by month\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nToo windy\nTomorrow\nOct 21\nRidge 08-11\nThu\nOct 22\nSled 08-11\nFri\nOct 23\nWrong wind\nSat\nOct 24\nSled 08-18\nSun\nOct 25\nSled 08-10\nMon\nOct 26\nWrong wind\nNot flyable\n\nNot flyable. Wind 31 km/h (limit 25), 07:00-19:00.\n\nWind 31 km/h (limit 25), 07:00-19:00\nGusts to 49 km/h, 07:00-19:00\nSE wind (157°), cross on launch, 07:00-12:00, 13:00-14:00 and 15:00-19:00\nThermal Strength\n1.4 m/s\nModerate at 13:00\nMax Altitude\n1,493m\n4,898 ft ASL\nCloud Base\n1713m AGL\n5,620 ft AGL\nFreezing Level\n3,147m MSL\nSafe\nBest Window\n—\nNo window\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.7°C/1000ft\nStable\nLift m/s\n0\n0.2\n0.6\n0.9\n1.2\n1.3\n1.4\n1.4\n1.4\n1.2\n0.9\n0\n0\n0°\n5°\n10°\n15°\nLaunch 5,630'\nModel ground 2,766'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n800m\n1000m\n1200m\n1400m\n1600m\n1800m\n2000m\n2200m\n2400m\n2600m\n2800m\n3000m\n3200m\n3400m\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,716m\n(ft)\nWhat it gives:\nNot sure: go by the weather\nLaunch directions:\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\nNotes:\n\nHike up the lookout trail; launch on the south meadow below the lookout.\n\nMax Wind Speed: 25 km/h\nLocation: 47.3979°, -121.4864°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap",
+    "shots": [
+      "desktop-custom-site-01.png",
+      "desktop-custom-site-02.png",
+      "desktop-custom-site-03.png",
+      "desktop-custom-site-04.png"
+    ],
+    "pageHeight": 2808,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "custom-new",
+    "path": "/sites/custom/new",
+    "status": 200,
+    "finalUrl": "/sites/custom/new",
+    "domContentLoadedMs": 270,
+    "settledMs": 1676,
+    "timing": {
+      "ttfbMs": 217,
+      "loadMs": 288,
+      "transferKb": 7
+    },
+    "title": "Add your own site | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nBack to Dashboard\nAdd your own site\n\nPin a launch that isn't listed, like a hike-and-fly peak. Only you can see it, and SoarCast rates it and sends alerts for it like any site you follow.\n\nName\nLaunch location\nSearch\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\nTap the map where you launch, then drag the pin to fine-tune it.\n\nOr paste coordinates (latitude, longitude)\nLaunch elevation (m)\n\nSoarCast reads the wind at this height, so the launch height matters.\n\nWind directions the launch works in\n\nTap a direction the wind comes from to cycle: works well, works cross, off.\n\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\n\nWith no directions set, SoarCast treats the launch as working in any wind direction.\n\nWind limit (km/h)\n\nHours with more wind than this at launch height count as unflyable.\n\nWhat the launch gives\nNot sure: go by the weather\nThermals\nRidge soaring\nThermals and ridge\nSled rides only\n\nA ridge-only launch never counts as a thermal day, and a sled-only one never soars.\n\nWorth going when\nSafe launch is enough\nSoarable\nOnly a great day\n\nAny day you can launch safely, even if it is only a sled ride. Those days show as a go, and alerts come for them.\n\nNotes\nAdd site\nCancel",
+    "shots": [
+      "desktop-custom-new-01.png",
+      "desktop-custom-new-02.png"
+    ],
+    "pageHeight": 1784,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "desktop-custom-new--pin-dropped-01.png",
+      "desktop-custom-new--pin-dropped-02.png",
+      "desktop-custom-new--submitted-empty-01.png",
+      "desktop-custom-new--submitted-empty-02.png",
+      "desktop-custom-new--submitted-empty-03.png"
+    ],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    ],
+    "failedRequests": [
+      "400 POST http://localhost:8790/sites/custom/new.data"
+    ]
+  },
+  {
+    "viewport": "desktop",
+    "name": "custom-edit",
+    "path": "/sites/custom/00000000-0000-4000-8000-00000000c0de/edit",
+    "status": 200,
+    "finalUrl": "/sites/custom/00000000-0000-4000-8000-00000000c0de/edit",
+    "domContentLoadedMs": 280,
+    "settledMs": 1466,
+    "timing": {
+      "ttfbMs": 226,
+      "loadMs": 285,
+      "transferKb": 7
+    },
+    "title": "Edit Granite Mountain | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nBack to Granite Mountain\nEdit Granite Mountain\nName\nLaunch location\nSearch\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\nTap the map where you launch, then drag the pin to fine-tune it.\n\nOr paste coordinates (latitude, longitude)\nLaunch elevation (m)\n\nSoarCast reads the wind at this height, so the launch height matters.\n\nWind directions the launch works in\n\nTap a direction the wind comes from to cycle: works well, works cross, off.\n\nN\nNE\nE\nSE\nS\nSW\nW\nNW\nWorks well\nWorks cross\nDoesn't work\n\nThe terrain here is too gentle to suggest a direction.\n\nWind limit (km/h)\n\nHours with more wind than this at launch height count as unflyable.\n\nWhat the launch gives\nNot sure: go by the weather\nThermals\nRidge soaring\nThermals and ridge\nSled rides only\n\nA ridge-only launch never counts as a thermal day, and a sled-only one never soars.\n\nWorth going when\nSafe launch is enough\nSoarable\nOnly a great day\n\nAny day you can launch safely, even if it is only a sled ride. Those days show as a go, and alerts come for them.\n\nNotes\nSave changes\nCancel\nDelete site",
+    "shots": [
+      "desktop-custom-edit-01.png",
+      "desktop-custom-edit-02.png",
+      "desktop-custom-edit-03.png"
+    ],
+    "pageHeight": 1825,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "settings",
+    "path": "/settings",
+    "status": 200,
+    "finalUrl": "/settings",
+    "domContentLoadedMs": 798,
+    "settledMs": 1470,
+    "timing": {
+      "ttfbMs": 751,
+      "loadMs": 821,
+      "transferKb": 9
+    },
+    "title": "Settings | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nSettings\n\nWhen and how SoarCast tells you a site is flyable.\n\nPush Notifications\nReceive browser notifications when good flying conditions are forecasted.\nEnable Push Notifications\n\nGet a notification on this device when one of your sites looks flyable.\n\nEnable\nNotification Preferences\nHow far ahead to look for days worth an alert.\n\nAlerts come for days that are a go at a site: flyable, with the flight you want from it. Set what each site is worth going for under Your sites below.\n\nNotification Window\n(1-7 days, default: 2)\n\nHow far in advance to check for qualifying days (e.g., 2 = today and tomorrow).\n\nEmail Morning Digest\nReceive a daily email at your delivery time showing today's flyability for your sites.\nEnable Email Digest\n\nEach morning: which of your sites are flyable today, and when.\n\nDelivery Time\n\nYour local time; it goes out at the start of that hour.\n\nYour sites\nWhat each site gives, what makes a day worth going there, and whether to alert you about it.\nGranite Mountain\n47.3979, -121.4864 • 1716m\nWorth going when:\nSafe launch is enough\nWhat it gives:\nNot sure: go by the weather\nWind limit 25 km/h • Edit site\nMt. Si\n47.5053, -121.7440 • 916m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: not tagged\nWind limit (km/h):\nMailbox Peak\n47.4617, -121.6400 • 1400m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: not tagged\nWind limit (km/h):\nChelan Butte\n47.8042, -120.0390 • 1117m\nWorth going when:\nSafe launch is enough\nWhat it gives:\nAs listed: Thermals\nWind limit (km/h):\nTiger Mountain\n47.4995, -122.0090 • 543m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Thermals and ridge\nWind limit (km/h):\nBlanchard\n48.6097, -122.4260 • 396m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Ridge soaring\nWind limit (km/h):\nRampart Ridge\n47.3861, -121.3640 • 1358m\nWorth going when:\nSoarable\nWhat it gives:\nAs listed: Thermals and ridge\nWind limit (km/h):\n\nHow Notifications Work\n\nSoarCast checks your sites at your digest time each morning and at 6 PM, in your local time. You'll get a push notification for each site with a day in your notification window that is a go for what you want from it.",
+    "shots": [
+      "desktop-settings-01.png",
+      "desktop-settings-02.png",
+      "desktop-settings-03.png"
+    ],
+    "pageHeight": 2516,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "browse-signed-in",
+    "path": "/sites/browse",
+    "status": 200,
+    "finalUrl": "/sites/browse",
+    "domContentLoadedMs": 334,
+    "settledMs": 2560,
+    "timing": {
+      "ttfbMs": 274,
+      "loadMs": 348,
+      "transferKb": 24
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nSearch\nFilters\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n0 sites\n\nNo sites found here — try panning to a different area\n\nNot listed? Add your own site",
+    "shots": [
+      "desktop-browse-signed-in-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+    ],
+    "failedRequests": [
+      "500 GET http://localhost:8790/api/sites/near?lat=47.44000&lng=-121.97000&radius=1512&limit=1000"
+    ]
+  },
+  {
+    "viewport": "desktop",
+    "name": "missing-page",
+    "path": "/sites/not-a-real-site-xyz",
+    "status": 404,
+    "finalUrl": "/sites/not-a-real-site-xyz",
+    "domContentLoadedMs": 243,
+    "settledMs": 825,
+    "timing": {
+      "ttfbMs": 195,
+      "loadMs": 256,
+      "transferKb": 20
+    },
+    "title": "",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nTP\nPage not found\n\nThat page doesn't exist, or the site has moved.\n\nYour sites\nBrowse sites",
+    "shots": [
+      "desktop-missing-page-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [
+      "404 GET http://localhost:8790/sites/not-a-real-site-xyz"
+    ]
+  },
+  {
+    "viewport": "desktop",
+    "name": "new-user-dashboard",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/dashboard",
+    "domContentLoadedMs": 350,
+    "settledMs": 941,
+    "timing": {
+      "ttfbMs": 238,
+      "loadMs": 363,
+      "transferKb": 5
+    },
+    "title": "Dashboard | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nNP\nWelcome to SoarCast\n\nNo sites yet. Follow a launch and it shows up here with the days and hours it's flyable this week, or pin your own launch if it isn't listed.\n\nBrowse Launch Sites\nAdd your own site",
+    "shots": [
+      "desktop-new-user-dashboard-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "-",
+    "name": "alerts-run",
+    "status": 200,
+    "text": "{\"success\":true,\"notificationsSent\":1,\"errors\":0}"
+  },
+  {
+    "viewport": "phone",
+    "name": "email-1",
+    "shots": [
+      "phone-email-1-01.png",
+      "phone-email-1-02.png"
+    ],
+    "pageHeight": 1203,
+    "horizontalOverflowPx": 0,
+    "text": "No go today at your sites\n\nSoarCast · Tuesday, October 20, 2026\n\nMt. Si\n\nFlyable: sled ride 13:00-18:00\n\nThermals top out below launch\n\nWatch for: Overdevelopment risk (moderate)\n\nMailbox Peak\n\nMarginal 15:00-17:00\n\nThermals top out below launch\n\nWatch for: Wind 29 km/h (limit 25), 08:00-19:00\n\nChelan Butte\n\nMarginal 14:00-19:00\n\nThermals top out ~1,004 ft above launch\n\nWatch for: NE wind (60°), off the launch, 07:00-19:00\n\nTiger Mountain\n\nMarginal 11:00-17:00\n\nThermals top out ~1,043 ft above launch\n\nWatch for: NE wind (51°), cross on launch, 07:00-19:00\n\nBlanchard\n\nNot flyable\n\nNE wind (31°), off the launch, 07:00-19:00\n\nRampart Ridge\n\nNot flyable\n\nGusts to 46 km/h, 07:00-19:00\n\nGranite Mountain\n\nNot flyable\n\nWind 31 km/h (limit 25), 07:00-19:00\n\nA go is a flyable day with the flying you said each site is worth going for.\n\nSee your week →\n\nWeather data by Open-Meteo.com (CC BY 4.0) · Manage notifications"
+  },
+  {
+    "viewport": "desktop",
+    "name": "email-1",
+    "shots": [
+      "desktop-email-1-01.png",
+      "desktop-email-1-02.png"
+    ],
+    "pageHeight": 1131,
+    "horizontalOverflowPx": 0,
+    "text": "No go today at your sites\n\nSoarCast · Tuesday, October 20, 2026\n\nMt. Si\n\nFlyable: sled ride 13:00-18:00\n\nThermals top out below launch\n\nWatch for: Overdevelopment risk (moderate)\n\nMailbox Peak\n\nMarginal 15:00-17:00\n\nThermals top out below launch\n\nWatch for: Wind 29 km/h (limit 25), 08:00-19:00\n\nChelan Butte\n\nMarginal 14:00-19:00\n\nThermals top out ~1,004 ft above launch\n\nWatch for: NE wind (60°), off the launch, 07:00-19:00\n\nTiger Mountain\n\nMarginal 11:00-17:00\n\nThermals top out ~1,043 ft above launch\n\nWatch for: NE wind (51°), cross on launch, 07:00-19:00\n\nBlanchard\n\nNot flyable\n\nNE wind (31°), off the launch, 07:00-19:00\n\nRampart Ridge\n\nNot flyable\n\nGusts to 46 km/h, 07:00-19:00\n\nGranite Mountain\n\nNot flyable\n\nWind 31 km/h (limit 25), 07:00-19:00\n\nA go is a flyable day with the flying you said each site is worth going for.\n\nSee your week →\n\nWeather data by Open-Meteo.com (CC BY 4.0) · Manage notifications"
+  }
+]

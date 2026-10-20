@@ -1,0 +1,1590 @@
+
+ ⛅️ wrangler 4.77.0 (update available 4.151.3)
+──────────────────────────────────────────────
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+Using secrets defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                                             Resource                  Mode
+env.EMAIL (unrestricted - senders: soarcast@mckinleyaviation.com)                   Send Email                local
+env.DB (soarcast)                                                                   D1 Database               local
+env.ASSETS                                                                          Assets                    local
+env.BETTER_AUTH_URL ("(hidden)")                                                    Environment Variable      local
+env.BETTER_AUTH_SECRET ("(hidden)")                                                 Environment Variable      local
+env.CRON_SECRET ("(hidden)")                                                        Environment Variable      local
+env.VAPID_PUBLIC_KEY ("(hidden)")                                                   Environment Variable      local
+env.VAPID_PRIVATE_KEY ("(hidden)")                                                  Environment Variable      local
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mScheduled Workers are not automatically triggered during local development.[0m
+
+  To manually trigger a scheduled event, run:
+    curl "http://localhost:8790/cdn-cgi/handler/scheduled"
+  For more details, see [4mhttps://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/react-router/dist/development/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:9:7:
+[37m      9 │ import [32m"react-router"[37m;
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/react-router/package.json:20:2:
+[37m      20 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:10:7:
+[37m      10 │ import [32m"isbot"[37m;
+         ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:14:7:
+[37m      14 │ import [32m"drizzle-orm/d1"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:15:7:
+[37m      15 │ import [32m"drizzle-orm"[37m;
+         ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:16:7:
+[37m      16 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:18:7:
+[37m      18 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:20:7:
+[37m      20 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/lucide-react/dist/esm/lucide-react.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:21:7:
+[37m      21 │ import [32m"lucide-react"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/lucide-react/package.json:31:2:
+[37m      31 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:24:7:
+[37m      24 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-display-DOeff7or.js:25:7:
+[37m      25 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/react-router/dist/development/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:10:7:
+[37m      10 │ import [32m"react-router"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/react-router/package.json:20:2:
+[37m      20 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:11:7:
+[37m      11 │ import [32m"isbot"[37m;
+         ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:15:7:
+[37m      15 │ import [32m"drizzle-orm/d1"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:16:7:
+[37m      16 │ import [32m"drizzle-orm"[37m;
+         ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:17:7:
+[37m      17 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:19:7:
+[37m      19 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:21:7:
+[37m      21 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:24:7:
+[37m      24 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/map-picker-BqgQdIs0.js:25:7:
+[37m      25 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/react-router/dist/development/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:4:7:
+[37m      4 │ import [32m"react-router"[37m;
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/react-router/package.json:20:2:
+[37m      20 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:5:7:
+[37m      5 │ import [32m"isbot"[37m;
+        ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:9:7:
+[37m      9 │ import [32m"drizzle-orm/d1"[37m;
+        ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:10:7:
+[37m      10 │ import [32m"drizzle-orm"[37m;
+         ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:11:7:
+[37m      11 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:13:7:
+[37m      13 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:15:7:
+[37m      15 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/lucide-react/dist/esm/lucide-react.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:17:7:
+[37m      17 │ import [32m"lucide-react"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/lucide-react/package.json:31:2:
+[37m      31 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:20:7:
+[37m      20 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/send-DYOKXAEu.js:21:7:
+[37m      21 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:11:7:
+[37m      11 │ import [32m"isbot"[37m;
+         ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:15:7:
+[37m      15 │ import [32m"drizzle-orm/d1"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:16:7:
+[37m      16 │ import [32m"drizzle-orm"[37m;
+         ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:17:7:
+[37m      17 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:19:7:
+[37m      19 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:21:7:
+[37m      21 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/lucide-react/dist/esm/lucide-react.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:22:7:
+[37m      22 │ import [32m"lucide-react"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/lucide-react/package.json:31:2:
+[37m      31 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:25:7:
+[37m      25 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/sites-browse-map-CqSDcfX-.js:26:7:
+[37m      26 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/react-router/dist/development/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:5:7:
+[37m      5 │ import [32m"react-router"[37m;
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/react-router/package.json:20:2:
+[37m      20 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:6:7:
+[37m      6 │ import [32m"isbot"[37m;
+        ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:10:7:
+[37m      10 │ import [32m"drizzle-orm/d1"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:11:7:
+[37m      11 │ import [32m"drizzle-orm"[37m;
+         ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:12:7:
+[37m      12 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:14:7:
+[37m      14 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:16:7:
+[37m      16 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/lucide-react/dist/esm/lucide-react.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:17:7:
+[37m      17 │ import [32m"lucide-react"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/lucide-react/package.json:31:2:
+[37m      31 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:20:7:
+[37m      20 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/assets/windgram-d3-CsvM3j-0.js:21:7:
+[37m      21 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/react-router/dist/development/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:3:7:
+[37m      3 │ import [32m"react-router"[37m;
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/react-router/package.json:20:2:
+[37m      20 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/isbot/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:4:7:
+[37m      4 │ import [32m"isbot"[37m;
+        ╵        [32m~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/isbot/package.json:47:2:
+[37m      47 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/d1/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:8:7:
+[37m      8 │ import [32m"drizzle-orm/d1"[37m;
+        ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:9:7:
+[37m      9 │ import [32m"drizzle-orm"[37m;
+        ╵        [32m~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/drizzle-orm/sqlite-core/index.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:10:7:
+[37m      10 │ import [32m"drizzle-orm/sqlite-core"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/drizzle-orm/package.json:18:2:
+[37m      18 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/radix-ui/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:12:7:
+[37m      12 │ import [32m"radix-ui"[37m;
+         ╵        [32m~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/radix-ui/package.json:35:2:
+[37m      35 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/tailwind-merge/dist/bundle-mjs.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:14:7:
+[37m      14 │ import [32m"tailwind-merge"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/tailwind-merge/package.json:51:4:
+[37m      51 │     [32m"sideEffects"[37m: false,
+         ╵     [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/lucide-react/dist/esm/lucide-react.js" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:16:7:
+[37m      16 │ import [32m"lucide-react"[37m;
+         ╵        [32m~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/lucide-react/package.json:31:2:
+[37m      31 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:19:7:
+[37m      19 │ import [32m"@radix-ui/react-dropdown-menu"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-dropdown-menu/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring this import because "node_modules/@radix-ui/react-avatar/dist/index.mjs" was marked as having no side effects[0m [ignored-bare-import]
+
+    build/server/index.js:20:7:
+[37m      20 │ import [32m"@radix-ui/react-avatar"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  "sideEffects" is false in the enclosing "package.json" file:
+
+    node_modules/@radix-ui/react-avatar/package.json:12:2:
+[37m      12 │   [32m"sideEffects"[37m: false,
+         ╵   [32m~~~~~~~~~~~~~[0m
+
+
+⎔ Starting local server...
+[wrangler:info] ✨ Parsed 6 valid header rules.
+[wrangler:info] Ready on http://localhost:8790
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.713Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.714Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.714Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.714Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET / 200 OK (1709ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.791Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.792Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.792Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:18.792Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET / 200 OK (162ms)
+[wrangler:info] GET /api/track-record 200 OK (2349ms)
+[wrangler:info] GET /api/track-record 200 OK (1417ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:23.278Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /dashboard 200 OK (1502ms)
+[wrangler:info] GET /assets/entry.client-lOSs8z9k.js 200 OK (10ms)
+[wrangler:info] GET /assets/index-Do-kILQa.js 200 OK (17ms)
+[wrangler:info] GET /assets/chunk-UVKPFVEO-DwS1HT8B.js 200 OK (24ms)
+[wrangler:info] GET /assets/root-C41jtEZL.js 200 OK (19ms)
+[wrangler:info] GET /assets/auth-client-DELgTdkd.js 200 OK (18ms)
+[wrangler:info] GET /assets/tooltip-CbEgCEUm.js 200 OK (19ms)
+[wrangler:info] GET /assets/button-BhqL3xiK.js 200 OK (11ms)
+[wrangler:info] GET /assets/root-BFm_q0N5.css 200 OK (23ms)
+[wrangler:info] GET /assets/index-DIQuflKg.js 200 OK (10ms)
+[wrangler:info] GET /assets/sheet-k9EF5ufx.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-DpPKBkgy.js 200 OK (14ms)
+[wrangler:info] GET /assets/index-DH82cvEv.js 200 OK (15ms)
+[wrangler:info] GET /assets/check-MqOm4e7y.js 200 OK (11ms)
+[wrangler:info] GET /assets/index-DKJX2DAp.js 200 OK (16ms)
+[wrangler:info] GET /assets/_auth-DiFliJgE.js 200 OK (15ms)
+[wrangler:info] GET /assets/index-GlKt4SbU.js 200 OK (18ms)
+[wrangler:info] GET /assets/index-BJOw-eHy.js 200 OK (18ms)
+[wrangler:info] GET /assets/bell-CCVRwng4.js 200 OK (20ms)
+[wrangler:info] GET /assets/index-BHTsmIGb.js 200 OK (14ms)
+[wrangler:info] GET /assets/_auth.dashboard-DyOIoBXe.js 200 OK (14ms)
+[wrangler:info] GET /assets/windgram-data-CS-Q0Ev9.js 200 OK (6ms)
+[wrangler:info] GET /assets/data-credits-DKHZg0Lj.js 200 OK (6ms)
+[wrangler:info] GET /assets/map-pin-DQokX5XG.js 200 OK (8ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:24.950Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:24.950Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (17ms)
+[wrangler:info] GET /__manifest 200 OK (7ms)
+[wrangler:info] GET /api/weather/profile 200 OK (18ms)
+[wrangler:info] GET /api/weather/profile 200 OK (36ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:30.648Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:30.648Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:30.648Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:30.648Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04 200 OK (430ms)
+[wrangler:info] GET /assets/sites._slug-DVdkDH5-.js 200 OK (4ms)
+[wrangler:info] GET /assets/site-utils-BuZwFUqN.js 200 OK (10ms)
+[wrangler:info] GET /assets/card-BWrNjXoo.js 200 OK (11ms)
+[wrangler:info] GET /assets/elevation-display-UNe1Qeju.js 200 OK (12ms)
+[wrangler:info] GET /assets/arrow-left-raKW4e3J.js 200 OK (8ms)
+[wrangler:info] GET /assets/site-goal-picker-DK4CAFP2.js 200 OK (12ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:31.196Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:31.197Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /__manifest 200 OK (16ms)
+[wrangler:info] GET /api/weather/profile 200 OK (36ms)
+[wrangler:info] GET /__manifest 200 OK (42ms)
+[wrangler:info] GET /assets/leaflet-B3ov5rOG.js 200 OK (36ms)
+[wrangler:info] GET /assets/map-display-CMn-_KRK.js 200 OK (36ms)
+[wrangler:info] GET /assets/leaflet-DF7_1Cmx.css 200 OK (37ms)
+[wrangler:info] GET /assets/windgram-d3-BDYTlTBS.js 200 OK (9ms)
+[wrangler:info] GET /assets/api.track-record-l0sNRNKZ.js 200 OK (36ms)
+[wrangler:info] GET /api/track-record.data 200 OK (46ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:36.747Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:36.748Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:36.748Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:36.748Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6 200 OK (430ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:37.298Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:32:37.298Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (16ms)
+[wrangler:info] GET /__manifest 200 OK (9ms)
+[wrangler:info] GET /api/weather/profile 200 OK (69ms)
+[wrangler:info] GET /assets/_auth.settings-C5b4jn4t.js 200 OK (3ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.602Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.602Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] POST /settings.data 200 OK (17ms)
+[wrangler:info] GET /assets/label-B28rEIyF.js 200 OK (10ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.632Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.633Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.633Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:04.633Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6.data 200 OK (64ms)
+[wrangler:info] GET /api/track-record.data 200 OK (1949ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.112Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.112Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.112Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.112Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6 200 OK (401ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.578Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:07.578Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (13ms)
+[wrangler:info] GET /api/track-record.data 200 OK (11ms)
+[wrangler:info] GET /api/weather/profile 200 OK (34ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:10.727Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:10.727Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:10.728Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:10.728Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/00000000-0000-4000-8000-00000000c0de 200 OK (284ms)
+[wrangler:info] GET /assets/sites.custom._id-toY-joqH.js 200 OK (5ms)
+[wrangler:info] GET /assets/launch-direction-picker-NecWMdz_.js 200 OK (4ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:11.124Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:11.124Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (11ms)
+[wrangler:info] GET /api/weather/profile 200 OK (33ms)
+[wrangler:info] GET /__manifest 200 OK (38ms)
+[wrangler:info] GET /api/track-record.data 200 OK (4024ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.032Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.032Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.032Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.032Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/new 200 OK (220ms)
+[wrangler:info] GET /assets/_auth.sites.custom.new-CS4jA_fe.js 200 OK (4ms)
+[wrangler:info] GET /assets/custom-site-form-CHNQADXQ.js 200 OK (5ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.364Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:18.364Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (16ms)
+[wrangler:info] GET /__manifest 200 OK (10ms)
+[wrangler:info] GET /assets/map-picker-4-op2OPa.js 200 OK (4ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:28.344Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:28.344Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] POST /sites/custom/new.data 400 Bad Request (12ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.627Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/00000000-0000-4000-8000-00000000c0de/edit 200 OK (219ms)
+[wrangler:info] GET /assets/_auth.sites.custom._id.edit-9CUREDB2.js 200 OK (5ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.952Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:29.952Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (18ms)
+[wrangler:info] GET /__manifest 200 OK (12ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.174Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.174Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.175Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.175Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.175Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:58.175Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /settings 200 OK (735ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:59.019Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:33:59.019Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (12ms)
+[wrangler:info] GET /sw.js 200 OK (3ms)
+[wrangler:info] GET /icon-192.svg 200 OK (5ms)
+[wrangler:info] GET /manifest.json 200 OK (9ms)
+[wrangler:info] GET /icon-512.svg 200 OK (10ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:01.577Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:01.577Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:01.836Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:01.836Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/browse 200 OK (416ms)
+[wrangler:info] GET /assets/sites.browse-D1yrpKYj.js 200 OK (6ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:02.110Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:02.110Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (12ms)
+[wrangler:info] GET /__manifest 200 OK (10ms)
+[wrangler:info] GET /assets/sites-browse-map-m3ez4qgr.js 200 OK (10ms)
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mError: pgsites API error: 401 Unauthorized for /api/sites/near[0m
+
+      at fetchApi (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2160:11)
+      at async nearbySites (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2188:18)
+      at async loader$b (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:5401:19)
+      at async callRouteHandler (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:510:16)
+      at async commonRoute.loader (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:661:19)
+      at null.<anonymous> (async file:///home/runner/work/soarcast/soarcast/.wrangler/tmp/dev-36BQod/worker.js:4101:19)
+      at async callLoaderOrAction (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4907:16)
+      at [object Object]
+      at async defaultDataStrategy (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4532:17)
+      at async callDataStrategyImpl (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4799:17)
+
+
+[wrangler:info] GET /api/sites/near 500 Internal Server Error (268ms)
+[wrangler:info] GET /__manifest 200 OK (3ms)
+[wrangler:info] GET /sw.js 304 Not Modified (3ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.413Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.414Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.414Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.414Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/not-a-real-site-xyz 404 Not Found (184ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.714Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:08.715Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (13ms)
+[wrangler:info] GET /sw.js 304 Not Modified (3ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.862Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.862Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.862Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.862Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.862Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:10.863Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mLaunch suggestions failed: Error: pgsites API error: 401 Unauthorized for /api/sites/near[0m
+
+      at fetchApi (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2160:11)
+      at async nearbySites (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2188:18)
+      at async loader$1 (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:7984:21)
+      at async callRouteHandler (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:510:16)
+      at async commonRoute.loader (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:661:19)
+      at null.<anonymous> (async file:///home/runner/work/soarcast/soarcast/.wrangler/tmp/dev-36BQod/worker.js:4101:19)
+      at async callLoaderOrAction (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4907:16)
+      at [object Object]
+      at async defaultDataStrategy (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4532:17)
+      at async callDataStrategyImpl (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4799:17)
+
+
+[wrangler:info] GET /dashboard 200 OK (222ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:11.296Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:11.297Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /assets/entry.client-lOSs8z9k.js 200 OK (11ms)
+[wrangler:info] GET /assets/tooltip-CbEgCEUm.js 200 OK (26ms)
+[wrangler:info] GET /assets/root-C41jtEZL.js 200 OK (29ms)
+[wrangler:info] GET /assets/index-Do-kILQa.js 200 OK (28ms)
+[wrangler:info] GET /assets/auth-client-DELgTdkd.js 200 OK (30ms)
+[wrangler:info] GET /assets/chunk-UVKPFVEO-DwS1HT8B.js 200 OK (30ms)
+[wrangler:info] GET /assets/root-BFm_q0N5.css 200 OK (38ms)
+[wrangler:info] GET /assets/button-BhqL3xiK.js 200 OK (16ms)
+[wrangler:info] GET /assets/sheet-k9EF5ufx.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-DKJX2DAp.js 200 OK (13ms)
+[wrangler:info] GET /assets/index-DpPKBkgy.js 200 OK (27ms)
+[wrangler:info] GET /assets/index-DH82cvEv.js 200 OK (27ms)
+[wrangler:info] GET /assets/index-DIQuflKg.js 200 OK (24ms)
+[wrangler:info] GET /assets/index-GlKt4SbU.js 200 OK (11ms)
+[wrangler:info] GET /assets/check-MqOm4e7y.js 200 OK (11ms)
+[wrangler:info] GET /assets/index-BJOw-eHy.js 200 OK (10ms)
+[wrangler:info] GET /assets/windgram-data-CS-Q0Ev9.js 200 OK (16ms)
+[wrangler:info] GET /assets/bell-CCVRwng4.js 200 OK (22ms)
+[wrangler:info] GET /assets/_auth-DiFliJgE.js 200 OK (21ms)
+[wrangler:info] GET /assets/_auth.dashboard-DyOIoBXe.js 200 OK (22ms)
+[wrangler:info] GET /assets/index-BHTsmIGb.js 200 OK (18ms)
+[wrangler:info] GET /assets/data-credits-DKHZg0Lj.js 200 OK (15ms)
+[wrangler:info] GET /assets/map-pin-DQokX5XG.js 200 OK (3ms)
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /__manifest 200 OK (12ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.475Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.475Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.475Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.476Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.476Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:13.476Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /dashboard 200 OK (463ms)
+[wrangler:info] GET /assets/entry.client-lOSs8z9k.js 200 OK (7ms)
+[wrangler:info] GET /assets/auth-client-DELgTdkd.js 200 OK (12ms)
+[wrangler:info] GET /assets/chunk-UVKPFVEO-DwS1HT8B.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-Do-kILQa.js 200 OK (15ms)
+[wrangler:info] GET /assets/root-C41jtEZL.js 200 OK (15ms)
+[wrangler:info] GET /assets/tooltip-CbEgCEUm.js 200 OK (15ms)
+[wrangler:info] GET /assets/root-BFm_q0N5.css 200 OK (16ms)
+[wrangler:info] GET /assets/button-BhqL3xiK.js 200 OK (6ms)
+[wrangler:info] GET /assets/sheet-k9EF5ufx.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-DpPKBkgy.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-DIQuflKg.js 200 OK (15ms)
+[wrangler:info] GET /assets/check-MqOm4e7y.js 200 OK (11ms)
+[wrangler:info] GET /assets/index-DH82cvEv.js 200 OK (16ms)
+[wrangler:info] GET /assets/index-DKJX2DAp.js 200 OK (14ms)
+[wrangler:info] GET /assets/_auth-DiFliJgE.js 200 OK (11ms)
+[wrangler:info] GET /assets/index-GlKt4SbU.js 200 OK (12ms)
+[wrangler:info] GET /assets/index-BJOw-eHy.js 200 OK (12ms)
+[wrangler:info] GET /assets/bell-CCVRwng4.js 200 OK (13ms)
+[wrangler:info] GET /assets/index-BHTsmIGb.js 200 OK (10ms)
+[wrangler:info] GET /assets/_auth.dashboard-DyOIoBXe.js 200 OK (12ms)
+[wrangler:info] GET /assets/windgram-data-CS-Q0Ev9.js 200 OK (7ms)
+[wrangler:info] GET /assets/data-credits-DKHZg0Lj.js 200 OK (3ms)
+[wrangler:info] GET /assets/map-pin-DQokX5XG.js 200 OK (4ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:14.092Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:14.092Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (13ms)
+[wrangler:info] GET /__manifest 200 OK (8ms)
+[wrangler:info] GET /api/weather/profile 200 OK (25ms)
+[wrangler:info] GET /api/weather/profile 200 OK (103ms)
+[wrangler:info] GET /api/weather/profile 200 OK (104ms)
+[wrangler:info] GET /api/weather/profile 200 OK (101ms)
+[wrangler:info] GET /api/weather/profile 200 OK (98ms)
+[wrangler:info] GET /api/weather/profile 200 OK (98ms)
+[wrangler:info] GET /api/weather/profile 200 OK (118ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:19.773Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:19.773Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:19.774Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:19.774Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/tiger-mountain--22ee6c89-ef7d-475c-a1fd-ac83f456fc04 200 OK (426ms)
+[wrangler:info] GET /assets/sites._slug-DVdkDH5-.js 200 OK (3ms)
+[wrangler:info] GET /assets/site-utils-BuZwFUqN.js 200 OK (10ms)
+[wrangler:info] GET /assets/card-BWrNjXoo.js 200 OK (8ms)
+[wrangler:info] GET /assets/elevation-display-UNe1Qeju.js 200 OK (12ms)
+[wrangler:info] GET /assets/arrow-left-raKW4e3J.js 200 OK (10ms)
+[wrangler:info] GET /assets/site-goal-picker-DK4CAFP2.js 200 OK (15ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:20.319Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:20.319Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (14ms)
+[wrangler:info] GET /__manifest 200 OK (4ms)
+[wrangler:info] GET /api/weather/profile 200 OK (23ms)
+[wrangler:info] GET /__manifest 200 OK (34ms)
+[wrangler:info] GET /assets/leaflet-B3ov5rOG.js 200 OK (26ms)
+[wrangler:info] GET /assets/map-display-CMn-_KRK.js 200 OK (29ms)
+[wrangler:info] GET /assets/leaflet-DF7_1Cmx.css 200 OK (27ms)
+[wrangler:info] GET /assets/api.track-record-l0sNRNKZ.js 200 OK (31ms)
+[wrangler:info] GET /api/track-record.data 200 OK (37ms)
+[wrangler:info] GET /assets/windgram-d3-BDYTlTBS.js 200 OK (21ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:25.675Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:25.675Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:25.675Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:25.676Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6 200 OK (377ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:26.176Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:26.177Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (17ms)
+[wrangler:info] GET /api/weather/profile 200 OK (33ms)
+[wrangler:info] GET /__manifest 200 OK (44ms)
+[wrangler:info] GET /api/track-record.data 200 OK (14ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.371Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.371Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.371Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.371Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/chelan-butte--32d63d42-6ef5-4bc8-95a2-53d84c64c2a6 200 OK (374ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.804Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:32.804Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /api/track-record.data 200 OK (13ms)
+[wrangler:info] GET /api/weather/profile 200 OK (38ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.095Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.095Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.095Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.095Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/00000000-0000-4000-8000-00000000c0de 200 OK (267ms)
+[wrangler:info] GET /assets/sites.custom._id-toY-joqH.js 200 OK (12ms)
+[wrangler:info] GET /assets/launch-direction-picker-NecWMdz_.js 200 OK (10ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.474Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:36.474Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (12ms)
+[wrangler:info] GET /api/weather/profile 200 OK (26ms)
+[wrangler:info] GET /__manifest 200 OK (36ms)
+[wrangler:info] GET /api/track-record.data 200 OK (13ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:39.817Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:39.817Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:39.818Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:39.818Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/new 200 OK (215ms)
+[wrangler:info] GET /assets/custom-site-form-CHNQADXQ.js 200 OK (8ms)
+[wrangler:info] GET /assets/_auth.sites.custom.new-CS4jA_fe.js 200 OK (10ms)
+[wrangler:info] GET /assets/label-B28rEIyF.js 200 OK (4ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:40.150Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:40.150Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /__manifest 200 OK (8ms)
+[wrangler:info] GET /assets/map-picker-4-op2OPa.js 200 OK (7ms)
+[wrangler:info] GET /api/terrain 200 OK (243ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:49.958Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:49.958Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] POST /sites/custom/new.data 400 Bad Request (11ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.172Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.172Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.173Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.173Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.175Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.175Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/custom/00000000-0000-4000-8000-00000000c0de/edit 200 OK (224ms)
+[wrangler:info] GET /assets/_auth.sites.custom._id.edit-9CUREDB2.js 200 OK (5ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.505Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:51.505Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (13ms)
+[wrangler:info] GET /__manifest 200 OK (5ms)
+[wrangler:info] GET /api/terrain 200 OK (166ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.890Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.890Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.890Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.890Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.891Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:55.891Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /settings 200 OK (750ms)
+[wrangler:info] GET /assets/_auth.settings-C5b4jn4t.js 200 OK (4ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:56.759Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:56.759Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /sw.js 200 OK (3ms)
+[wrangler:info] GET /icon-192.svg 200 OK (4ms)
+[wrangler:info] GET /manifest.json 200 OK (8ms)
+[wrangler:info] GET /icon-512.svg 200 OK (9ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.139Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.140Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.219Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.220Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/browse 200 OK (270ms)
+[wrangler:info] GET /assets/sites.browse-D1yrpKYj.js 200 OK (6ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.536Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:34:59.536Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (12ms)
+[wrangler:info] GET /assets/sites-browse-map-m3ez4qgr.js 200 OK (5ms)
+[wrangler:info] GET /__manifest 200 OK (9ms)
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mError: pgsites API error: 401 Unauthorized for /api/sites/near[0m
+
+      at fetchApi (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2160:11)
+      at async nearbySites (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2188:18)
+      at async loader$b (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:5401:19)
+      at async callRouteHandler (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:510:16)
+      at async commonRoute.loader (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:661:19)
+      at null.<anonymous> (async file:///home/runner/work/soarcast/soarcast/.wrangler/tmp/dev-36BQod/worker.js:4101:19)
+      at async callLoaderOrAction (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4907:16)
+      at [object Object]
+      at async defaultDataStrategy (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4532:17)
+      at async callDataStrategyImpl (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4799:17)
+
+
+[wrangler:info] GET /api/sites/near 500 Internal Server Error (400ms)
+[wrangler:info] GET /__manifest 200 OK (4ms)
+[wrangler:info] GET /sw.js 304 Not Modified (2ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:05.827Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:05.827Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:05.827Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:05.827Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /sites/not-a-real-site-xyz 404 Not Found (192ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:06.133Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:06.133Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /api/auth/get-session 200 OK (12ms)
+[wrangler:info] GET /sw.js 304 Not Modified (2ms)
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.253Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mLaunch suggestions failed: Error: pgsites API error: 401 Unauthorized for /api/sites/near[0m
+
+      at fetchApi (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2160:11)
+      at async nearbySites (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:2188:18)
+      at async loader$1 (file:///home/runner/work/soarcast/soarcast/build/server/assets/server-build-Cd0Y4IjQ.js:7984:21)
+      at async callRouteHandler (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:510:16)
+      at async commonRoute.loader (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UALY5CBT.mjs:661:19)
+      at null.<anonymous> (async file:///home/runner/work/soarcast/soarcast/.wrangler/tmp/dev-36BQod/worker.js:4101:19)
+      at async callLoaderOrAction (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4907:16)
+      at [object Object]
+      at async defaultDataStrategy (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4532:17)
+      at async callDataStrategyImpl (file:///home/runner/work/soarcast/soarcast/node_modules/react-router/dist/development/chunk-UVKPFVEO.mjs:4799:17)
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.662Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m2026-10-20T16:35:08.663Z WARN [Better Auth]: Social provider github is missing clientId or clientSecret[0m
+
+
+[wrangler:info] GET /dashboard 200 OK (237ms)
+[wrangler:info] GET /assets/entry.client-lOSs8z9k.js 200 OK (5ms)
+[wrangler:info] GET /assets/index-Do-kILQa.js 200 OK (12ms)
+[wrangler:info] GET /assets/chunk-UVKPFVEO-DwS1HT8B.js 200 OK (15ms)
+[wrangler:info] GET /assets/root-C41jtEZL.js 200 OK (13ms)
+[wrangler:info] GET /assets/auth-client-DELgTdkd.js 200 OK (23ms)
+[wrangler:info] GET /assets/tooltip-CbEgCEUm.js 200 OK (25ms)
+[wrangler:info] GET /assets/root-BFm_q0N5.css 200 OK (21ms)
+[wrangler:info] GET /assets/index-DpPKBkgy.js 200 OK (13ms)
+[wrangler:info] GET /assets/button-BhqL3xiK.js 200 OK (17ms)
+[wrangler:info] GET /assets/sheet-k9EF5ufx.js 200 OK (17ms)
+[wrangler:info] GET /assets/index-DKJX2DAp.js 200 OK (11ms)
+[wrangler:info] GET /assets/index-DH82cvEv.js 200 OK (13ms)
+[wrangler:info] GET /assets/index-DIQuflKg.js 200 OK (14ms)
+[wrangler:info] GET /assets/index-BJOw-eHy.js 200 OK (10ms)
+[wrangler:info] GET /assets/check-MqOm4e7y.js 200 OK (12ms)
+[wrangler:info] GET /assets/index-GlKt4SbU.js 200 OK (13ms)
+[wrangler:info] GET /assets/_auth-DiFliJgE.js 200 OK (12ms)
+[wrangler:info] GET /assets/bell-CCVRwng4.js 200 OK (12ms)
+[wrangler:info] GET /assets/index-BHTsmIGb.js 200 OK (8ms)
+[wrangler:info] GET /assets/_auth.dashboard-DyOIoBXe.js 200 OK (15ms)
+[wrangler:info] GET /assets/map-pin-DQokX5XG.js 200 OK (10ms)
+[wrangler:info] GET /assets/windgram-data-CS-Q0Ev9.js 200 OK (12ms)
+[wrangler:info] GET /assets/data-credits-DKHZg0Lj.js 200 OK (13ms)
+[wrangler:info] GET /api/auth/get-session 200 OK (15ms)
+[wrangler:info] GET /__manifest 200 OK (12ms)
+[wrangler:info] send_email binding called with MessageBuilder:
+From: "SoarCast" <soarcast@mckinleyaviation.com>
+To: pilot@example.com
+Subject: No go today at your sites · SoarCast
+
+Text: /tmp/miniflare-2d5cd1b967a6b4d7005d20394a4a8b12/files/email-text/3fb458bb-7c4d-4825-99b0-33587aa4a66a.txt
+HTML: /tmp/miniflare-2d5cd1b967a6b4d7005d20394a4a8b12/files/email-html/2b6b6997-3e35-444a-b5f9-cd815263938f.html
+[wrangler:info] POST /api/notifications/check 200 OK (429ms)

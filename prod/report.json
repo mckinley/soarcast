@@ -1,0 +1,536 @@
+[
+  {
+    "viewport": "phone",
+    "name": "home",
+    "path": "/",
+    "status": 200,
+    "finalUrl": "/",
+    "domContentLoadedMs": 1078,
+    "settledMs": 2058,
+    "timing": {
+      "ttfbMs": 956,
+      "loadMs": 1101,
+      "transferKb": 6
+    },
+    "title": "SoarCast - Paragliding XC Weather Monitor",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSoarCast\nSign In\nKnow when to fly,\nbefore you drive\n\nAtmospheric forecasts for paraglider pilots. See lapse rate, thermal strength, cloud base, and wind conditions for your favorite launch sites.\n\nBrowse Sites\nGet Started Free\nGo or No-Go\n\nA verdict for each launch, its flyable hours, and what limits the rest\n\nWindgrams\n\nWind speed and direction at every altitude, every hour\n\nSite Browser\n\nBrowse and favorite launch sites from around the world\n\nAlerts\n\nPush notifications when epic conditions are forecasted",
+    "shots": [
+      "phone-home-01.png",
+      "phone-home-02.png"
+    ],
+    "pageHeight": 1504,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "signin",
+    "path": "/auth/signin",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 148,
+    "settledMs": 828,
+    "timing": {
+      "ttfbMs": 95,
+      "loadMs": 220,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "phone-signin-01.png",
+      "phone-signin-02.png"
+    ],
+    "pageHeight": 932,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "dashboard-signed-out",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 142,
+    "settledMs": 757,
+    "timing": {
+      "ttfbMs": 99,
+      "loadMs": 150,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "phone-dashboard-signed-out-01.png",
+      "phone-dashboard-signed-out-02.png"
+    ],
+    "pageHeight": 932,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "browse",
+    "path": "/sites/browse",
+    "status": 200,
+    "finalUrl": "/sites/browse",
+    "domContentLoadedMs": 848,
+    "settledMs": 2488,
+    "timing": {
+      "ttfbMs": 748,
+      "loadMs": 861,
+      "transferKb": 52
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSearch\nFilters\n4\n23\n28\n31\n6\n2\n25\n25\n15\n13\n17\n7\n6\n8\n13\n25\n10\n62\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\n418 sites in view\n\nTiger Mountain\n\nUS\n\n543m elevation\n\nLake Sammamish State Park\n\nUS\n\n5m elevation\n\nMt. Si\n\nUS\n\n916m elevation\n\nMailbox Peak\n\nUS\n\n1400m elevation\n\nBandera\n\nUS\n\n1266m elevation\n\nDiscovery Park\n\nUS\n\n24m elevation\n\nRampart Ridge\n\nUS\n\n1358m elevation\n\nCallisto Launch\n\nUS\n\n802m elevation\n\nFort Flagler-Harmon\n\nUS\n\n35m elevation\n\nTumwater Mountain\n\nUS\n\n1260m elevation\n\nMt Ellinor\n\nUS\n\n1619m elevation\n\nIcicle Ridge\n\nUS\n\n863m elevation\n\nBlyn\n\nUS\n\n485m elevation\n\nWhidbey/ Fort Ebey\n\nUS\n\n66m elevation\n\nDog\n\nUS\n\n632m elevation\n\nEagle Creek Raptor Ridge\n\nUS\n\n1131m elevation\n\nManastash Butte\n\nUS\n\n1700m elevation\n\nSauk Mountain\n\nUS\n\n1302m elevation\n\nCap Sante\n\nUS\n\n38m elevation\n\nElk Rock\n\nUS\n\n1310m elevation\n\nBlanchard\n\nUS\n\n396m elevation\n\nBaldy Butte (Ellensburg)\n\nUS\n\n955m elevation\n\nMt. Baker Summit\n\nUS\n\n3198m elevation\n\nChelan Butte\n\nUS\n\n1117m elevation\n\nBig J\n\nUS\n\n565m elevation\n\nCrosswater Ridge\n\nUS\n\n396m elevation\n\nBlack Mountain\n\nUS\n\n1397m elevation\n\nSaddle\n\nUS\n\n679m elevation\n\nGoat Peak (Mazama)\n\nUS\n\n1314m elevation\n\nElk Mountain\n\nCA\n\n1414m elevation\n\nSalt Spring Island, Bruce Peak\n\nCA\n\n675m elevation\n\nSumas Mountain\n\nCA\n\n821m elevation\n\nSilver Star\n\nUS\n\n1044m elevation\n\nDiefenbaker Training Hill\n\nCA\n\n57m elevation\n\nDog Mt Coliumbia River Gorge (Closed)\n\nUS\n\n788m elevation\n\nBridal Falls (Lower)\n\nCA\n\n727m elevation\n\nBingen\n\nUS\n\n687m elevation\n\nLittle Nic\n\nCA\n\n450m elevation\n\nBenny School LZ\n\nCA\n\n18m elevation\n\nWoodside\n\nCA\n\n599m elevation\n\nMount Prevost\n\nCA\n\n765m elevation\n\nHorsefly\n\nCA\n\n923m elevation\n\nBenny HG\n\nCA\n\n668m elevation\n\nBenny PG\n\nCA\n\n655m elevation\n\nMount St. Benedict\n\nCA\n\n1089m elevation\n\nXCT 900\n\nCA\n\n876m elevation\n\nArea B\n\nUS\n\n0\nCliffside\n\nUS\n\n351m elevation\n\nSim Site\n\nCA\n\n995m elevation\n\nKiona PG Launch\n\nUS\n\n551m elevation\n\nGrouse\n\nCA\n\n1210m elevation\n\nMount Hood\n\nUS\n\n2645m elevation\n\nOWL\n\nUS\n\n400m elevation\n\nMt Strachan NW\n\nCA\n\n1434m elevation\n\nCandy Mt.\n\nUS\n\n329m elevation\n\nNeahkahnie\n\nUS\n\n27m elevation\n\nEagle Butte\n\nUS\n\n366m elevation\n\nGower Point\n\nCA\n\n53m elevation\n\nTunnel Bluff\n\nCA\n\n560m elevation\n\nsoames hill\n\nCA\n\n222m elevation\n\nMount Kobau\n\nCA\n\n1850m elevation\n\nmt elphinstone\n\nCA\n\n1087m elevation\n\nHedley\n\nCA\n\n1420m elevation\n\nOrofino\n\nCA\n\n1132m elevation\n\nCawston\n\nCA\n\n1200m elevation\n\nSollie Smith\n\nUS\n\n471m elevation\n\nport smellon\n\nCA\n\n581m elevation\n\nAnarchist (Osoyoos)\n\nCA\n\n1111m elevation\n\nSechelt Ridge\n\nCA\n\n613m elevation\n\nStawamus Chief Mountain\n\nCA\n\n582m elevation\n\nUpper Ripley\n\nCA\n\n959m elevation\n\nLower Ripley - CLOSED DO NOT FLY\n\nCA\n\n770m elevation\n\nOttos\n\nCA\n\n623m elevation\n\nOceanside\n\nUS\n\n153m elevation\n\nSeacrest\n\nCA\n\n691m elevation\n\nTokio\n\nUS\n\n624m elevation\n\nmt richardson\n\nCA\n\n950m elevation\n\nTokio WA\n\nUS\n\n614m elevation\n\nMentorcity\n\nUS\n\n519m elevation\n\nCape Lookout\n\nUS\n\n111m elevation\n\nTokio West\n\nUS\n\n623m elevation\n\nSand Lake\n\nUS\n\n0\nmt hallowell\n\nCA\n\n969m elevation\n\nTierra Del Mar\n\nUS\n\n11m elevation\n\nFranson Peak\n\nUS\n\n1003m elevation\n\nVulcan\n\nUS\n\n1146m elevation\n\nCayuse\n\nUS\n\n638m elevation\n\nMount Leona\n\nUS\n\n1817m elevation\n\nIrwin Lower\n\nCA\n\n664m elevation\n\nHoover Ridge\n\nUS\n\n572m elevation\n\nBlackcomb Mountain\n\nCA\n\n1704m elevation\n\nMeadow Park\n\nCA\n\n641m elevation\n\nRainbow Mountain (Alpine Meadows)\n\nCA\n\n1104m elevation\n\nDevils Gap\n\nUS\n\n711m elevation\n\nShannon Lake\n\nCA\n\n768m elevation\n\nWrights Mtn WA\n\nUS\n\n788m elevation\n\nInkler's Point\n\nUS\n\n646m elevation\n\nPemberton\n\nCA\n\n747m elevation\n\nBlue Grouse\n\nCA\n\n745m elevation\n\nParker Mtn\n\nUS\n\n816m elevation\n\nPeterson Butte\n\nUS\n\n213m elevation\n\nHaystack\n\nUS\n\n1211m elevation\n\nEagle Mountain\n\nUS\n\n1344m elevation\n\nPine Ridge\n\nUS\n\n1255m elevation\n\nGrizzly Mountain\n\nUS\n\n1703m elevation\n\nE Spangle tow\n\nUS\n\n759m elevation\n\nFlagstaff\n\nUS\n\n866m elevation\n\nYaquina Head\n\nUS\n\n103m elevation\n\nSpangle WA\n\nUS\n\n755m elevation\n\nSteptoe Butte\n\nUS\n\n1043m elevation\n\nCornwall, BC\n\nCA\n\n1980m elevation\n\nLands Inn\n\nUS\n\n1566m elevation\n\nKing Eddy Baldy\n\nCA\n\n959m elevation\n\nPrairie Peak\n\nUS\n\n1038m elevation\n\nSavona\n\nCA\n\n462m elevation\n\nChimps Pioneered\n\nCA\n\n872m elevation\n\nSavonaBowl\n\nCA\n\n554m elevation\n\nDeadman's / Savona, BC\n\nCA\n\n954m elevation\n\nThe Pimple\n\nCA\n\n778m elevation\n\nSaddle Mountain\n\nCA\n\n863m elevation\n\nCoopers ('Thermal Rise')\n\nCA\n\n1050m elevation\n\nMt. Bachelor\n\nUS\n\n2703m elevation\n\nBolean\n\nCA\n\n1502m elevation\n\nCherryville Golf Course LZ\n\nCA\n\n474m elevation\n\nFly Hills Lower, Mid and Upper Launches.\n\nCA\n\n1468m elevation\n\nFly Hills north\n\nCA\n\n1188m elevation\n\nPine Mt. (training hill)\n\nUS\n\n1567m elevation\n\nYmir - Mt Dundee\n\nCA\n\n1473m elevation\n\nPine Mt.\n\nUS\n\n1892m elevation\n\nSun Peaks, BC\n\nCA\n\n2059m elevation\n\nKitchener\n\nCA\n\n1115m elevation\n\nMara\n\nCA\n\n1346m elevation\n\nSicamous\n\nCA\n\n1043m elevation\n\nHoward\n\nUS\n\n2396m elevation\n\nIdaho Peak\n\nCA\n\n2182m elevation\n\nBlack Mtn. Idaho\n\nUS\n\n1723m elevation\n\nHall Mountain\n\nUS\n\n1536m elevation\n\nThompson's lookout\n\nCA\n\n2026m elevation\n\nMacKenzie\n\nCA\n\n2185m elevation\n\nCougar Peak\n\nUS\n\n1965m elevation\n\nSale Mtn, BC\n\nCA\n\n1785m elevation\n\nWinter Ridge\n\nUS\n\n1937m elevation\n\nMany Feathers Paragliding School bunny hill launch\n\nUS\n\n877m elevation\n\nMany Feathers Paralgiding School Launch\n\nUS\n\n1299m elevation\n\nMany Feathers Paragliding Meat collection launch\n\nUS\n\n1715m elevation\n\nBar Z mtn launch\n\nUS\n\n1693m elevation\n\nMany Feathers Paragliding School Launch\n\nUS\n\n1112m elevation\n\nWhitetail Lake\n\nCA\n\n1894m elevation\n\nThe Dunes\n\nUS\n\n748m elevation\n\nPanorama Roller Coaster Launch\n\nCA\n\n2006m elevation\n\nPanorama Top Launch\n\nCA\n\n2339m elevation\n\nHadley Butte\n\nUS\n\n1890m elevation\n\nMt. Bruce\n\nCA\n\n2288m elevation\n\nBlacktail Creek\n\nCA\n\n1875m elevation\n\nPelican Butte\n\nUS\n\n2415m elevation\n\nTarkio\n\nUS\n\n1542m elevation\n\nMount Marston\n\nUS\n\n2092m elevation\n\nEagle Hill\n\nCA\n\n1058m elevation\n\nSwansea\n\nCA\n\n1702m elevation\n\nMany feathers Paragliding School Launch\n\nUS\n\n983m elevation\n\nFernie LZ\n\nCA\n\n1006m elevation\n\nAbert Rim Walkup\n\nUS\n\n1423m elevation\n\nFernie Mic Towers\n\n",
+    "shots": [
+      "phone-browse-01.png",
+      "phone-browse-02.png",
+      "phone-browse-03.png",
+      "phone-browse-04.png",
+      "phone-browse-05.png",
+      "phone-browse-06.png",
+      "phone-browse-07.png",
+      "phone-browse-08.png",
+      "phone-browse-09.png",
+      "phone-browse-10.png"
+    ],
+    "pageHeight": 45170,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "warning: [.WebGL-0x263c00133200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x263c00133200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x263c00133200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "warning: [.WebGL-0x263c00133200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    ],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "browse-search",
+    "path": "/sites/browse?search=chelan",
+    "status": 200,
+    "finalUrl": "/sites/browse?search=chelan",
+    "domContentLoadedMs": 460,
+    "settledMs": 1788,
+    "timing": {
+      "ttfbMs": 413,
+      "loadMs": 467,
+      "transferKb": 7
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSearch\nFilters\nSearch: chelan\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n\n1 site in view\n\nChelan Butte\n\nUS\n\n1117m elevation\n\nWind: N, E, SE, S, SW, W, NW",
+    "shots": [
+      "phone-browse-search-01.png",
+      "phone-browse-search-02.png"
+    ],
+    "pageHeight": 937,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-tiger",
+    "path": "/sites/tiger-mountain",
+    "status": 200,
+    "finalUrl": "/sites/tiger-mountain",
+    "domContentLoadedMs": 957,
+    "settledMs": 2895,
+    "timing": {
+      "ttfbMs": 911,
+      "loadMs": 1035,
+      "transferKb": 8
+    },
+    "title": "Tiger Mountain | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nTiger Mountain\n\nUS\n\nToday: Marginal\n\nMarginal 07:00-19:00, fly with care. NE wind (50°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 07-19\nTomorrow\nOct 21\nSled 11-18\nThu\nOct 22\nThermals 12-18\nFri\nOct 23\nThermals 14-18\nSat\nOct 24\nThermals 14-17\nSun\nOct 25\nThermals 13-16\nMon\nOct 26\nThermals 12-16\nMarginal 07:00-19:00\n\nMarginal 07:00-19:00, fly with care. NE wind (50°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nNE wind (50°), cross on launch, 07:00-19:00\nGusty, to 27 km/h, 07:00-08:00 and 13:00-14:00\nWind 23 km/h, near the 25 km/h limit, 07:00-08:00\nThermal Strength\n1.1 m/s\nModerate at 12:00\nMax Altitude\n861m\n2,825 ft ASL\nCloud Base\n1096m AGL\n3,596 ft AGL\nFreezing Level\n3,162m MSL\nSafe\nBest Window\n07:00-19:00\n(12 hrs)\nOD Risk\nLow\nWind Shear\nLow\nLapse Rate (850-700)\n2°C/1000ft\nStable\nLift m/s\n0\n0.5\n1.0\n1.1\n1.1\n0.6\n0\n5°\n10°\n15°\nLaunch 1,781'\nModel ground 1,709'\n2,000'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n500m\n750m\n1000m\n1250m\n1500m\n1750m\n2000m\n2250m\n2500m\n2750m\n3000m\n7a\n9a\n11a\n1p\n3p\n5p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 543m\n(ft)\nLanding: 60m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●●\nNE\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●●\nIdeal Wind Directions:\n↑\nN (0°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.4995°, -122.0090°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "phone-site-tiger-01.png",
+      "phone-site-tiger-02.png",
+      "phone-site-tiger-03.png",
+      "phone-site-tiger-04.png"
+    ],
+    "pageHeight": 3169,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "phone-site-tiger--later-day-01.png",
+      "phone-site-tiger--later-day-02.png",
+      "phone-site-tiger--later-day-03.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-chelan",
+    "path": "/sites/chelan-butte",
+    "status": 200,
+    "finalUrl": "/sites/chelan-butte",
+    "domContentLoadedMs": 294,
+    "settledMs": 1627,
+    "timing": {
+      "ttfbMs": 224,
+      "loadMs": 296,
+      "transferKb": 8
+    },
+    "title": "Chelan Butte | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nChelan Butte\n\nUS\n\nToday: Not flyable\n\nNot flyable. NE wind (46°), off the launch, 07:00-19:00.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nWrong wind\nTomorrow\nOct 21\nSled 08-18\nThu\nOct 22\nSled 08-17\nFri\nOct 23\nXC 13-16\nSat\nOct 24\nThermals 14-16\nSun\nOct 25\nMarginal 07-13\nMon\nOct 26\nSled 13-17\nNot flyable\n\nNot flyable. NE wind (46°), off the launch, 07:00-19:00.\n\nNE wind (46°), off the launch, 07:00-19:00\nWind 24 km/h, near the 25 km/h limit, 07:00-12:00\nGusty, to 28 km/h, 07:00-12:00\nThermal Strength\n1.4 m/s\nModerate at 14:00\nMax Altitude\n1,423m\n4,669 ft ASL\nCloud Base\n2075m AGL\n6,808 ft AGL\nFreezing Level\n3,067m MSL\nSafe\nBest Window\n—\nNo window\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.5°C/1000ft\nStable\nLift m/s\n0\n0.5\n1.1\n1.3\n1.3\n0.9\n0\n0°\n5°\n10°\nLaunch 3,665'\nModel ground 2,569'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n1000m\n1500m\n2000m\n2500m\n3000m\n3500m\n4000m\n7a\n9a\n11a\n1p\n3p\n5p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,117m\n(ft)\nLanding: 532m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding\nOrientations:\nN\n●\nE\n●\nSE\n●●\nS\n●●\nSW\n●●\nW\n●\nNW\n●●\nIdeal Wind Directions:\n↑\nSE (135°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.8042°, -120.0390°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "phone-site-chelan-01.png",
+      "phone-site-chelan-02.png",
+      "phone-site-chelan-03.png",
+      "phone-site-chelan-04.png"
+    ],
+    "pageHeight": 3072,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-valle",
+    "path": "/sites/valle-de-bravo",
+    "status": 200,
+    "finalUrl": "/sites/valle-de-bravo",
+    "domContentLoadedMs": 466,
+    "settledMs": 1977,
+    "timing": {
+      "ttfbMs": 415,
+      "loadMs": 477,
+      "transferKb": 9
+    },
+    "title": "Valle de Bravo - El Peñon | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nValle de Bravo - El Peñon\n\nMX\n\nToday: Go\n\nLaunch window 07:00-12:00: thermals 11:00-16:00 climbing about 1.8 m/s to 503 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nThermals 11-16\nTomorrow\nOct 21\nThermals 11-13\nThu\nOct 22\nSled 08-12\nFri\nOct 23\nThermals 12-14\nSat\nOct 24\nSled 08-15\nSun\nOct 25\nSled 11-14\nMon\nOct 26\nMarginal 08-15\nGo: thermals 11:00-16:00\n\nLaunch window 07:00-12:00: thermals 11:00-16:00 climbing about 1.8 m/s to 503 m above launch.\n\nThunderstorm risk, 12:00-19:00\nE wind (75°), off the launch, 06:00-07:00\nGusty, to 27 km/h, 13:00-14:00\n\nRain in the forecast 11:00-19:00 isn't counted: in the tropics, models forecast rain on most days and little of it falls. Watch for showers building.\n\nThermal Strength\n2.0 m/s\nStrong at 12:00\nMax Altitude\n2,839m\n9,314 ft ASL\nCloud Base\n1141m AGL\n3,743 ft AGL\nFreezing Level\n5,094m MSL\nSafe\nBest Window\n07:00-12:00\n(5 hrs)\nOD Risk\nLow\nWind Shear\nNone\nLapse Rate (850-700)\n2.2°C/1000ft\nStable\nLift m/s\n0\n0.5\n1.5\n2.0\n1.9\n1.5\n0.2\n5°\n10°\n15°\n20°\nLaunch 7,664'\nModel ground 6,345'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n14,000'\n2000m\n2250m\n2500m\n2750m\n3000m\n3250m\n3500m\n3750m\n4000m\n4250m\n4500m\n6a\n8a\n10a\n12p\n2p\n4p\n6p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\n👈 Swipe to change days 👉\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 2,336m\n(ft)\nLanding: 1,778m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●\nIdeal Wind Directions:\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\nMax Wind Speed: 25 km/h (default)\nLocation: 19.0616°, -100.0910°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "phone-site-valle-01.png",
+      "phone-site-valle-02.png",
+      "phone-site-valle-03.png",
+      "phone-site-valle-04.png"
+    ],
+    "pageHeight": 3170,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "phone",
+    "name": "site-missing",
+    "path": "/sites/not-a-real-site-xyz",
+    "status": 404,
+    "finalUrl": "/sites/not-a-real-site-xyz",
+    "domContentLoadedMs": 344,
+    "settledMs": 1055,
+    "timing": {
+      "ttfbMs": 289,
+      "loadMs": 347,
+      "transferKb": 5
+    },
+    "title": "",
+    "text": "Toggle navigation\nToggle theme\nSign In\nPage not found\n\nThat page doesn't exist, or the site has moved.\n\nYour sites\nBrowse sites",
+    "shots": [
+      "phone-site-missing-01.png"
+    ],
+    "pageHeight": 844,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failedRequests": [
+      "404 GET https://soarcast.mckinleyaviation.com/sites/not-a-real-site-xyz"
+    ]
+  },
+  {
+    "viewport": "phone",
+    "name": "add-site-signed-out",
+    "path": "/sites/custom/new",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 127,
+    "settledMs": 714,
+    "timing": {
+      "ttfbMs": 76,
+      "loadMs": 134,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "Toggle navigation\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "phone-add-site-signed-out-01.png",
+      "phone-add-site-signed-out-02.png"
+    ],
+    "pageHeight": 932,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "home",
+    "path": "/",
+    "status": 200,
+    "finalUrl": "/",
+    "domContentLoadedMs": 772,
+    "settledMs": 1745,
+    "timing": {
+      "ttfbMs": 688,
+      "loadMs": 798,
+      "transferKb": 6
+    },
+    "title": "SoarCast - Paragliding XC Weather Monitor",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSoarCast\nSign In\nKnow when to fly,\nbefore you drive\n\nAtmospheric forecasts for paraglider pilots. See lapse rate, thermal strength, cloud base, and wind conditions for your favorite launch sites.\n\nBrowse Sites\nGet Started Free\nGo or No-Go\n\nA verdict for each launch, its flyable hours, and what limits the rest\n\nWindgrams\n\nWind speed and direction at every altitude, every hour\n\nSite Browser\n\nBrowse and favorite launch sites from around the world\n\nAlerts\n\nPush notifications when epic conditions are forecasted",
+    "shots": [
+      "desktop-home-01.png",
+      "desktop-home-02.png"
+    ],
+    "pageHeight": 1004,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "signin",
+    "path": "/auth/signin",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 141,
+    "settledMs": 756,
+    "timing": {
+      "ttfbMs": 91,
+      "loadMs": 151,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "desktop-signin-01.png",
+      "desktop-signin-02.png"
+    ],
+    "pageHeight": 1004,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "dashboard-signed-out",
+    "path": "/dashboard",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 296,
+    "settledMs": 886,
+    "timing": {
+      "ttfbMs": 246,
+      "loadMs": 300,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "desktop-dashboard-signed-out-01.png",
+      "desktop-dashboard-signed-out-02.png"
+    ],
+    "pageHeight": 1004,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "browse",
+    "path": "/sites/browse",
+    "status": 200,
+    "finalUrl": "/sites/browse",
+    "domContentLoadedMs": 705,
+    "settledMs": 2277,
+    "timing": {
+      "ttfbMs": 609,
+      "loadMs": 709,
+      "transferKb": 52
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSearch\nFilters\n2\n9\n4\n6\n4\n20\n23\n28\n6\n8\n3\n15\n31\n14\n6\n2\n6\n25\n25\n15\n13\n17\n7\n6\n8\n13\n25\n10\n62\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n418 sites\nTiger Mountain\nUS\n543m\nLake Sammamish State Park\nUS\n5m\nMt. Si\nUS\n916m\nMailbox Peak\nUS\n1400m\nBandera\nUS\n1266m\nDiscovery Park\nUS\n24m\nRampart Ridge\nUS\n1358m\nCallisto Launch\nUS\n802m\nFort Flagler-Harmon\nUS\n35m\nTumwater Mountain\nUS\n1260m\nMt Ellinor\nUS\n1619m\nIcicle Ridge\nUS\n863m\nBlyn\nUS\n485m\nWhidbey/ Fort Ebey\nUS\n66m\nDog\nUS\n632m\nEagle Creek Raptor Ridge\nUS\n1131m\nManastash Butte\nUS\n1700m\nSauk Mountain\nUS\n1302m\nCap Sante\nUS\n38m\nElk Rock\nUS\n1310m\nBlanchard\nUS\n396m\nBaldy Butte (Ellensburg)\nUS\n955m\nMt. Baker Summit\nUS\n3198m\nChelan Butte\nUS\n1117m\nBig J\nUS\n565m\nCrosswater Ridge\nUS\n396m\nBlack Mountain\nUS\n1397m\nSaddle\nUS\n679m\nGoat Peak (Mazama)\nUS\n1314m\nElk Mountain\nCA\n1414m\nSalt Spring Island, Bruce Peak\nCA\n675m\nSumas Mountain\nCA\n821m\nSilver Star\nUS\n1044m\nDiefenbaker Training Hill\nCA\n57m\nDog Mt Coliumbia River Gorge (Closed)\nUS\n788m\nBridal Falls (Lower)\nCA\n727m\nBingen\nUS\n687m\nLittle Nic\nCA\n450m\nBenny School LZ\nCA\n18m\nWoodside\nCA\n599m\nMount Prevost\nCA\n765m\nHorsefly\nCA\n923m\nBenny HG\nCA\n668m\nBenny PG\nCA\n655m\nMount St. Benedict\nCA\n1089m\nXCT 900\nCA\n876m\nArea B\nUS\n0\nCliffside\nUS\n351m\nSim Site\nCA\n995m\nKiona PG Launch\nUS\n551m\nGrouse\nCA\n1210m\nMount Hood\nUS\n2645m\nOWL\nUS\n400m\nMt Strachan NW\nCA\n1434m\nCandy Mt.\nUS\n329m\nNeahkahnie\nUS\n27m\nEagle Butte\nUS\n366m\nGower Point\nCA\n53m\nTunnel Bluff\nCA\n560m\nsoames hill\nCA\n222m\nMount Kobau\nCA\n1850m\nmt elphinstone\nCA\n1087m\nHedley\nCA\n1420m\nOrofino\nCA\n1132m\nCawston\nCA\n1200m\nSollie Smith\nUS\n471m\nport smellon\nCA\n581m\nAnarchist (Osoyoos)\nCA\n1111m\nSechelt Ridge\nCA\n613m\nStawamus Chief Mountain\nCA\n582m\nUpper Ripley\nCA\n959m\nLower Ripley - CLOSED DO NOT FLY\nCA\n770m\nOttos\nCA\n623m\nOceanside\nUS\n153m\nSeacrest\nCA\n691m\nTokio\nUS\n624m\nmt richardson\nCA\n950m\nTokio WA\nUS\n614m\nMentorcity\nUS\n519m\nCape Lookout\nUS\n111m\nTokio West\nUS\n623m\nSand Lake\nUS\n0\nmt hallowell\nCA\n969m\nTierra Del Mar\nUS\n11m\nFranson Peak\nUS\n1003m\nVulcan\nUS\n1146m\nCayuse\nUS\n638m\nMount Leona\nUS\n1817m\nIrwin Lower\nCA\n664m\nHoover Ridge\nUS\n572m\nBlackcomb Mountain\nCA\n1704m\nMeadow Park\nCA\n641m\nRainbow Mountain (Alpine Meadows)\nCA\n1104m\nDevils Gap\nUS\n711m\nShannon Lake\nCA\n768m\nWrights Mtn WA\nUS\n788m\nInkler's Point\nUS\n646m\nPemberton\nCA\n747m\nBlue Grouse\nCA\n745m\nParker Mtn\nUS\n816m\nPeterson Butte\nUS\n213m\nHaystack\nUS\n1211m\nEagle Mountain\nUS\n1344m\nPine Ridge\nUS\n1255m\nGrizzly Mountain\nUS\n1703m\nE Spangle tow\nUS\n759m\nFlagstaff\nUS\n866m\nYaquina Head\nUS\n103m\nSpangle WA\nUS\n755m\nSteptoe Butte\nUS\n1043m\nCornwall, BC\nCA\n1980m\nLands Inn\nUS\n1566m\nKing Eddy Baldy\nCA\n959m\nPrairie Peak\nUS\n1038m\nSavona\nCA\n462m\nChimps Pioneered\nCA\n872m\nSavonaBowl\nCA\n554m\nDeadman's / Savona, BC\nCA\n954m\nThe Pimple\nCA\n778m\nSaddle Mountain\nCA\n863m\nCoopers ('Thermal Rise')\nCA\n1050m\nMt. Bachelor\nUS\n2703m\nBolean\nCA\n1502m\nCherryville Golf Course LZ\nCA\n474m\nFly Hills Lower, Mid and Upper Launches.\nCA\n1468m\nFly Hills north\nCA\n1188m\nPine Mt. (training hill)\nUS\n1567m\nYmir - Mt Dundee\nCA\n1473m\nPine Mt.\nUS\n1892m\nSun Peaks, BC\nCA\n2059m\nKitchener\nCA\n1115m\nMara\nCA\n1346m\nSicamous\nCA\n1043m\nHoward\nUS\n2396m\nIdaho Peak\nCA\n2182m\nBlack Mtn. Idaho\nUS\n1723m\nHall Mountain\nUS\n1536m\nThompson's lookout\nCA\n2026m\nMacKenzie\nCA\n2185m\nCougar Peak\nUS\n1965m\nSale Mtn, BC\nCA\n1785m\nWinter Ridge\nUS\n1937m\nMany Feathers Paragliding School bunny hill launch\nUS\n877m\nMany Feathers Paralgiding School Launch\nUS\n1299m\nMany Feathers Paragliding Meat collection launch\nUS\n1715m\nBar Z mtn launch\nUS\n1693m\nMany Feathers Paragliding School Launch\nUS\n1112m\nWhitetail Lake\nCA\n1894m\nThe Dunes\nUS\n748m\nPanorama Roller Coaster Launch\nCA\n2006m\nPanorama Top Launch\nCA\n2339m\nHadley Butte\nUS\n1890m\nMt. Bruce\nCA\n2288m\nBlacktail Creek\nCA\n1875m\nPelican Butte\nUS\n2415m\nTarkio\nUS\n1542m\nMount Marston\nUS\n2092m\nEagle Hill\nCA\n1058m\nSwansea\nCA\n1702m\nMany feathers Paragliding School Launch\nUS\n983m\nFernie LZ\nCA\n1006m\nAbert Rim Walkup\nUS\n1423m\nFernie Mic Towers\nCA\n2126m\nHagelstein (Upper Klamath Lake)\nUS\n1480m\nMt 7 - Golden\nCA\n1932m\nAlberton\nUS\n1749m\nMark's Launch\nUS\n1500m\nMany Feathers Paragliding Launch\nUS\n1993m\nSehewoki’i Newenee’an Katete\nUS\n1731m\nMany Feathers Paragliding School Bunny Hill\nUS\n919m\nSkags Lake\nUS\n1678m\nPoodle\nUS\n4578m\nWoodrat Mountain\nUS\n1135m\nPalisades\nUS\n2182m\nEmerald Lake\nCA\n2464m\ncolumbia Mountain\nUS\n1260m\nDEMERS RIDGE HIKE AND FLY LAUNCH\nUS\n1800m\nTEAKETTLE LAUNCH\nUS\n1295m\nMt. Stukel\nUS\n1896m\nBlack Cap\nUS\n1905m\nPickle Butte\nUS\n913m\nRainbow Peak (Park)\nUS\n3300m\nMany Feathers Paragliding School Launch\nUS\n1935m\nDESERT MOUNTAIN OLD SCHOOL HG/PG LAUNCH\nUS\n1927m\nCox Launch\nUS\n1408m\nMount Jumbo\nUS\n1381m\nMount Sentinel\nUS\n1535m\nSouth Summit\nUS\n1554m\nLucas Launch\nUS\n1569m\nBogus Basin\nUS\n2252m\nRainbow Mountain (BC)\nCA\n1084m\nMelba Ridge\nUS\n797m\n8th street\nUS\n1804m\nHa Ling\nCA\n2380m\nCrow Butte\nUS\n1045m\nCervidae\nUS\n1261m\nLady MacDonald\nCA\n2344m\nGrotto Mountain\nCA\n2404m\nDoherty Slide\nUS\n1832m\nFederal Butte\nUS\n1642m\nBOB's Upper Lip\nUS\n1356m\nBOB (Blown Out Butte)\nUS\n1267m\nSugar\nUS\n2181m\nSwan Falls\nUS\n908m\nChief Mountain\nUS\n1958m\nPrairie Mountain\nCA\n2190m\nHerd Peak\nUS\n1732m\nMoose Mountain\nCA\n1952m\nMesa Butte\nCA\n1662m\nThe Whaleback\nUS\n2254m\nJasper Tram\nCA\n2146m\nDanskin\nUS\n2032m\nGeertson Cr. Mail Road\nUS\n2311m\nMarcum Mountain\nUS\n1857m\nCochrane\nCA\n1340m\nNanton Tow Site\nCA\n1037m\nProspect Trail Launch\nUS\n674m\nSawtooth Ridge\nUS\n2450m\nAnaconda Towers Launch\nUS\n2185m\nVulcan Tow Site\nCA\n1022m\nVulcan\nCA\n1067m\nVulcan Tow rd. 161\nCA\n1039m\nMt Baldy (Sun Valley)\nUS\n2731m\nAthabasca Lookout\nCA\n1567m\nHat Creek rim\nUS\n1398m\nBEISEKER\nCA\n948m\nSky Ridge (Ketchum- Hailey)\nUS\n2048m\nWeaver Bally\nUS\n2122m\nSieben Ranch\nUS\n1534m\nSieben Ranch 2\nUS\n1573m\nJohn G. Mine\nUS\n1433m\nStandard Tow Site\nCA\n917m\nTable Bluff (Eureka)\nUS\n50m\nWhitehall Launch\nUS\n1852m\nSpokane Hills\nUS\n1552m\nKing Mountain (Arco/ Moore)\nUS\n2424m\nThompson Peak\nUS\n2314m\nIndian Valley\nUS\n1493m\nDuck Creek Pass\nUS\n2305m\nMattole\nUS\n252m\nTootsie Creek\nUS\n1705m\nKimberly\nUS\n1693m\nShelter Cove\nUS\n426m\nPass Creek\nUS\n18",
+    "shots": [
+      "desktop-browse-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "browse-search",
+    "path": "/sites/browse?search=chelan",
+    "status": 200,
+    "finalUrl": "/sites/browse?search=chelan",
+    "domContentLoadedMs": 176,
+    "settledMs": 1394,
+    "timing": {
+      "ttfbMs": 123,
+      "loadMs": 179,
+      "transferKb": 7
+    },
+    "title": "Browse Launch Sites | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSearch\nFilters\nSearch: chelan\n+\n−\n Leaflet | Protomaps © OpenStreetMap\n1 site\nChelan Butte\nUS\n1117m\nN E SE S SW W NW",
+    "shots": [
+      "desktop-browse-search-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-tiger",
+    "path": "/sites/tiger-mountain",
+    "status": 200,
+    "finalUrl": "/sites/tiger-mountain",
+    "domContentLoadedMs": 285,
+    "settledMs": 2192,
+    "timing": {
+      "ttfbMs": 227,
+      "loadMs": 301,
+      "transferKb": 8
+    },
+    "title": "Tiger Mountain | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nTiger Mountain\n\nUS\n\nToday: Marginal\n\nMarginal 07:00-19:00, fly with care. NE wind (50°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nMarginal 07-19\nTomorrow\nOct 21\nSled 11-18\nThu\nOct 22\nThermals 12-18\nFri\nOct 23\nThermals 14-18\nSat\nOct 24\nThermals 14-17\nSun\nOct 25\nThermals 13-16\nMon\nOct 26\nThermals 12-16\nMarginal 07:00-19:00\n\nMarginal 07:00-19:00, fly with care. NE wind (50°), cross on launch, 07:00-19:00. A sled ride, thermals top out 318 m above launch.\n\nNE wind (50°), cross on launch, 07:00-19:00\nGusty, to 27 km/h, 07:00-08:00 and 13:00-14:00\nWind 23 km/h, near the 25 km/h limit, 07:00-08:00\nThermal Strength\n1.1 m/s\nModerate at 12:00\nMax Altitude\n861m\n2,825 ft ASL\nCloud Base\n1096m AGL\n3,596 ft AGL\nFreezing Level\n3,162m MSL\nSafe\nBest Window\n07:00-19:00\n(12 hrs)\nOD Risk\nLow\nWind Shear\nLow\nLapse Rate (850-700)\n2°C/1000ft\nStable\nLift m/s\n0\n0.1\n0.5\n0.9\n1.0\n1.1\n1.1\n1.1\n1.1\n1.0\n0.6\n0.2\n0\n5°\n10°\n15°\nLaunch 1,781'\nModel ground 1,709'\n2,000'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n600m\n800m\n1000m\n1200m\n1400m\n1600m\n1800m\n2000m\n2200m\n2400m\n2600m\n2800m\n3000m\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 543m\n(ft)\nLanding: 60m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●●\nNE\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●●\nIdeal Wind Directions:\n↑\nN (0°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.4995°, -122.0090°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "desktop-site-tiger-01.png",
+      "desktop-site-tiger-02.png",
+      "desktop-site-tiger-03.png"
+    ],
+    "pageHeight": 2583,
+    "horizontalOverflowPx": 0,
+    "actionShots": [
+      "desktop-site-tiger--later-day-01.png",
+      "desktop-site-tiger--later-day-02.png",
+      "desktop-site-tiger--later-day-03.png"
+    ],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-chelan",
+    "path": "/sites/chelan-butte",
+    "status": 200,
+    "finalUrl": "/sites/chelan-butte",
+    "domContentLoadedMs": 306,
+    "settledMs": 1975,
+    "timing": {
+      "ttfbMs": 245,
+      "loadMs": 311,
+      "transferKb": 8
+    },
+    "title": "Chelan Butte | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nChelan Butte\n\nUS\n\nToday: Not flyable\n\nNot flyable. NE wind (46°), off the launch, 07:00-19:00.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nWrong wind\nTomorrow\nOct 21\nSled 08-18\nThu\nOct 22\nSled 08-17\nFri\nOct 23\nXC 13-16\nSat\nOct 24\nThermals 14-16\nSun\nOct 25\nMarginal 07-13\nMon\nOct 26\nSled 13-17\nNot flyable\n\nNot flyable. NE wind (46°), off the launch, 07:00-19:00.\n\nNE wind (46°), off the launch, 07:00-19:00\nWind 24 km/h, near the 25 km/h limit, 07:00-12:00\nGusty, to 28 km/h, 07:00-12:00\nThermal Strength\n1.4 m/s\nModerate at 14:00\nMax Altitude\n1,423m\n4,669 ft ASL\nCloud Base\n2075m AGL\n6,808 ft AGL\nFreezing Level\n3,067m MSL\nSafe\nBest Window\n—\nNo window\nOD Risk\nNone\nWind Shear\nLow\nLapse Rate (850-700)\n1.5°C/1000ft\nStable\nLift m/s\n0\n0.2\n0.5\n0.8\n1.1\n1.2\n1.3\n1.4\n1.3\n1.2\n0.9\n0\n0\n0°\n5°\n10°\nLaunch 3,665'\nModel ground 2,569'\n3,000'\n4,000'\n5,000'\n6,000'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n750m\n1000m\n1250m\n1500m\n1750m\n2000m\n2250m\n2500m\n2750m\n3000m\n3250m\n3500m\n3750m\n4000m\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 1,117m\n(ft)\nLanding: 532m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding\nOrientations:\nN\n●\nE\n●\nSE\n●●\nS\n●●\nSW\n●●\nW\n●\nNW\n●●\nIdeal Wind Directions:\n↑\nSE (135°)\n↑\nS (180°)\n↑\nSW (225°)\n↑\nNW (315°)\nMax Wind Speed: 25 km/h (default)\nLocation: 47.8042°, -120.0390°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "desktop-site-chelan-01.png",
+      "desktop-site-chelan-02.png",
+      "desktop-site-chelan-03.png"
+    ],
+    "pageHeight": 2571,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-valle",
+    "path": "/sites/valle-de-bravo",
+    "status": 200,
+    "finalUrl": "/sites/valle-de-bravo",
+    "domContentLoadedMs": 1005,
+    "settledMs": 2718,
+    "timing": {
+      "ttfbMs": 954,
+      "loadMs": 1022,
+      "transferKb": 9
+    },
+    "title": "Valle de Bravo - El Peñon | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nBack to Browse\nSign in to favorite\nValle de Bravo - El Peñon\n\nMX\n\nToday: Go\n\nLaunch window 07:00-12:00: thermals 11:00-16:00 climbing about 1.8 m/s to 503 m above launch.\n\nWorth going when\nSoarable\nDays with thermals or ridge lift to stay up in. Follow the site to change it.\nWindgram\n\nWind, temperature and thermals from the ground up, hour by hour, in the colors of the RASP windgrams pilots know.\n\nToday\nOct 20\nThermals 11-16\nTomorrow\nOct 21\nThermals 11-13\nThu\nOct 22\nSled 08-12\nFri\nOct 23\nThermals 12-14\nSat\nOct 24\nSled 08-15\nSun\nOct 25\nSled 11-14\nMon\nOct 26\nMarginal 08-15\nGo: thermals 11:00-16:00\n\nLaunch window 07:00-12:00: thermals 11:00-16:00 climbing about 1.8 m/s to 503 m above launch.\n\nThunderstorm risk, 12:00-19:00\nE wind (75°), off the launch, 06:00-07:00\nGusty, to 27 km/h, 13:00-14:00\n\nRain in the forecast 11:00-19:00 isn't counted: in the tropics, models forecast rain on most days and little of it falls. Watch for showers building.\n\nThermal Strength\n2.0 m/s\nStrong at 12:00\nMax Altitude\n2,839m\n9,314 ft ASL\nCloud Base\n1141m AGL\n3,743 ft AGL\nFreezing Level\n5,094m MSL\nSafe\nBest Window\n07:00-12:00\n(5 hrs)\nOD Risk\nLow\nWind Shear\nNone\nLapse Rate (850-700)\n2.2°C/1000ft\nStable\nLift m/s\n0\n0.1\n0.5\n0.9\n1.5\n1.8\n2.0\n2.0\n1.9\n1.7\n1.5\n1.2\n0.2\n0.1\n5°\n10°\n15°\n20°\nLaunch 7,664'\nModel ground 6,345'\n7,000'\n8,000'\n9,000'\n10,000'\n11,000'\n12,000'\n13,000'\n14,000'\n2000m\n2200m\n2400m\n2600m\n2800m\n3000m\n3200m\n3400m\n3600m\n3800m\n4000m\n4200m\n4400m\n6a\n7a\n8a\n9a\n10a\n11a\n12p\n1p\n2p\n3p\n4p\n5p\n6p\n7p\n\nHover or tap the chart for exact numbers at any height. Red barbs are stronger than this site's 25 km/h limit.\n\nBackground: how fast the air cools with height (°C per 1000 ft)\n\n-0.5\n0\n1.2\n1.5\n2\n2.5\n3\nInversion\nStable\nConditionally unstable\nUnstable\n\nRising dry air cools 3° per 1000 ft. Thermals climb through red, orange, pink and lavender, fade in tan, and stop where it turns blue or grey.\n\nWind barbs point into the wind, in km/h: long feather 10, short 5, flag 50; red is over this site's 25 km/h\nTop of lift, in hours with thermals of 1 m/s or more\nCumulus base, where thermals reach it\nCloud in the model (hatched)\nTemperature every 5 °C; dashed blue is freezing\nLaunch height; dark ground is the model's terrain\n\nWeather data by Open-Meteo.com (CC BY 4.0)\n\nLocation & Details\nTakeoff: 2,336m\n(ft)\nLanding: 1,778m\n(ft)\nWhat it gives:\nNot tagged on Paragliding Earth, so SoarCast goes by the weather\nFlying Types: paragliding, hanggliding\nOrientations:\nN\n●\nSE\n●\nS\n●●\nSW\n●●\nW\n●●\nNW\n●\nIdeal Wind Directions:\n↑\nS (180°)\n↑\nSW (225°)\n↑\nW (270°)\nMax Wind Speed: 25 km/h (default)\nLocation: 19.0616°, -100.0910°\nLocation Map\n+\n−\n Leaflet | Thermals: thermal.kk7.ch (CC BY-NC-SA 4.0), Protomaps © OpenStreetMap\n\nSite information from Paragliding Earth (CC BY-SA 3.0). Check the site's rules and the local club before flying.",
+    "shots": [
+      "desktop-site-valle-01.png",
+      "desktop-site-valle-02.png",
+      "desktop-site-valle-03.png"
+    ],
+    "pageHeight": 2595,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  },
+  {
+    "viewport": "desktop",
+    "name": "site-missing",
+    "path": "/sites/not-a-real-site-xyz",
+    "status": 404,
+    "finalUrl": "/sites/not-a-real-site-xyz",
+    "domContentLoadedMs": 199,
+    "settledMs": 807,
+    "timing": {
+      "ttfbMs": 149,
+      "loadMs": 205,
+      "transferKb": 5
+    },
+    "title": "",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nPage not found\n\nThat page doesn't exist, or the site has moved.\n\nYour sites\nBrowse sites",
+    "shots": [
+      "desktop-site-missing-01.png"
+    ],
+    "pageHeight": 900,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [
+      "error: Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failedRequests": [
+      "404 GET https://soarcast.mckinleyaviation.com/sites/not-a-real-site-xyz"
+    ]
+  },
+  {
+    "viewport": "desktop",
+    "name": "add-site-signed-out",
+    "path": "/sites/custom/new",
+    "status": 200,
+    "finalUrl": "/auth/signin",
+    "domContentLoadedMs": 166,
+    "settledMs": 756,
+    "timing": {
+      "ttfbMs": 123,
+      "loadMs": 178,
+      "transferKb": 6
+    },
+    "title": "Sign In | SoarCast",
+    "text": "SoarCast\nNavigation\nDashboard\nBrowse Sites\nNotifications\nToggle theme\nSign In\nSoarCast\n\nSign in to track your flying sites\n\nContinue with Google\nContinue with GitHub\n\nBy signing in, you agree to our terms of service.",
+    "shots": [
+      "desktop-add-site-signed-out-01.png",
+      "desktop-add-site-signed-out-02.png"
+    ],
+    "pageHeight": 1004,
+    "horizontalOverflowPx": 0,
+    "actionShots": [],
+    "consoleErrors": [],
+    "failedRequests": []
+  }
+]
