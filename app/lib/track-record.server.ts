@@ -95,14 +95,14 @@ async function fetchPastForecasts(
   const response = await fetchWithRetry(
     `https://previous-runs-api.open-meteo.com/v1/forecast?${params}`,
   );
-  if (!response.ok) {
-    const reason = (await response.text().catch(() => '')).slice(0, 200);
-    throw new Error(`Open-Meteo previous runs: ${response.status} ${reason}`.trim());
+  const body = await response.text();
+  let data: { timezone: string; hourly: Record<string, (number | null)[]> & { time: string[] } };
+  try {
+    if (!response.ok) throw new Error();
+    data = JSON.parse(body);
+  } catch {
+    throw new Error(`Open-Meteo previous runs: ${response.status} ${body.slice(0, 200)}`.trim());
   }
-  const data = (await response.json()) as {
-    timezone: string;
-    hourly: Record<string, (number | null)[]> & { time: string[] };
-  };
   const h = data.hourly;
   return {
     timezone: data.timezone,
@@ -191,11 +191,19 @@ export async function getTrackRecord(
   }
 
   let found: { record: TrackRecord; distanceKm: number } | null = null;
+  let failure: unknown = null;
   for (const station of await stationsNear(latitude, longitude)) {
     const { distanceKm, ...rest } = station;
     let record = await storedRecord(db, station.id, now);
     if (!record) {
-      record = await buildTrackRecord(rest);
+      try {
+        record = await buildTrackRecord(rest);
+      } catch (error) {
+        // Try the next airport, but don't record "none here" for a failed fetch
+        console.error(`Track record for ${station.id} failed:`, error);
+        failure = error;
+        continue;
+      }
       if (totalRecord(record.months).days < MIN_DAYS) continue;
       await db
         .insert(forecastTrackRecords)
@@ -208,6 +216,7 @@ export async function getTrackRecord(
     found = { record, distanceKm };
     break;
   }
+  if (!found && failure) throw failure;
 
   const values = {
     stationId: found?.record.station.id ?? null,
