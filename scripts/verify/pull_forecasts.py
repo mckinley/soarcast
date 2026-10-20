@@ -16,10 +16,20 @@ STATIONS = [
     ('EAT', 47.3989, -120.2068, 'America/Los_Angeles', 'Washington', [('2026-04-01', '2026-09-30')]),
     ('S52', 48.4249, -120.1458, 'America/Los_Angeles', 'Washington', [('2026-04-01', '2026-09-30')]),
 ]
+# Rainy seasons, to check a rain rule still catches the days it really rains
+WET = [
+    ('SKGO', 4.7582, -75.9557, 'America/Bogota', 'Colombia', [('2025-04-01', '2025-05-31'), ('2025-10-01', '2025-11-30')]),
+    ('SKCL', 3.5432, -76.3816, 'America/Bogota', 'Colombia', [('2025-04-01', '2025-05-31'), ('2025-10-01', '2025-11-30')]),
+    ('SKPE', 4.8127, -75.7395, 'America/Bogota', 'Colombia', [('2025-04-01', '2025-05-31'), ('2025-10-01', '2025-11-30')]),
+    ('VIGG', 32.1651, 76.2634, 'Asia/Kolkata', 'India', [('2025-07-01', '2025-08-31')]),
+    ('VTPH', 12.6362, 99.9515, 'Asia/Bangkok', 'Thailand', [('2025-06-01', '2025-10-31')]),
+]
+WET_MODELS = "best_match ecmwf_ifs ecmwf_ifs025 icon_global gfs_global".split()
+WHICH = os.environ.get('VERIFY_SET', 'dry')
 base = 'https://previous-runs-api.open-meteo.com/v1/forecast'
 jobs, keys = [], []
-for sid, lat, lon, tz, region, periods in STATIONS:
-    models = GLOBAL + (US if region == 'Washington' else [])
+for sid, lat, lon, tz, region, periods in (WET if WHICH == 'wet' else STATIONS):
+    models = WET_MODELS if WHICH == 'wet' else GLOBAL + (US if region == 'Washington' else [])
     for (s, e) in periods:
         for m in models:
             jobs.append((base, dict(latitude=lat, longitude=lon, hourly=','.join(v + '_previous_day1' for v in VARS),

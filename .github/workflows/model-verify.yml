@@ -23,6 +23,7 @@ jobs:
       - name: Pull forecasts
         env:
           VERIFY_OUT: verify-out
+          VERIFY_SET: wet
         run: |
           mkdir -p verify-out
           cd scripts/verify && VERIFY_OUT=../../verify-out python3 pull_forecasts.py
