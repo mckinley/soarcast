@@ -326,6 +326,30 @@ async function digestEmail(browser) {
   }
 }
 
+// Builds the forecast track records the site pages show (a few seconds each
+// the first time), so the screenshots catch them loaded: Tiger, and
+// Roldanillo in Colombia, where model rain is little trusted.
+async function trackRecords() {
+  for (const [name, lat, lng] of [
+    ['tiger', 47.4995, -122.009],
+    ['roldanillo', 4.407, -76.203],
+  ]) {
+    const started = Date.now();
+    const res = await fetch(`${base}/api/track-record?lat=${lat}&lng=${lng}`);
+    const body = await res.text();
+    const ms = Date.now() - started;
+    console.log(`track record ${name}: HTTP ${res.status} in ${ms} ms ${body.slice(0, 600)}`);
+    report.push({
+      viewport: '-',
+      name: `track-record-${name}`,
+      status: res.status,
+      ms,
+      text: body,
+    });
+  }
+}
+
+if (mode === 'local') await trackRecords().catch((e) => console.log(`track records: ${e}`));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const pages = mode === 'prod' ? prodPages() : localPages();
 const host = new URL(base).hostname;

@@ -5,6 +5,7 @@ import { WindgramSection } from '@/components/windgram-section';
 import { verdictSummary } from '@/lib/forecast-engine';
 import { STATUS_BADGE, STATUS_WORD, dayStatus } from '@/lib/verdict-display';
 import { SiteGoalLine, type GoalTarget } from '@/components/site-goal-picker';
+import { ForecastTrackRecord } from '@/components/forecast-track-record';
 import { defaultGoal } from '@/lib/site-goals';
 import type { Site, DayScore } from '@/types';
 
@@ -49,6 +50,8 @@ export function SiteDetailClient({ site, scores, today, goalTarget }: SiteDetail
           <SiteGoalLine target={goalTarget} goal={goal} />
         </Card>
       )}
+
+      <ForecastTrackRecord latitude={site.latitude} longitude={site.longitude} today={today} />
 
       <WindgramSection
         latitude={site.latitude}
