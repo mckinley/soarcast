@@ -218,6 +218,39 @@ describe('evaluateDays', () => {
     expect(day.reasons[0]).toMatch(/^Rain \(1.2 mm\/h\), 06:00-21:00/);
   });
 
+  describe('in the tropics, where model rain is little trusted', () => {
+    const tropics = (overrides: (h: number) => HourOverrides) => ({
+      ...profile(overrides),
+      latitude: 4.4,
+    });
+
+    it('does not let light rain and a high chance of rain ground the day', () => {
+      const day = today(
+        tropics((h) => (h >= 6 ? { precipitation: 1.2, precipitationProbability: 95 } : {})),
+      );
+      expect(day.verdict).toBe('go');
+      expect(day.reasons.some((r) => r.startsWith('Rain'))).toBe(false);
+      expect(day.rainNote).toMatch(/^Rain in the forecast 06:00-21:00 isn't counted/);
+    });
+
+    it('still flags hours with heavy showers', () => {
+      const day = today(tropics((h) => (h >= 13 && h < 15 ? { precipitation: 4 } : {})));
+      expect(day.verdict).toBe('go');
+      expect(day.reasons[0]).toMatch(/^Showers possible \(4 mm\/h\), 13:00-15:00/);
+      expect(day.rainNote).toBeNull();
+    });
+
+    it('says nothing about rain on a dry day', () => {
+      expect(today(tropics(() => ({}))).rainNote).toBeNull();
+    });
+
+    it('leaves rain outside the tropics as it was', () => {
+      const day = today(profile((h) => (h >= 6 ? { precipitationProbability: 95 } : {})));
+      expect(day.verdict).toBe('no');
+      expect(day.rainNote).toBeNull();
+    });
+  });
+
   it('finds the window after the wind drops', () => {
     const day = today(profile((h) => (h < 14 ? { windSpeed: 35 } : {})));
     expect(day.verdict).toBe('go');

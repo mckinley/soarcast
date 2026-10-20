@@ -13,9 +13,9 @@ export {
   RIDGE_MIN_KMH,
   SOAR_MIN_HEIGHT,
 } from './evaluate';
-export { THERMAL_MIN_WSTAR } from './gates';
+export { THERMAL_MIN_WSTAR, rainTrust } from './gates';
 export type { HourVerdict } from './evaluate';
-export type { LaunchProfile, GateResult, GateStatus, GateName } from './gates';
+export type { LaunchProfile, GateResult, GateStatus, GateName, RainTrust } from './gates';
 export type { LaunchConditions } from './launch-conditions';
 
 /** Paraglider launch limit used when a site has none: most launches top out around 25 km/h. */

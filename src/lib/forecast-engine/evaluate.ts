@@ -9,6 +9,8 @@ import { deriveLaunchConditions, type LaunchConditions } from './launch-conditio
 import {
   angleDifference,
   evaluateGates,
+  rainGate,
+  rainTrust,
   SECTOR_HALF_WIDTH,
   THERMAL_MIN_WSTAR,
   worstStatus,
@@ -16,6 +18,7 @@ import {
   type GateResult,
   type GateStatus,
   type LaunchProfile,
+  type RainTrust,
 } from './gates';
 
 export interface HourVerdict {
@@ -242,7 +245,28 @@ function classifyFlight(
   };
 }
 
-function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile): DayScore {
+/**
+ * Where model rain is little trusted, the daylight hours whose forecast rain
+ * was set aside, said plainly so the pilot knows it was there.
+ */
+function rainNote(hours: HourVerdict[], trust: RainTrust): string | null {
+  if (trust === 'trusted') return null;
+  const setAside = hours.filter(
+    (h) =>
+      !h.gates.some((g) => g.gate === 'daylight' && g.status === 'fail') &&
+      h.gates.some((g) => g.gate === 'rain' && g.status === 'pass') &&
+      rainGate(h.conditions).status !== 'pass',
+  );
+  if (setAside.length === 0) return null;
+  return `Rain in the forecast ${formatHours(setAside.map((h) => h.hour))} isn't counted: in the tropics, models forecast rain on most days and little of it falls. Watch for showers building.`;
+}
+
+function evaluateDay(
+  date: string,
+  hours: HourVerdict[],
+  launch: LaunchProfile,
+  trust: RainTrust,
+): DayScore {
   const goWindow = longestRun(hours, (h) => h.status === 'pass');
   const anyWindow = longestRun(hours, (h) => h.status !== 'fail');
   const goHours = windowLength(goWindow);
@@ -346,11 +370,13 @@ function evaluateDay(date: string, hours: HourVerdict[], launch: LaunchProfile):
     sled: flight?.sled ?? null,
     greatDay: flight?.greatDay ?? false,
     goalMet,
+    rainNote: rainNote(hours, trust),
   };
 }
 
 /** Hour-by-hour verdicts for every hour in the profile. */
 export function evaluateHours(profile: AtmosphericProfile, launch: LaunchProfile): HourVerdict[] {
+  const trust = rainTrust(profile.latitude);
   return profile.hours.map((hour) => {
     const conditions = deriveLaunchConditions(hour, profile.elevation, launch.elevation);
     const gates = evaluateGates(
@@ -358,6 +384,7 @@ export function evaluateHours(profile: AtmosphericProfile, launch: LaunchProfile
       launch,
       profile.sunriseByDay?.[conditions.date],
       profile.sunsetByDay?.[conditions.date],
+      trust,
     );
     return {
       time: hour.time,
@@ -377,5 +404,6 @@ export function evaluateDays(profile: AtmosphericProfile, launch: LaunchProfile)
     if (!byDay.has(date)) byDay.set(date, []);
     byDay.get(date)!.push(h);
   }
-  return [...byDay.entries()].map(([date, hours]) => evaluateDay(date, hours, launch));
+  const trust = rainTrust(profile.latitude);
+  return [...byDay.entries()].map(([date, hours]) => evaluateDay(date, hours, launch, trust));
 }

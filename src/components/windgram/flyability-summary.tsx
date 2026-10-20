@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { DayScore } from '@/types';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
 import { deriveLaunchConditions } from '@/lib/forecast-engine/launch-conditions';
-import { verdictSummary } from '@/lib/forecast-engine';
+import { rainTrust, verdictSummary } from '@/lib/forecast-engine';
 import { STATUS_BADGE, dayHeadline, dayStatus } from '@/lib/verdict-display';
 import { calculateCircularMean } from '@/lib/site-utils';
 
@@ -63,6 +63,10 @@ export function FlyabilitySummary({
                 </span>
               ))}
             </div>
+          )}
+
+          {dayScore.rainNote && (
+            <p className="text-xs text-muted-foreground">{dayScore.rainNote}</p>
           )}
         </div>
 
@@ -143,13 +147,15 @@ export function FlyabilitySummary({
               <div className="text-muted-foreground text-xs">Rain Chance (max)</div>
               <div className="font-medium">{details.maxPrecipChance}%</div>
               <div className="text-xs text-muted-foreground">
-                {details.maxPrecipChance <= 10
-                  ? 'Very low'
-                  : details.maxPrecipChance <= 30
-                    ? 'Low'
-                    : details.maxPrecipChance <= 50
-                      ? 'Moderate'
-                      : 'High'}
+                {rainTrust(atmosphericData.latitude) === 'low'
+                  ? 'Models overstate it here'
+                  : details.maxPrecipChance <= 10
+                    ? 'Very low'
+                    : details.maxPrecipChance <= 30
+                      ? 'Low'
+                      : details.maxPrecipChance <= 50
+                        ? 'Moderate'
+                        : 'High'}
               </div>
             </div>
           </div>

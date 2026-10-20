@@ -63,6 +63,8 @@ export interface DayScore {
   greatDay?: boolean;
   /** Whether the day is a go for the pilot's goal at this site */
   goalMet?: boolean;
+  /** Where model rain is little trusted (the tropics), the forecast rain that was set aside, in words */
+  rainNote?: string | null;
 }
 
 export interface Settings {
