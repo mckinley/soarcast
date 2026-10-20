@@ -25,6 +25,8 @@ interface WindgramSectionProps {
    * When provided, draws a horizontal line at this altitude on the windgram.
    */
   launchElevation?: number;
+  /** The site's wind limit (km/h), for the windgram's wind barbs */
+  maxWindSpeed?: number;
 }
 
 /**
@@ -38,6 +40,7 @@ export function WindgramSection({
   today,
   days = 7,
   launchElevation,
+  maxWindSpeed,
 }: WindgramSectionProps) {
   const [profile, setProfile] = useState<AtmosphericProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,9 +124,10 @@ export function WindgramSection({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Atmospheric Profile</h2>
+        <h2 className="text-2xl font-semibold mb-2">Windgram</h2>
         <p className="text-sm text-muted-foreground">
-          Interactive windgram showing conditions at different altitudes over time
+          Wind, temperature and thermals from the ground up, hour by hour, in the colors of the
+          RASP windgrams pilots know.
         </p>
       </div>
 
@@ -133,6 +137,7 @@ export function WindgramSection({
         dayScores={scores}
         today={today}
         launchElevation={launchElevation}
+        maxWindSpeed={maxWindSpeed}
       />
       <ForecastCredit />
     </div>

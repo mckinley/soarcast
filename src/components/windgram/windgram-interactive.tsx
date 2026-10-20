@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { WindgramDaySelector } from './windgram-day-selector';
 import { FlyabilitySummary } from './flyability-summary';
 import { XcSnapshotPanel } from '@/components/xc-snapshot-panel';
-import { LapseRateLegend } from './lapse-rate-legend';
+import { WindgramLegend } from './windgram-legend';
+import { altitudeRange } from './windgram-data';
 import { useAttachTouchGestures } from '@/hooks/use-touch-gestures';
 
 // d3 takes long to initialize, and Cloudflare caps the Worker's startup CPU,
@@ -44,6 +45,8 @@ interface WindgramInteractiveProps {
    * When provided, draws a horizontal line at this altitude on the windgram.
    */
   launchElevation?: number;
+  /** The site's wind limit (km/h); stronger wind barbs are drawn red */
+  maxWindSpeed?: number;
 }
 
 /**
@@ -57,6 +60,7 @@ export function WindgramInteractive({
   loading = false,
   className = '',
   launchElevation,
+  maxWindSpeed,
 }: WindgramInteractiveProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +77,12 @@ export function WindgramInteractive({
     }
     return Array.from(dayMap.entries()).map(([dateString, hours]) => ({ dateString, hours }));
   }, [data]);
+
+  // One altitude scale for the whole week, so days compare at a glance
+  const range = useMemo(
+    () => (data ? altitudeRange(data, launchElevation) : undefined),
+    [data, launchElevation],
+  );
 
   // Open on the site's today when the profile has it, else its first day
   const defaultDayIndex = useMemo(() => {
@@ -174,7 +184,13 @@ export function WindgramInteractive({
         className="transition-opacity duration-300 relative"
         style={{ animation: 'fadeIn 0.3s ease-in-out' }}
       >
-        <LazyWindgramD3 data={selectedDayData} loading={false} launchElevation={launchElevation} />
+        <LazyWindgramD3
+          data={selectedDayData}
+          loading={false}
+          launchElevation={launchElevation}
+          maxWindSpeed={maxWindSpeed}
+          range={range}
+        />
         {days.length > 1 && (
           <p className="text-xs text-muted-foreground text-center mt-2 md:hidden">
             👈 Swipe to change days 👉
@@ -182,9 +198,8 @@ export function WindgramInteractive({
         )}
       </div>
 
-      {/* Lapse rate color legend */}
-      <div className="mt-4 flex justify-center">
-        <LapseRateLegend />
+      <div className="mt-4">
+        <WindgramLegend maxWindSpeed={maxWindSpeed} />
       </div>
 
       <style>{`

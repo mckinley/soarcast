@@ -1,17 +1,6 @@
 export { WindgramInteractive } from './windgram-interactive';
 export { WindgramDaySelector } from './windgram-day-selector';
-export { LapseRateLegend } from './lapse-rate-legend';
+export { WindgramLegend } from './windgram-legend';
 export { FlyabilitySummary } from './flyability-summary';
 export { WindgramThumbnail } from './windgram-thumbnail';
-export {
-  kmhToKnots,
-  windSpeedToBarb,
-  drawWindBarb,
-  formatWindTooltip,
-  type WindBarbConfig,
-} from './wind-barb-utils';
-export {
-  getThermalStrengthFromVelocity,
-  formatThermalVelocity,
-  type ThermalStrength,
-} from './thermal-cloud-utils';
+export { windSpeedToBarb, windBarbPath, compassPoint, type WindBarbConfig } from './wind-barb-utils';

@@ -13,8 +13,16 @@ export function setProfileDb(db: DrizzleD1Database<Record<string, unknown>>) {
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 const CACHE_DURATION_HOURS = 3;
 
-// Pressure levels to fetch (hPa)
-const PRESSURE_LEVELS = [1000, 950, 900, 850, 800, 700, 600, 500] as const;
+// Pressure levels to fetch (hPa): every 25 hPa (about 250 m) up to 700 hPa,
+// where pilots fly, so the windgram resolves inversions and launch-height
+// wind instead of averaging over 500 m to 1 km layers.
+const PRESSURE_LEVELS = [
+  1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 650, 600, 500,
+] as const;
+
+// Wind shear is judged between these levels, the 50-100 hPa steps its
+// thresholds were set on, not between every fetched level.
+const SHEAR_LEVELS: readonly number[] = [1000, 950, 900, 850, 800, 700];
 
 /**
  * Every profile is fetched and cached for this many days, whatever the
@@ -132,55 +140,11 @@ interface OpenMeteoProfileResponse {
     precipitation?: (number | null)[];
     cloud_cover_low?: (number | null)[];
     visibility?: (number | null)[];
-    // Pressure-level parameters (8 levels × 6 params = 48 fields)
-    temperature_1000hPa: number[];
-    temperature_950hPa: number[];
-    temperature_900hPa: number[];
-    temperature_850hPa: number[];
-    temperature_800hPa: number[];
-    temperature_700hPa: number[];
-    temperature_600hPa: number[];
-    temperature_500hPa: number[];
-    wind_speed_1000hPa: number[];
-    wind_speed_950hPa: number[];
-    wind_speed_900hPa: number[];
-    wind_speed_850hPa: number[];
-    wind_speed_800hPa: number[];
-    wind_speed_700hPa: number[];
-    wind_speed_600hPa: number[];
-    wind_speed_500hPa: number[];
-    wind_direction_1000hPa: number[];
-    wind_direction_950hPa: number[];
-    wind_direction_900hPa: number[];
-    wind_direction_850hPa: number[];
-    wind_direction_800hPa: number[];
-    wind_direction_700hPa: number[];
-    wind_direction_600hPa: number[];
-    wind_direction_500hPa: number[];
-    relative_humidity_1000hPa: number[];
-    relative_humidity_950hPa: number[];
-    relative_humidity_900hPa: number[];
-    relative_humidity_850hPa: number[];
-    relative_humidity_800hPa: number[];
-    relative_humidity_700hPa: number[];
-    relative_humidity_600hPa: number[];
-    relative_humidity_500hPa: number[];
-    geopotential_height_1000hPa: number[];
-    geopotential_height_950hPa: number[];
-    geopotential_height_900hPa: number[];
-    geopotential_height_850hPa: number[];
-    geopotential_height_800hPa: number[];
-    geopotential_height_700hPa: number[];
-    geopotential_height_600hPa: number[];
-    geopotential_height_500hPa: number[];
-    cloud_cover_1000hPa: (number | null)[];
-    cloud_cover_950hPa: (number | null)[];
-    cloud_cover_900hPa: (number | null)[];
-    cloud_cover_850hPa: (number | null)[];
-    cloud_cover_800hPa: (number | null)[];
-    cloud_cover_700hPa: (number | null)[];
-    cloud_cover_600hPa: (number | null)[];
-    cloud_cover_500hPa: (number | null)[];
+  } & {
+    // Pressure-level parameters: one series per level and parameter
+    [K in `${'temperature' | 'wind_speed' | 'wind_direction' | 'relative_humidity' | 'geopotential_height'}_${PressureLevelValue}hPa`]: number[];
+  } & {
+    [K in `cloud_cover_${PressureLevelValue}hPa`]: (number | null)[];
   };
 }
 
@@ -333,8 +297,8 @@ export function calculateFreezingLevel(pressureLevels: PressureLevel[]): number 
  * @returns Maximum wind speed delta (km/h) between adjacent levels, or null
  */
 export function calculateWindShearMax(pressureLevels: PressureLevel[]): number | null {
-  // Filter to soaring layer: 1000-700 hPa
-  const soaringLevels = pressureLevels.filter((l) => l.pressure >= 700 && l.pressure <= 1000);
+  // Soaring layer, 1000-700 hPa, at the levels the shear thresholds expect
+  const soaringLevels = pressureLevels.filter((l) => SHEAR_LEVELS.includes(l.pressure));
   if (soaringLevels.length < 2) return null;
 
   let maxShear = 0;
