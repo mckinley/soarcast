@@ -167,9 +167,9 @@ export function formatDateLabel(dateStr: string, today: string): string {
 /** The digest's one-line answer: "Go today at Tiger Mountain". */
 export function digestTitle(statuses: Array<{ name: string; status: DayStatus }>): string {
   const go = statuses.filter((s) => s.status === 'go');
-  if (go.length === 0) return 'No go today at your sites';
+  if (go.length === 0) return 'No go today at any favorite site';
   if (go.length === 1) return `Go today at ${go[0].name}`;
-  return `Go today at ${go.length} of your ${statuses.length} sites`;
+  return `Go today at ${go.length} of ${statuses.length} sites`;
 }
 
 /**
@@ -204,7 +204,7 @@ export function generateMorningDigest(
             .slice(0, 3)
             .map((a) => `${a.site.name}: ${a.analysis.headline.toLowerCase()}`)
             .join('. ')}.`
-        : `None of your ${analyses.length} sites has a flyable window.`;
+        : `None of the ${analyses.length} sites has a flyable window.`;
   }
 
   return {

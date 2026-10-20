@@ -56,6 +56,9 @@ type Pages = {
   "/api/health": {
     params: {};
   };
+  "/planning": {
+    params: {};
+  };
   "/sites/custom/:id/edit": {
     params: {
       "id": string;
@@ -78,7 +81,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -128,6 +131,10 @@ type RouteFiles = {
     id: "routes/api.health";
     page: "/api/health";
   };
+  "routes/planning.tsx": {
+    id: "routes/planning";
+    page: "/planning";
+  };
   "routes/_index.tsx": {
     id: "routes/_index";
     page: "/";
@@ -172,6 +179,7 @@ type RouteModules = {
   "routes/sites.$slug": typeof import("./app/routes/sites.$slug.tsx");
   "routes/api.auth.$": typeof import("./app/routes/api.auth.$.tsx");
   "routes/api.health": typeof import("./app/routes/api.health.tsx");
+  "routes/planning": typeof import("./app/routes/planning.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");
   "routes/_auth": typeof import("./app/routes/_auth.tsx");
   "routes/_auth.sites.custom.$id.edit": typeof import("./app/routes/_auth.sites.custom.$id.edit.tsx");

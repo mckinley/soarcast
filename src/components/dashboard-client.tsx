@@ -105,7 +105,7 @@ export function DashboardClient({
           <Link to="/sites/custom/new">
             <Button size="lg" variant="outline">
               <MapPinPlus className="mr-2 h-4 w-4" />
-              Add your own site
+              Add a private site
             </Button>
           </Link>
         </div>
@@ -195,16 +195,16 @@ export function DashboardClient({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Your week</h1>
+          <h1 className="text-3xl font-bold">This week</h1>
           <p className="text-muted-foreground mt-1">
-            When each of your sites gives the flying you want from it. Open a site for its windgram.
+            When each favorite site gives the flying it&apos;s worth going for. Open a site for its windgram.
           </p>
           <StatusLegend />
         </div>
         <Button variant="outline" size="lg" asChild>
           <Link to="/sites/custom/new">
             <MapPinPlus className="mr-2 h-4 w-4" />
-            Add your own site
+            Add a private site
           </Link>
         </Button>
       </div>

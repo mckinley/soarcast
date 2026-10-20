@@ -269,7 +269,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               <p className="text-sm text-muted-foreground">
                 {pushEnabled
                   ? 'On for this browser. Alerts come at your digest time and at 6 PM, your time.'
-                  : 'Get a notification on this device when one of your sites looks flyable.'}
+                  : 'Get a notification on this device when a favorite site looks flyable.'}
               </p>
             </div>
             {pushEnabled ? (
@@ -310,7 +310,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
         <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground">
             Alerts come for days that are a go at a site: flyable, with the flight you want from it.
-            Set what each site is worth going for under Your sites below.
+            Set what each site is worth going for under Favorites below.
           </p>
 
           {/* Days Ahead Window */}
@@ -354,7 +354,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
             <div>
               <Label htmlFor="email-digest">Enable Email Digest</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Each morning: which of your sites are flyable today, and when.
+                Each morning: which favorite sites are flyable today, and when.
               </p>
             </div>
             <Switch
@@ -406,7 +406,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       {/* Per-Site Notification Toggles */}
       <Card>
         <CardHeader>
-          <CardTitle>Your sites</CardTitle>
+          <CardTitle>Favorites</CardTitle>
           <CardDescription>
             What each site gives, what makes a day worth going there, and whether to alert you about
             it.

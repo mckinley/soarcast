@@ -144,7 +144,7 @@ export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDig
                 display: 'inline-block',
               }}
             >
-              See your week →
+              See this week →
             </Link>
           </Section>
 

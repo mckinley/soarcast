@@ -90,7 +90,7 @@ export const LOST_REASON_WORD: Record<string, string> = {
   visibility: 'fog',
   storm: 'storms',
   daylight: 'short days',
-  weak: 'too little lift for your goal',
+  weak: 'too little lift for the goal',
   other: 'other checks',
 };
 

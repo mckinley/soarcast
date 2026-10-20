@@ -132,7 +132,7 @@ export function SiteCard({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate">{site.name}</h3>
             <div className="text-xs text-muted-foreground mt-0.5">
-              {siteType === 'custom' && 'Your site • '}
+              {siteType === 'custom' && 'Private • '}
               {site.elevation}m • {site.maxWindSpeed}km/h max
               {site.goal && ` • ${GOAL_LABEL[site.goal]}`}
             </div>

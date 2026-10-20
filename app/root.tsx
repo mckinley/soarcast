@@ -63,7 +63,7 @@ export default function App() {
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = 'Something went wrong';
-  let details = 'SoarCast hit an unexpected error. Try again, or head back to your sites.';
+  let details = 'SoarCast hit an unexpected error. Try again, or head back to the dashboard.';
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
@@ -86,7 +86,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
             <p className="mt-2 max-w-md text-muted-foreground">{details}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to="/dashboard" className={buttonVariants()}>
-                Your sites
+                Dashboard
               </Link>
               <Link to="/sites/browse" className={buttonVariants({ variant: 'outline' })}>
                 Browse sites
