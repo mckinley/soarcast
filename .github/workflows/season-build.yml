@@ -10,16 +10,13 @@ name: Season build
 on:
   schedule:
     - cron: '23 5,17 * * *'
-  push:
-    branches: ['claude/year-planner-comps-ij539o']
-    paths: ['scripts/seasons/**', 'src/lib/seasons.ts', '.github/workflows/season-build.yml']
   workflow_dispatch:
     inputs:
       budget:
         description: 'Open-Meteo calls to spend (about 240 a site)'
         default: '4500'
       dry_run:
-        description: 'Rate destinations only and write nothing'
+        description: 'Rate a few destinations and write nothing (to try a branch)'
         type: boolean
         default: false
 
@@ -46,9 +43,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SEASON_CALL_BUDGET: ${{ inputs.budget || '4500' }}
-          # A push to the working branch tries a few destinations without writing
-          SEASON_DRY_RUN: ${{ (github.event_name == 'push' || inputs.dry_run) && '1' || '' }}
-          SEASON_LIMIT: ${{ github.event_name == 'push' && '4' || '' }}
+          # A dry run tries a few destinations without writing
+          SEASON_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          SEASON_LIMIT: ${{ inputs.dry_run && '4' || '' }}
         run: |
           npx esbuild scripts/seasons/build.ts --bundle --platform=node --format=esm --outfile=season-tmp/build.mjs
           node season-tmp/build.mjs
