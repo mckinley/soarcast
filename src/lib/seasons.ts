@@ -130,6 +130,28 @@ export function seasonMonths(days: SeasonDay[], goal: SiteGoal): SeasonMonth[] {
   return months;
 }
 
+/**
+ * Go share by calendar month (index 0 = Jan) for an area: a day counts as a
+ * go when any of its launches was a go for the goal, as a pilot there picks
+ * the launch the day suits.
+ */
+export function anyGoShares(launches: SeasonDay[][], goal: SiteGoal): number[] {
+  const days = new Map<string, boolean>();
+  for (const launch of launches) {
+    for (const day of launch) {
+      days.set(day.date, days.get(day.date) === true || statusFor(day, goal) === 'go');
+    }
+  }
+  const rated = Array.from({ length: 12 }, () => 0);
+  const go = Array.from({ length: 12 }, () => 0);
+  for (const [date, isGo] of days) {
+    const i = Number(date.slice(5, 7)) - 1;
+    rated[i]++;
+    if (isGo) go[i]++;
+  }
+  return rated.map((n, i) => (n ? go[i] / n : 0));
+}
+
 /** A site's season for the pilot's goal: what pages show, without the day list. */
 export interface SeasonSummary {
   months: SeasonMonth[];

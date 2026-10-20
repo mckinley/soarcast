@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  anyGoShares,
   bestMonths,
   decodeSeasonDays,
   encodeSeasonDays,
@@ -70,6 +71,20 @@ describe('seasonMonths', () => {
     expect(seasonMonths(sled, 'soar')[4].counts.flyable).toBe(1);
     expect(lostReason(sled[0], 'soar')).toBe('weak');
     expect(lostReason(sled[0], 'launch')).toBeNull();
+  });
+});
+
+describe('anyGoShares', () => {
+  it('counts a day as a go when any launch in the area was', () => {
+    // One launch flies the first 10 days of July, the other days 6 to 20
+    const a = month(2025, 7, 10);
+    const b = month(2025, 7, 20).map((d, i) =>
+      i < 5 ? { ...d, verdict: 'no' as const, flight: null, gate: 'wind' } : d,
+    );
+    const shares = anyGoShares([a, b], 'soar');
+    expect(shares[6]).toBeCloseTo(20 / 31);
+    expect(shares[0]).toBe(0);
+    expect(anyGoShares([a], 'soar')[6]).toBeCloseTo(10 / 31);
   });
 });
 
