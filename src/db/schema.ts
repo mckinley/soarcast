@@ -2,6 +2,7 @@ import { sql, relations } from 'drizzle-orm';
 import { text, integer, real, sqliteTable, unique } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 import type { SiteGoal, SiteKind } from '../types';
+import type { TrackRecord } from '../lib/track-record';
 
 // Better Auth's tables live in auth-schema.ts; app tables reference user.id.
 export * from './auth-schema';
@@ -211,6 +212,23 @@ export const atmosphericProfilesCache = sqliteTable(
     uniqueLocationDate: unique().on(table.locationKey, table.fetchDate),
   }),
 );
+
+// A forecast's track record at an airport (src/lib/track-record.ts), shared by
+// every site near it and recomputed monthly.
+export const forecastTrackRecords = sqliteTable('forecast_track_records', {
+  stationId: text('station_id').primaryKey(), // ICAO code
+  record: text('record', { mode: 'json' }).notNull().$type<TrackRecord>(),
+  computedAt: integer('computed_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Which airport a place's track record comes from; stationId null when no
+// airport within reach has enough reports.
+export const trackRecordLocations = sqliteTable('track_record_locations', {
+  locationKey: text('location_key').primaryKey(), // "lat,lng" rounded to 2 decimals
+  stationId: text('station_id'),
+  distanceKm: real('distance_km'),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+});
 
 // Export types for use in application code
 export type LaunchSite = typeof launchSites.$inferSelect;

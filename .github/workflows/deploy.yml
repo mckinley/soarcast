@@ -74,6 +74,19 @@ jobs:
               echo "  terrain: $(curl -sS "$api/api/terrain?lat=$lat&lng=$lng" | jq -c '{elevation, suggestion}')"
             done
 
+      # Site pages show the forecast's track record at the nearest airport.
+      # Tiger's must come back from Renton or another airport with a year of
+      # days; the first request builds it (Open-Meteo, the METAR archive).
+      - name: Smoke test the forecast track record
+        run: |
+          status=$(curl -sS -m 90 -o record.json -w '%{http_code}' \
+            "https://soarcast.mckinleyaviation.com/api/track-record?lat=47.4995&lng=-122.009")
+          echo "HTTP $status"
+          jq -c '{station: .record.station, distanceKm, from: .record.from, to: .record.to,
+                  months: [.record.months[] | {month, days, rainForecastDays, rainSeenDays, rainBothDays}]}' record.json
+          test "$status" = 200
+          jq -e '([.record.months[].days] | add) > 200' record.json
+
       # Starting a sign-in writes to the database, so this catches a broken
       # database as well as a missing OAuth client id. Google is printed only.
       - name: Smoke test sign-in

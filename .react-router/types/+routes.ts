@@ -23,6 +23,9 @@ type Pages = {
   "/api/weather/profile": {
     params: {};
   };
+  "/api/track-record": {
+    params: {};
+  };
   "/sites/custom/:id": {
     params: {
       "id": string;
@@ -72,7 +75,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -85,6 +88,10 @@ type RouteFiles = {
   "routes/api.weather.profile.tsx": {
     id: "routes/api.weather.profile";
     page: "/api/weather/profile";
+  };
+  "routes/api.track-record.tsx": {
+    id: "routes/api.track-record";
+    page: "/api/track-record";
   };
   "routes/sites.custom.$id.tsx": {
     id: "routes/sites.custom.$id";
@@ -149,6 +156,7 @@ type RouteModules = {
   "routes/api.notifications.subscribe": typeof import("./app/routes/api.notifications.subscribe.tsx");
   "routes/api.notifications.check": typeof import("./app/routes/api.notifications.check.tsx");
   "routes/api.weather.profile": typeof import("./app/routes/api.weather.profile.tsx");
+  "routes/api.track-record": typeof import("./app/routes/api.track-record.tsx");
   "routes/sites.custom.$id": typeof import("./app/routes/sites.custom.$id.tsx");
   "routes/api.sites.near": typeof import("./app/routes/api.sites.near.tsx");
   "routes/sites.browse": typeof import("./app/routes/sites.browse.tsx");
