@@ -331,7 +331,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             ),
           );
           const areas = [...new Set(members.map((l) => l.dest.area))];
-          const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+          const count = (n: number, one: string) =>
+            `${n} ${one}${n === 1 ? '' : one.endsWith('h') ? 'es' : 's'}`;
           const parts = members.map(launchRow).sort(byRank);
           return [
             {
