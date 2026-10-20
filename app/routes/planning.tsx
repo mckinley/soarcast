@@ -24,9 +24,10 @@ import {
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { pgsitesSlug } from '~/lib/pgsites-client';
-import { DESTINATION_BY_SLUG } from '~/lib/destinations';
-import { decodeSeasonDays, seasonMonths } from '~/lib/seasons';
+import { AREA_BY_SLUG, DESTINATION_BY_SLUG, type Destination } from '~/lib/destinations';
+import { anyGoShares, decodeSeasonDays, type SeasonDay } from '~/lib/seasons';
 import { GOAL_LABEL } from '~/lib/site-goals';
+import type { SiteSeason } from '~/db/schema';
 import type { Site } from '~/types';
 import { CompName, CompRow } from '@/components/site-comps';
 import { CompsCredit } from '@/components/data-credits';
@@ -75,6 +76,10 @@ type RegionFilter = Region | 'all';
 const GOALS = { soar: 'Soaring days', great: 'Great days' } as const;
 type WhereGoal = keyof typeof GOALS;
 
+/** Where to fly ranks flying areas, or whole countries. */
+const GROUPS = { area: 'Areas', country: 'Countries' } as const;
+type Group = keyof typeof GROUPS;
+
 // Left out of links when they're the value
 const DEFAULT_FILTERS: Record<string, string> = {
   view: 'where',
@@ -82,6 +87,7 @@ const DEFAULT_FILTERS: Record<string, string> = {
   level: 'all',
   region: 'all',
   goal: 'soar',
+  by: 'area',
 };
 
 type Query = Record<string, string>;
@@ -92,7 +98,9 @@ function pick<T extends string>(value: string | null, options: Record<T, unknown
 
 function planningHref(query: Query, change: Record<string, string>): string {
   const params = new URLSearchParams(
-    Object.entries({ ...query, ...change }).filter(([k, v]) => v !== DEFAULT_FILTERS[k]),
+    Object.entries({ ...query, ...change }).filter(
+      ([k, v]) => v !== '' && v !== DEFAULT_FILTERS[k],
+    ),
   );
   return params.size > 0 ? `/planning?${params}` : '/planning';
 }
@@ -123,11 +131,13 @@ export interface PlanningComp extends Comp {
   nearSite: { name: string; href: string } | null;
 }
 
-/** A destination or favorite site across the window. */
+/** A flying area, country, launch or favorite site across the window. */
 interface PlaceRow {
   key: string;
   name: string;
   href: string;
+  /** An area or country: its launches, best first, each with its share over the window */
+  parts?: Array<{ name: string; href: string; share: number }>;
   /** Under the name: the country, or the site's goal */
   detail: string;
   flag: string | null;
@@ -166,6 +176,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const level = pick<Level>(q.get('level'), LEVELS, 'all');
   const region = pick<RegionFilter>(q.get('region'), REGIONS, 'all');
   const goal = pick<WhereGoal>(q.get('goal'), GOALS, 'soar');
+  const by = pick<Group>(q.get('by'), GROUPS, 'area');
+  // Where to fly opened on one area or country lists its launches
+  const inArea = AREA_BY_SLUG.has(q.get('area') ?? '') ? q.get('area')! : null;
+  const inCountry = inArea ? null : (/^[a-z]{2}$/.exec(q.get('country') ?? '')?.[0] ?? null);
 
   // The window: any month from now to YEARS_AHEAD out, for a month to two years
   const fromParam = q.get('from');
@@ -193,6 +207,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (region !== 'all') query.region = region;
   if (kind !== 'flying') query.kind = kind;
   if (level !== 'all') query.level = level;
+  if (by !== 'area') query.by = by;
+  if (inArea) query.area = inArea;
+  if (inCountry) query.country = inCountry;
 
   const [comps, session] = await Promise.all([
     compsWorldwide(env, { from: compsFrom, to: compsTo, disciplines: KINDS[kind].disciplines }),
@@ -259,41 +276,98 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .sort(byRank);
   }
 
+  let opened: { name: string; launches: number } | null = null;
   if (view === 'where') {
     const rows = await destinationSeasons(db);
     destinationsRated = rows.length;
-    places = rows
-      .flatMap((row): PlaceRow[] => {
-        const dest = DESTINATION_BY_SLUG.get(row.destination ?? '');
-        if (!dest) return [];
-        if (region !== 'all' && countryRegion(row.countryCode) !== region) return [];
-        const days = decodeSeasonDays(row.days);
-        const byMonth = {
-          soar: seasonMonths(days, 'soar'),
-          great: seasonMonths(days, 'great'),
-        };
-        const shareIn = (g: WhereGoal, m: string) => byMonth[g][Number(m.slice(5, 7)) - 1].goShare;
-        const shares = months.map((m) => shareIn(goal, m));
-        const otherGoal: WhereGoal = goal === 'great' ? 'soar' : 'great';
-        const pgsitesId = row.siteRef.replace(/^pg:/, '');
-        return [
-          {
-            key: dest.slug,
-            name: dest.name,
-            href: `/sites/${pgsitesSlug(row.name ?? dest.name, pgsitesId)}`,
-            detail: countryName(row.countryCode) ?? '',
-            flag: countryFlag(row.countryCode),
-            shares,
-            avg: mean(shares),
-            comps: compsByMonth(row.latitude, row.longitude),
-            other: {
-              label: otherGoal === 'great' ? 'great' : 'soar',
-              share: mean(months.map((m) => shareIn(otherGoal, m))),
+    const launches = rows.flatMap((row) => {
+      const dest = DESTINATION_BY_SLUG.get(row.destination ?? '');
+      return dest ? [{ row, dest, days: decodeSeasonDays(row.days) }] : [];
+    });
+    const otherGoal: WhereGoal = goal === 'great' ? 'soar' : 'great';
+    const otherLabel = otherGoal === 'great' ? 'great' : 'soar';
+    /** Go share in each window month, from calendar-month shares. */
+    const inWindow = (byCal: number[]) => months.map((m) => byCal[Number(m.slice(5, 7)) - 1]);
+
+    const launchRow = (l: Launch): PlaceRow => {
+      const shares = inWindow(anyGoShares([l.days], goal));
+      const pgsitesId = l.row.siteRef.replace(/^pg:/, '');
+      return {
+        key: l.dest.slug,
+        name: l.dest.name,
+        href: `/sites/${pgsitesSlug(l.row.name ?? l.dest.name, pgsitesId)}`,
+        detail: countryName(l.row.countryCode) ?? '',
+        flag: countryFlag(l.row.countryCode),
+        shares,
+        avg: mean(shares),
+        comps: compsByMonth(l.row.latitude, l.row.longitude),
+        other: { label: otherLabel, share: mean(inWindow(anyGoShares([l.days], otherGoal))) },
+      };
+    };
+
+    if (inArea || inCountry) {
+      const members = launches.filter((l) =>
+        inArea ? l.dest.area === inArea : l.dest.countryCode === inCountry,
+      );
+      opened = {
+        name: inArea ? AREA_BY_SLUG.get(inArea)!.name : (countryName(inCountry) ?? inCountry!),
+        launches: members.length,
+      };
+      places = members.map(launchRow).sort(byRank);
+    } else {
+      const groups = new Map<string, Launch[]>();
+      for (const l of launches) {
+        const key = by === 'country' ? l.dest.countryCode : l.dest.area;
+        groups.set(key, [...(groups.get(key) ?? []), l]);
+      }
+      places = [...groups]
+        .flatMap(([key, members]): PlaceRow[] => {
+          const codes = [...new Set(members.map((l) => l.dest.countryCode))];
+          if (region !== 'all' && countryRegion(codes[0]) !== region) return [];
+          const shares = inWindow(
+            anyGoShares(
+              members.map((l) => l.days),
+              goal,
+            ),
+          );
+          const areas = [...new Set(members.map((l) => l.dest.area))];
+          const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+          const parts = members.map(launchRow).sort(byRank);
+          return [
+            {
+              key,
+              name:
+                by === 'country' ? (countryName(key) ?? key) : (AREA_BY_SLUG.get(key)?.name ?? key),
+              href: planningHref(query, by === 'country' ? { country: key } : { area: key }),
+              detail:
+                by === 'country'
+                  ? `${areas.length === 1 ? (AREA_BY_SLUG.get(areas[0])?.name ?? '') : count(areas.length, 'area')} · ${count(members.length, 'launch')}`
+                  : `${codes.map((c) => countryName(c)).join(', ')} · ${count(members.length, 'launch')}`,
+              flag: codes.map((c) => countryFlag(c)).join(' '),
+              shares,
+              avg: mean(shares),
+              comps: months.map((_, i) => uniqueComps(parts.flatMap((p) => p.comps[i]))),
+              other: {
+                label: otherLabel,
+                share: mean(
+                  inWindow(
+                    anyGoShares(
+                      members.map((l) => l.days),
+                      otherGoal,
+                    ),
+                  ),
+                ),
+              },
+              parts: parts.map((p) => ({
+                name: p.name.replace(/ \(.*\)$/, ''),
+                href: p.href,
+                share: p.avg,
+              })),
             },
-          },
-        ];
-      })
-      .sort(byRank);
+          ];
+        })
+        .sort(byRank);
+    }
   }
 
   const nearOwnSite = (c: Comp) =>
@@ -322,14 +396,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     months,
     firstMonth: thisMonth,
     lastMonth,
-    filters: { kind, level, region, goal },
+    filters: { kind, level, region, goal, by },
     comps: shown,
     failed: comps === null,
     signedIn: !!session?.user?.id,
     hasOwnSites: ownSites.length > 0,
     places,
     destinationsRated,
+    opened,
   };
+}
+
+/** A rated launch at a destination, with its days. */
+interface Launch {
+  row: SiteSeason;
+  dest: Destination;
+  days: SeasonDay[];
+}
+
+function uniqueComps(comps: Comp[]): Comp[] {
+  return [...new Map(comps.map((c) => [c.id, c])).values()];
 }
 
 /** One row of filter chips; each chip is a link, so filters work before the page hydrates. */
@@ -514,6 +600,26 @@ function PlaceName({ row }: { row: PlaceRow }) {
   );
 }
 
+/** An area's launches, best first: "Annecy 62% · Saint-Hilaire 60% · +1". */
+function PartsLine({ parts }: { parts: NonNullable<PlaceRow['parts']> }) {
+  if (parts.length < 2) return null;
+  const shown = parts.slice(0, 3);
+  return (
+    <div className="text-xs text-muted-foreground">
+      {shown.map((p, i) => (
+        <span key={p.href}>
+          {i > 0 && ' · '}
+          <Link to={p.href} className="hover:underline">
+            {p.name}
+          </Link>{' '}
+          <span className="tabular-nums">{pct(p.share)}</span>
+        </span>
+      ))}
+      {parts.length > shown.length && ` · +${parts.length - shown.length} more`}
+    </div>
+  );
+}
+
 /** Places ranked for one month, with a bar each. */
 function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
   let rank = 0;
@@ -533,6 +639,7 @@ function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
               </span>
               <div className="min-w-0">
                 <PlaceName row={row} />
+                {row.parts && <PartsLine parts={row.parts} />}
                 {row.comps[0].map((c) => (
                   <span
                     key={c.id}
@@ -676,10 +783,12 @@ export default function PlanningPage() {
     hasOwnSites,
     places,
     destinationsRated,
+    opened,
   } = useLoaderData<typeof loader>();
   const byMonth = new Map(groupByMonth(comps, months[0]).map((g) => [g.month, g.comps]));
   const atOwnSites = comps.filter((c) => c.nearSite).length;
   const when = windowLabel(months);
+  const goalWords = filters.goal === 'great' ? 'a great day (XC or a long ridge day)' : 'soarable';
 
   return (
     <div className="space-y-6">
@@ -706,31 +815,62 @@ export default function PlanningPage() {
         <>
           <div className="space-y-2">
             <FilterChips name="goal" options={GOALS} value={filters.goal} query={query} />
-            <FilterChips name="region" options={REGIONS} value={filters.region} query={query} />
+            {!opened && (
+              <>
+                <FilterChips name="by" options={GROUPS} value={filters.by} query={query} />
+                <FilterChips name="region" options={REGIONS} value={filters.region} query={query} />
+              </>
+            )}
           </div>
           {destinationsRated === 0 ? (
             <p className="text-muted-foreground">
-              The destinations&apos; last two years are being rated now. They arrive over the next
+              The flying areas&apos; last two years are being rated now. They arrive over the next
               day or two.
             </p>
           ) : (
             <div className="space-y-3">
+              {opened && (
+                <div>
+                  <Link
+                    to={planningHref(query, { area: '', country: '' })}
+                    preventScrollReset
+                    className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    All {filters.by === 'country' ? 'countries' : 'areas'}
+                  </Link>
+                  <h2 className="text-xl font-semibold">{opened.name}</h2>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
-                How often {when} was{' '}
-                {filters.goal === 'great' ? 'a great day (XC or a long ridge day)' : 'soarable'} at
-                each destination&apos;s main launch, best {months.length > 1 ? 'on average ' : ''}
-                first. A trophy marks a comp there.
+                {opened ? (
+                  <>
+                    How often {when} was {goalWords} at each of its launches, best{' '}
+                    {months.length > 1 ? 'on average ' : ''}first.
+                  </>
+                ) : (
+                  <>
+                    How often {when} was {goalWords} somewhere in each{' '}
+                    {filters.by === 'country' ? 'country' : 'area'}, at one launch or another, best{' '}
+                    {months.length > 1 ? 'on average ' : ''}first. Open one for its launches.
+                  </>
+                )}{' '}
+                A trophy marks a comp there.
               </p>
               {places.length === 0 ? (
-                <p className="text-muted-foreground">No destinations rated in this region yet.</p>
+                <p className="text-muted-foreground">Nothing rated here yet.</p>
               ) : (
-                <Places rows={places} months={months} label="Destination" />
+                <Places
+                  rows={places}
+                  months={months}
+                  label={opened ? 'Launch' : filters.by === 'country' ? 'Country' : 'Area'}
+                />
               )}
               <p className="text-xs text-muted-foreground">
-                {destinationsRated} destinations, each rated at one listed launch with its
+                {destinationsRated} launches in flying areas around the world, each rated with its
                 Paragliding Earth wind directions and SoarCast&apos;s default wind limit, on
-                archived forecasts. A launch near it can do better or worse; open the site for its
-                own season. {SEASONS_NOTE}
+                archived forecasts. An area or country counts a day as a go when any of its launches
+                was; open a launch for its own season. {SEASONS_NOTE}
               </p>
             </div>
           )}
@@ -789,9 +929,7 @@ export default function PlanningPage() {
                   <>
                     <span className="text-[11px] text-muted-foreground">
                       {monthLabel(month)}
-                      {month.endsWith('-01') || month === months[0]
-                        ? ` ’${month.slice(2, 4)}`
-                        : ''}
+                      {month.endsWith('-01') || month === months[0] ? ` ’${month.slice(2, 4)}` : ''}
                     </span>
                     <span
                       className={`text-sm font-semibold ${count ? '' : 'text-muted-foreground/50'}`}
