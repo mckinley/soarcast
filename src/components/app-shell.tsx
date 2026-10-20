@@ -47,8 +47,8 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Your year',
-    href: '/year',
+    title: 'Planning',
+    href: '/planning',
     icon: CalendarRange,
   },
   {

@@ -95,7 +95,7 @@ export default function CustomSiteDetailPage() {
         <h1 className="text-3xl font-bold">{site.name}</h1>
         <p className="text-muted-foreground mt-1 inline-flex items-center gap-1.5">
           <Lock className="h-4 w-4" />
-          Your site. Only you can see it.
+          Private site. Only you can see it.
         </p>
       </div>
 

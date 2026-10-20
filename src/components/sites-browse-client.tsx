@@ -319,7 +319,7 @@ export function SitesBrowseClient({
                     : 'No sites found here — try panning to a different area'}
                 </p>
                 <Link to="/sites/custom/new" className="text-sm underline hover:text-primary">
-                  Not listed? Add your own site
+                  Not listed? Add a private site
                 </Link>
               </div>
             ) : (
@@ -348,7 +348,7 @@ export function SitesBrowseClient({
               {isSearchMode ? 'No sites match your search' : 'Pan or zoom the map to explore sites'}
             </p>
             <Link to="/sites/custom/new" className="inline-block underline hover:text-primary">
-              Not listed? Add your own site
+              Not listed? Add a private site
             </Link>
           </div>
         ) : (

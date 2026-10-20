@@ -101,7 +101,7 @@ export function SeasonCard({
         <p className="text-sm text-muted-foreground">
           {followed
             ? 'Coming soon: SoarCast is rating this site’s last two years, month by month. It runs twice a day, so check back tomorrow.'
-            : 'Follow this site to see its best months: SoarCast then rates its last two years, month by month.'}
+            : 'Add this site to Favorites to see its best months: SoarCast then rates its last two years, month by month.'}
         </p>
       </Card>
     );
@@ -117,7 +117,7 @@ export function SeasonCard({
       <div>
         <h2 className="text-lg font-semibold">Season</h2>
         <p className="text-sm text-muted-foreground">
-          Days that were a go for your goal ({GOAL_LABEL[goal].toLowerCase()}), by month.
+          Days that were a go ({GOAL_LABEL[goal].toLowerCase()}), by month.
         </p>
       </div>
 
@@ -128,7 +128,7 @@ export function SeasonCard({
             {Math.round(season.best.share * 100)}% of days.
           </>
         ) : (
-          'No month here was a go for your goal in the last two years.'
+          `No month here was a go (${GOAL_LABEL[goal].toLowerCase()}) in the last two years.`
         )}
       </p>
 
@@ -213,11 +213,11 @@ export function SeasonCard({
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <li className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-sm ${GO_FILL}`} />
-          Go for your goal
+          Go: {GOAL_LABEL[goal].toLowerCase()}
         </li>
         <li className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-sm ${FLYABLE_FILL}`} />
-          Flyable, but less than your goal
+          Flyable, but less than that
         </li>
         {compMonths.some((n) => n > 0) && (
           <li className="flex items-center gap-1.5">
@@ -266,7 +266,7 @@ export function SeasonCard({
         today&apos;s forecast is, on archived forecasts. Two years is enough to see the seasons but
         one odd year still moves a month.
         {!season.sameSettings &&
-          ' These use the settings the site had when it was rated; yours come with the next update.'}
+          ' These use the settings the site had when it was rated; the current ones come with the next update.'}
       </p>
     </Card>
   );

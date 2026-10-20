@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 export function meta() {
-  return [{ title: 'Add your own site | SoarCast' }];
+  return [{ title: 'Add a private site | SoarCast' }];
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -49,7 +49,7 @@ export default function NewCustomSitePage() {
         </Link>
       </Button>
       <div>
-        <h1 className="text-3xl font-bold">Add your own site</h1>
+        <h1 className="text-3xl font-bold">Add a private site</h1>
         <p className="text-muted-foreground mt-1">
           Pin a launch that isn&apos;t listed, like a hike-and-fly peak. Only you can see it, and
           SoarCast rates it and sends alerts for it like any site you follow.

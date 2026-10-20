@@ -64,8 +64,8 @@ describe('digestTitle', () => {
         { name: 'B', status: 'go' },
         { name: 'C', status: 'no' },
       ]),
-    ).toBe('Go today at 2 of your 3 sites');
-    expect(digestTitle([{ name: 'A', status: 'flyable' }])).toBe('No go today at your sites');
+    ).toBe('Go today at 2 of 3 sites');
+    expect(digestTitle([{ name: 'A', status: 'flyable' }])).toBe('No go today at any favorite site');
   });
 });
 
