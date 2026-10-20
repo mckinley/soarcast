@@ -106,7 +106,37 @@ export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult
   return { gate: 'gusts', status: 'pass' };
 }
 
-export function rainGate(c: LaunchConditions): GateResult {
+/**
+ * How far the model's rain can be taken at its word. Global models rain a
+ * little on most days in the tropics, and little of it falls: at Colombian
+ * and Thai airports in 2024-26, the model SoarCast uses forecast rain in
+ * the flying hours on 84 to 95% of dry-season days, the airports saw some
+ * on 3 to 33%, and even an hour forecast at 3 mm/h saw rain within an hour
+ * either side only a quarter to a third of the time, in the rainy seasons
+ * too. In Washington forecast rain came true on three days in four.
+ */
+export type RainTrust = 'trusted' | 'low';
+
+const TROPICS_LATITUDE = 23.5;
+/** Where model rain is little trusted, this much in an hour still makes a shower worth watching for. */
+export const SHOWER_MM = 3;
+
+export function rainTrust(latitude: number): RainTrust {
+  return Math.abs(latitude) < TROPICS_LATITUDE ? 'low' : 'trusted';
+}
+
+export function rainGate(c: LaunchConditions, trust: RainTrust = 'trusted'): GateResult {
+  if (trust === 'low') {
+    // Light model rain and the chance of rain say little here
+    if ((c.precipitation ?? 0) >= SHOWER_MM) {
+      return {
+        gate: 'rain',
+        status: 'marginal',
+        reason: `Showers possible (${c.precipitation} mm/h)`,
+      };
+    }
+    return { gate: 'rain', status: 'pass' };
+  }
   if ((c.precipitation ?? 0) >= 0.3 || c.precipitationProbability >= 60) {
     return { gate: 'rain', status: 'fail', reason: rainReason(c) };
   }
@@ -203,10 +233,11 @@ export function evaluateGates(
   launch: LaunchProfile,
   sunrise?: string,
   sunset?: string,
+  trust: RainTrust = 'trusted',
 ): GateResult[] {
   return [
     daylightGate(c, sunrise, sunset),
-    rainGate(c),
+    rainGate(c, trust),
     stormGate(c),
     cloudGate(c, launch),
     visibilityGate(c),

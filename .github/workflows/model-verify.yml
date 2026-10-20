@@ -10,6 +10,12 @@ on:
     branches: ['claude/forecast-accuracy-1hi2gc']
     paths: ['scripts/verify/**', '.github/workflows/model-verify.yml']
   workflow_dispatch:
+    inputs:
+      set:
+        description: 'Which seasons to pull: dry (flying seasons) or wet (rainy seasons)'
+        default: dry
+        type: choice
+        options: [dry, wet]
 
 permissions:
   contents: write
@@ -23,7 +29,7 @@ jobs:
       - name: Pull forecasts
         env:
           VERIFY_OUT: verify-out
-          VERIFY_SET: wet
+          VERIFY_SET: ${{ inputs.set || 'dry' }}
         run: |
           mkdir -p verify-out
           cd scripts/verify && VERIFY_OUT=../../verify-out python3 pull_forecasts.py
