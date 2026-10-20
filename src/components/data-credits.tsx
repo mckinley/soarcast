@@ -63,3 +63,25 @@ export function SiteSourceCredit({
     </p>
   );
 }
+
+/** Where comps come from; their own pages have the final dates and entry. */
+export function CompsCredit({ className = '' }: { className?: string }) {
+  return (
+    <p className={`text-xs text-muted-foreground ${className}`}>
+      Comps from the{' '}
+      <a
+        href="https://www.fai.org/commission/civl"
+        className={link}
+        target="_blank"
+        rel="noreferrer"
+      >
+        FAI sporting calendar
+      </a>{' '}
+      and the{' '}
+      <a href="https://pwca.org" className={link} target="_blank" rel="noreferrer">
+        Paragliding World Cup
+      </a>
+      . Dates and places can change: check the comp&apos;s own page before you plan around it.
+    </p>
+  );
+}

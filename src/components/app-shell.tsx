@@ -2,7 +2,17 @@
 
 import * as React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Cloud, Bell, LayoutDashboard, Menu, Sun, Moon, LogOut, Compass } from 'lucide-react';
+import {
+  Cloud,
+  Bell,
+  LayoutDashboard,
+  Menu,
+  Sun,
+  Moon,
+  LogOut,
+  Compass,
+  CalendarRange,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { authClient } from '~/app/lib/auth-client';
 
@@ -35,6 +45,11 @@ const navItems = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Your year',
+    href: '/year',
+    icon: CalendarRange,
   },
   {
     title: 'Browse Sites',

@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { addDays } from '@/lib/alert-schedule';
 import { flightSummary } from '@/lib/forecast-engine';
 import { GOAL_LABEL } from '@/lib/site-goals';
+import { compDates, compsOn, type Comp } from '@/lib/comps';
+import { Trophy } from 'lucide-react';
 import {
   STATUS_BADGE,
   STATUS_DOT,
@@ -26,6 +28,8 @@ interface SiteCardProps {
   siteType: 'launch' | 'custom';
   slug?: string; // For launch sites
   error?: string;
+  /** Comps held at the site this week */
+  comps?: Comp[];
   className?: string;
 }
 
@@ -49,6 +53,7 @@ export function SiteCard({
   siteType,
   slug,
   error,
+  comps = [],
   className = '',
 }: SiteCardProps) {
   const [thumbnailData, setThumbnailData] = useState<AtmosphericProfile | null>(null);
@@ -59,8 +64,9 @@ export function SiteCard({
   const todayScore = scores.find((s) => s.date === today);
   const week = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(today, i);
-    return { date, score: scores.find((s) => s.date === date) };
+    return { date, score: scores.find((s) => s.date === date), comp: compsOn(comps, date)[0] };
   });
+  const weekComp = week.find((d) => d.comp)?.comp;
 
   // Lazy load thumbnail data when card becomes visible
   useEffect(() => {
@@ -139,9 +145,17 @@ export function SiteCard({
             </div>
           )}
         </div>
-        <p className="mb-3 text-sm text-muted-foreground truncate">
+        <p className={`${weekComp ? 'mb-1' : 'mb-3'} text-sm text-muted-foreground truncate`}>
           {error ? error : todayScore ? todayLine(todayScore) : 'No forecast for today'}
         </p>
+        {weekComp && (
+          <p className="mb-3 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+            <Trophy className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              Comp {compDates(weekComp, { year: false })}: {weekComp.name}
+            </span>
+          </p>
+        )}
 
         {/* Windgram Thumbnail */}
         <div className="mb-3">
@@ -158,7 +172,7 @@ export function SiteCard({
 
         {/* The week */}
         <div className="grid grid-cols-7 gap-1" aria-label="Next 7 days">
-          {week.map(({ date, score }, i) => (
+          {week.map(({ date, score, comp }, i) => (
             <div
               key={date}
               className="flex min-w-0 flex-col items-center gap-1"
@@ -168,9 +182,10 @@ export function SiteCard({
                     ? (shortReason(score) ?? STATUS_WORD.no)
                     : dayHeadline(score)
                   : 'no forecast'
-              }`}
+              }${comp ? `. Comp on: ${comp.name}` : ''}`}
             >
-              <span className="text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                {comp && <Trophy className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400" />}
                 {i === 0
                   ? 'Today'
                   : new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {

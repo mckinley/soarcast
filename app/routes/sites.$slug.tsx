@@ -24,6 +24,8 @@ import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
 import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
 import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals';
 import { SiteKindSelect } from '@/components/site-goal-picker';
+import { SiteCompsCard } from '@/components/site-comps';
+import { compsAtSite } from '~/app/lib/comps.server';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -269,6 +271,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     updatedAt: site.updatedAt,
   };
 
+  // Comps held here, fetched while the forecast loads
+  const compsPromise = compsAtSite(env, site.latitude, site.longitude);
+
   // Day verdicts for every site, local or pgsites-only
   let scores: DayScore[] | null = null;
   let today: string | null = null;
@@ -282,6 +287,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     console.error(`Forecast for ${site.name} failed:`, e);
     forecastError = true;
   }
+  const comps = await compsPromise;
 
   return {
     site,
@@ -297,6 +303,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     scores,
     today,
     forecastError,
+    comps,
+    // Without a forecast, comps split into past and coming by the UTC date
+    compsToday: today ?? new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -452,6 +461,8 @@ export default function SiteDetailPage() {
     scores,
     today,
     forecastError,
+    comps,
+    compsToday,
   } = useLoaderData<typeof loader>();
 
   return (
@@ -488,8 +499,16 @@ export default function SiteDetailPage() {
       {forecastError || !scores || !today ? (
         <ForecastUnavailable />
       ) : (
-        <SiteDetailClient site={engineSite} scores={scores} today={today} goalTarget={goalTarget} />
+        <SiteDetailClient
+          site={engineSite}
+          scores={scores}
+          today={today}
+          goalTarget={goalTarget}
+          comps={comps}
+        />
       )}
+
+      <SiteCompsCard comps={comps} today={compsToday} />
 
       {/* Location & Details — always visible */}
       <Card className="p-4 sm:p-6">

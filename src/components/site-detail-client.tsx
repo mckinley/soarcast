@@ -6,7 +6,9 @@ import { verdictSummary } from '@/lib/forecast-engine';
 import { STATUS_BADGE, STATUS_WORD, dayStatus } from '@/lib/verdict-display';
 import { SiteGoalLine, type GoalTarget } from '@/components/site-goal-picker';
 import { ForecastTrackRecord } from '@/components/forecast-track-record';
+import { CompDayNotice } from '@/components/site-comps';
 import { defaultGoal } from '@/lib/site-goals';
+import type { Comp } from '@/lib/comps';
 import type { Site, DayScore } from '@/types';
 
 interface SiteDetailClientProps {
@@ -16,6 +18,8 @@ interface SiteDetailClientProps {
   today: string;
   /** Set when the pilot follows or owns the site, so they can change its goal */
   goalTarget?: GoalTarget;
+  /** Comps held at the site, for a line when one is on this week */
+  comps?: Comp[];
 }
 
 /** Shown when Open-Meteo can't be reached and nothing is cached. */
@@ -28,7 +32,13 @@ export function ForecastUnavailable() {
   );
 }
 
-export function SiteDetailClient({ site, scores, today, goalTarget }: SiteDetailClientProps) {
+export function SiteDetailClient({
+  site,
+  scores,
+  today,
+  goalTarget,
+  comps = [],
+}: SiteDetailClientProps) {
   const todayScore = scores.find((s) => s.date === today) ?? scores[0];
   const goal = site.goal ?? defaultGoal(site.kind);
 
@@ -48,6 +58,7 @@ export function SiteDetailClient({ site, scores, today, goalTarget }: SiteDetail
             </p>
           </div>
           <SiteGoalLine target={goalTarget} goal={goal} />
+          <CompDayNotice comps={comps} today={today} />
         </Card>
       )}
 
