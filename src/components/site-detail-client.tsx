@@ -7,6 +7,8 @@ import { STATUS_BADGE, STATUS_WORD, dayStatus } from '@/lib/verdict-display';
 import { SiteGoalLine, type GoalTarget } from '@/components/site-goal-picker';
 import { ForecastTrackRecord } from '@/components/forecast-track-record';
 import { CompDayNotice } from '@/components/site-comps';
+import { TypicalWeekLine } from '@/components/season-card';
+import { addDays } from '@/lib/alert-schedule';
 import { defaultGoal } from '@/lib/site-goals';
 import type { Comp } from '@/lib/comps';
 import type { Site, DayScore } from '@/types';
@@ -20,6 +22,8 @@ interface SiteDetailClientProps {
   goalTarget?: GoalTarget;
   /** Comps held at the site, for a line when one is on this week */
   comps?: Comp[];
+  /** Go days in a typical week here at this time of year, from the site's season */
+  typicalWeek?: number | null;
 }
 
 /** Shown when Open-Meteo can't be reached and nothing is cached. */
@@ -38,9 +42,14 @@ export function SiteDetailClient({
   today,
   goalTarget,
   comps = [],
+  typicalWeek = null,
 }: SiteDetailClientProps) {
   const todayScore = scores.find((s) => s.date === today) ?? scores[0];
   const goal = site.goal ?? defaultGoal(site.kind);
+  const weekEnd = addDays(today, 6);
+  const weekGoDays = scores.filter(
+    (s) => s.date >= today && s.date <= weekEnd && dayStatus(s) === 'go',
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -58,6 +67,7 @@ export function SiteDetailClient({
             </p>
           </div>
           <SiteGoalLine target={goalTarget} goal={goal} />
+          <TypicalWeekLine weekGoDays={weekGoDays} typicalWeek={typicalWeek} />
           <CompDayNotice comps={comps} today={today} />
         </Card>
       )}

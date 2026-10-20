@@ -16,7 +16,7 @@ const CACHE_DURATION_HOURS = 3;
 // Pressure levels to fetch (hPa): every 25 hPa (about 250 m) up to 700 hPa,
 // where pilots fly, so the windgram resolves inversions and launch-height
 // wind instead of averaging over 500 m to 1 km layers.
-const PRESSURE_LEVELS = [
+export const PRESSURE_LEVELS = [
   1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 650, 600, 500,
 ] as const;
 
@@ -31,7 +31,7 @@ const SHEAR_LEVELS: readonly number[] = [1000, 950, 900, 850, 800, 700];
  */
 export const PROFILE_DAYS = 7;
 const RETRY_DELAY_MS = 1500;
-type PressureLevelValue = (typeof PRESSURE_LEVELS)[number];
+export type PressureLevelValue = (typeof PRESSURE_LEVELS)[number];
 
 /**
  * Data at a single pressure level
@@ -112,7 +112,7 @@ export interface AtmosphericProfile {
 /**
  * Open-Meteo API response structure for pressure-level data
  */
-interface OpenMeteoProfileResponse {
+export interface OpenMeteoProfileResponse {
   latitude: number;
   longitude: number;
   elevation: number;
@@ -131,7 +131,7 @@ interface OpenMeteoProfileResponse {
     wind_gusts_10m: number[];
     cloud_cover: number[];
     cape: number[];
-    precipitation_probability: number[];
+    precipitation_probability?: number[];
     boundary_layer_height: (number | null)[];
     convective_inhibition: (number | null)[];
     lifted_index: (number | null)[];
@@ -142,9 +142,11 @@ interface OpenMeteoProfileResponse {
     visibility?: (number | null)[];
   } & {
     // Pressure-level parameters: one series per level and parameter
-    [K in `${'temperature' | 'wind_speed' | 'wind_direction' | 'relative_humidity' | 'geopotential_height'}_${PressureLevelValue}hPa`]: number[];
+    [K in `${'temperature' | 'wind_speed' | 'wind_direction' | 'geopotential_height'}_${PressureLevelValue}hPa`]: number[];
   } & {
-    [K in `cloud_cover_${PressureLevelValue}hPa`]: (number | null)[];
+    [K in `relative_humidity_${PressureLevelValue}hPa`]?: number[];
+  } & {
+    [K in `cloud_cover_${PressureLevelValue}hPa`]?: (number | null)[];
   };
 }
 
@@ -447,132 +449,147 @@ export async function fetchAtmosphericProfile(
     }
 
     const data: OpenMeteoProfileResponse = await response.json();
-
-    // Calculate expiration time (current time + 3 hours)
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + CACHE_DURATION_HOURS * 60 * 60 * 1000);
-
-    // Process each hour
-    const hours: AtmosphericHour[] = data.hourly.time.map((time, idx) => {
-      // Build pressure levels array
-      const pressureLevels: PressureLevel[] = PRESSURE_LEVELS.map((pressure) => ({
-        pressure,
-        temperature: data.hourly[`temperature_${pressure}hPa`][idx],
-        windSpeed: data.hourly[`wind_speed_${pressure}hPa`][idx],
-        windDirection: data.hourly[`wind_direction_${pressure}hPa`][idx],
-        relativeHumidity: data.hourly[`relative_humidity_${pressure}hPa`][idx],
-        geopotentialHeight: data.hourly[`geopotential_height_${pressure}hPa`][idx],
-        cloudCover: data.hourly[`cloud_cover_${pressure}hPa`][idx] ?? 0,
-      }));
-
-      // Surface data
-      const surface: SurfaceData = {
-        temperature: data.hourly.temperature_2m[idx],
-        windSpeed: data.hourly.wind_speed_10m[idx],
-        windDirection: data.hourly.wind_direction_10m[idx],
-        windGusts: data.hourly.wind_gusts_10m[idx],
-        cloudCover: data.hourly.cloud_cover[idx],
-        cape: data.hourly.cape[idx],
-        precipitationProbability: data.hourly.precipitation_probability[idx],
-        boundaryLayerHeight: data.hourly.boundary_layer_height[idx],
-        convectiveInhibition: data.hourly.convective_inhibition[idx],
-        liftedIndex: data.hourly.lifted_index[idx],
-        shortwaveRadiation: data.hourly.shortwave_radiation[idx],
-        dewPoint: data.hourly.dew_point_2m?.[idx] ?? null,
-        precipitation: data.hourly.precipitation?.[idx] ?? null,
-        cloudCoverLow: data.hourly.cloud_cover_low?.[idx] ?? null,
-        visibility: data.hourly.visibility?.[idx] ?? null,
-      };
-
-      // Calculate derived parameters
-      // Use 850-700 hPa for lapse rate (typical thermal layer)
-      const level850 = pressureLevels.find((l) => l.pressure === 850);
-      const level700 = pressureLevels.find((l) => l.pressure === 700);
-
-      const lapseRate =
-        level850 && level700
-          ? calculateLapseRate(
-              level850.temperature,
-              level700.temperature,
-              level850.geopotentialHeight,
-              level700.geopotentialHeight,
-            )
-          : null;
-
-      // Cloud base above the model ground, from the surface dewpoint spread
-      const cloudBase =
-        surface.dewPoint != null
-          ? estimateCloudBaseFromDewpoint(surface.temperature, surface.dewPoint)
-          : null;
-
-      // Calculate thermal index
-      const thermalIndex = calculateThermalIndex(
-        lapseRate,
-        surface.cape,
-        surface.convectiveInhibition,
-        surface.windSpeed,
-      );
-
-      // Estimate top of lift
-      const topOfLift = estimateTopOfLift(surface.boundaryLayerHeight, cloudBase, data.elevation);
-
-      // W* (thermal updraft velocity)
-      const wStar = calculateWStar(
-        surface.boundaryLayerHeight,
-        surface.shortwaveRadiation,
-        surface.temperature,
-      );
-
-      // Freezing level (0°C isotherm)
-      const freezingLevel = calculateFreezingLevel(pressureLevels);
-
-      // Wind shear max in soaring layer
-      const windShearMax = calculateWindShearMax(pressureLevels);
-
-      // OD potential — Open-Meteo returns local times with timezone=auto
-      const localHour = parseInt(time.slice(11, 13));
-      const odPotential = calculateOdPotentialFromLocalHour(surface.cape, cloudBase, localHour);
-
-      const derived: DerivedParameters = {
-        lapseRate,
-        thermalIndex,
-        estimatedCloudBase: cloudBase,
-        estimatedTopOfLift: topOfLift,
-        wStar,
-        freezingLevel,
-        windShearMax,
-        odPotential,
-      };
-
-      return {
-        time,
-        pressureLevels,
-        surface,
-        derived,
-      };
-    });
-
-    return {
-      latitude: data.latitude,
-      longitude: data.longitude,
-      elevation: data.elevation,
-      timezone: data.timezone,
-      fetchedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      sunriseByDay: data.daily
-        ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunrise[i]]))
-        : undefined,
-      sunsetByDay: data.daily
-        ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunset[i]]))
-        : undefined,
-      hours,
-    };
+    return profileFromOpenMeteo(data);
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to fetch atmospheric profile: ${error.message}`);
     }
     throw new Error('Failed to fetch atmospheric profile: Unknown error');
   }
+}
+
+/**
+ * A profile from an Open-Meteo hourly response (the forecast API, or the
+ * historical forecast API for past days). Pressure levels the response
+ * doesn't have are left out, and humidity, level cloud and rain chance
+ * default when missing, so a smaller request still rates.
+ */
+export function profileFromOpenMeteo(
+  data: OpenMeteoProfileResponse,
+  now: Date = new Date(),
+): AtmosphericProfile {
+  const levels = PRESSURE_LEVELS.filter(
+    (pressure) => data.hourly[`temperature_${pressure}hPa`] !== undefined,
+  );
+
+  // Calculate expiration time (current time + 3 hours)
+  const expiresAt = new Date(now.getTime() + CACHE_DURATION_HOURS * 60 * 60 * 1000);
+
+  // Process each hour
+  const hours: AtmosphericHour[] = data.hourly.time.map((time, idx) => {
+    // Build pressure levels array
+    const pressureLevels: PressureLevel[] = levels.map((pressure) => ({
+      pressure,
+      temperature: data.hourly[`temperature_${pressure}hPa`][idx],
+      windSpeed: data.hourly[`wind_speed_${pressure}hPa`][idx],
+      windDirection: data.hourly[`wind_direction_${pressure}hPa`][idx],
+      relativeHumidity: data.hourly[`relative_humidity_${pressure}hPa`]?.[idx] ?? 0,
+      geopotentialHeight: data.hourly[`geopotential_height_${pressure}hPa`][idx],
+      cloudCover: data.hourly[`cloud_cover_${pressure}hPa`]?.[idx] ?? 0,
+    }));
+
+    // Surface data
+    const surface: SurfaceData = {
+      temperature: data.hourly.temperature_2m[idx],
+      windSpeed: data.hourly.wind_speed_10m[idx],
+      windDirection: data.hourly.wind_direction_10m[idx],
+      windGusts: data.hourly.wind_gusts_10m[idx],
+      cloudCover: data.hourly.cloud_cover[idx],
+      cape: data.hourly.cape[idx],
+      precipitationProbability: data.hourly.precipitation_probability?.[idx] ?? 0,
+      boundaryLayerHeight: data.hourly.boundary_layer_height[idx],
+      convectiveInhibition: data.hourly.convective_inhibition[idx],
+      liftedIndex: data.hourly.lifted_index[idx],
+      shortwaveRadiation: data.hourly.shortwave_radiation[idx],
+      dewPoint: data.hourly.dew_point_2m?.[idx] ?? null,
+      precipitation: data.hourly.precipitation?.[idx] ?? null,
+      cloudCoverLow: data.hourly.cloud_cover_low?.[idx] ?? null,
+      visibility: data.hourly.visibility?.[idx] ?? null,
+    };
+
+    // Calculate derived parameters
+    // Use 850-700 hPa for lapse rate (typical thermal layer)
+    const level850 = pressureLevels.find((l) => l.pressure === 850);
+    const level700 = pressureLevels.find((l) => l.pressure === 700);
+
+    const lapseRate =
+      level850 && level700
+        ? calculateLapseRate(
+            level850.temperature,
+            level700.temperature,
+            level850.geopotentialHeight,
+            level700.geopotentialHeight,
+          )
+        : null;
+
+    // Cloud base above the model ground, from the surface dewpoint spread
+    const cloudBase =
+      surface.dewPoint != null
+        ? estimateCloudBaseFromDewpoint(surface.temperature, surface.dewPoint)
+        : null;
+
+    // Calculate thermal index
+    const thermalIndex = calculateThermalIndex(
+      lapseRate,
+      surface.cape,
+      surface.convectiveInhibition,
+      surface.windSpeed,
+    );
+
+    // Estimate top of lift
+    const topOfLift = estimateTopOfLift(surface.boundaryLayerHeight, cloudBase, data.elevation);
+
+    // W* (thermal updraft velocity)
+    const wStar = calculateWStar(
+      surface.boundaryLayerHeight,
+      surface.shortwaveRadiation,
+      surface.temperature,
+    );
+
+    // Freezing level (0°C isotherm)
+    const freezingLevel = calculateFreezingLevel(pressureLevels);
+
+    // Wind shear max in soaring layer
+    const windShearMax = calculateWindShearMax(pressureLevels);
+
+    // OD potential — Open-Meteo returns local times with timezone=auto
+    const localHour = parseInt(time.slice(11, 13));
+    const odPotential = calculateOdPotentialFromLocalHour(surface.cape, cloudBase, localHour);
+
+    const derived: DerivedParameters = {
+      lapseRate,
+      thermalIndex,
+      estimatedCloudBase: cloudBase,
+      estimatedTopOfLift: topOfLift,
+      wStar,
+      freezingLevel,
+      windShearMax,
+      odPotential,
+    };
+
+    return {
+      time,
+      pressureLevels,
+      surface,
+      derived,
+    };
+  });
+
+  return {
+    latitude: data.latitude,
+    longitude: data.longitude,
+    elevation: data.elevation,
+    timezone: data.timezone,
+    fetchedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    sunriseByDay: data.daily
+      ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunrise[i]]))
+      : undefined,
+    sunsetByDay: data.daily
+      ? Object.fromEntries(data.daily.time.map((d, i) => [d, data.daily!.sunset[i]]))
+      : undefined,
+    hours,
+  };
 }
 
 /**

@@ -26,6 +26,8 @@ import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
+import { seasonForSite, seasonSiteRef } from '~/app/lib/seasons.server';
+import { SeasonCard } from '@/components/season-card';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -287,14 +289,20 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     console.error(`Forecast for ${site.name} failed:`, e);
     forecastError = true;
   }
-  const comps = await compsPromise;
+  // Without a forecast, comps and the season go by the UTC date
+  const compsToday = today ?? new Date().toISOString().slice(0, 10);
+  const pgsitesId = localSite?.pgsitesId ?? site.id;
+  const [comps, season] = await Promise.all([
+    compsPromise,
+    seasonForSite(db, seasonSiteRef('pgsites', pgsitesId), engineSite, compsToday),
+  ]);
 
   return {
     site,
     engineSite,
     listedKind,
     ownKind: favorite?.siteKind ?? null,
-    pgsitesId: localSite?.pgsitesId ?? site.id,
+    pgsitesId,
     isFavorited: !!favorite,
     goalTarget:
       favorite && localSiteId ? { siteId: localSiteId, source: 'launch' as const } : undefined,
@@ -304,8 +312,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     today,
     forecastError,
     comps,
-    // Without a forecast, comps split into past and coming by the UTC date
-    compsToday: today ?? new Date().toISOString().slice(0, 10),
+    compsToday,
+    season,
   };
 }
 
@@ -463,6 +471,7 @@ export default function SiteDetailPage() {
     forecastError,
     comps,
     compsToday,
+    season,
   } = useLoaderData<typeof loader>();
 
   return (
@@ -505,8 +514,17 @@ export default function SiteDetailPage() {
           today={today}
           goalTarget={goalTarget}
           comps={comps}
+          typicalWeek={season?.typicalWeek ?? null}
         />
       )}
+
+      <SeasonCard
+        season={season}
+        goal={engineSite.goal ?? 'soar'}
+        today={compsToday}
+        comps={comps}
+        followed={isFavorited}
+      />
 
       <SiteCompsCard comps={comps} today={compsToday} />
 
