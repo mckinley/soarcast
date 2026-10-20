@@ -24,13 +24,22 @@ import {
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { pgsitesSlug } from '~/lib/pgsites-client';
-import { AREA_BY_SLUG, DESTINATION_BY_SLUG, type Destination } from '~/lib/destinations';
+import {
+  AREAS,
+  AREA_BY_SLUG,
+  AREA_RADIUS_KM,
+  DESTINATIONS,
+  DESTINATION_BY_SLUG,
+  type Destination,
+} from '~/lib/destinations';
 import { anyGoShares, decodeSeasonDays, type SeasonDay } from '~/lib/seasons';
 import { GOAL_LABEL } from '~/lib/site-goals';
 import type { SiteSeason } from '~/db/schema';
 import type { Site } from '~/types';
 import { CompName, CompRow } from '@/components/site-comps';
 import { CompsCredit } from '@/components/data-credits';
+import { PlanningMapWrapper } from '@/components/planning-map-wrapper';
+import type { PlanningMapPoint, PlanningMapProps } from '@/components/planning-map';
 import { ChevronLeft, ChevronRight, MapPin, Trophy } from 'lucide-react';
 
 /** How many years ahead the start month can be. */
@@ -135,7 +144,8 @@ export interface PlanningComp extends Comp {
 interface PlaceRow {
   key: string;
   name: string;
-  href: string;
+  /** Where it opens; null for a launch not rated yet */
+  href: string | null;
   /** An area or country: its launches, best first, each with its share over the window */
   parts?: Array<{ name: string; href: string; share: number }>;
   /** Under the name: the country, or the site's goal */
@@ -277,97 +287,141 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }
 
   let opened: { name: string; launches: number } | null = null;
+  let pending: string[] = [];
+  let mapPoints: PlanningMapPoint[] = [];
+  let mapExtents: PlanningMapProps['extents'] = [];
   if (view === 'where') {
     const rows = await destinationSeasons(db);
     destinationsRated = rows.length;
-    const launches = rows.flatMap((row) => {
+    const rated = new Map<string, Launch>();
+    for (const row of rows) {
       const dest = DESTINATION_BY_SLUG.get(row.destination ?? '');
-      return dest ? [{ row, dest, days: decodeSeasonDays(row.days) }] : [];
-    });
+      if (dest) rated.set(dest.slug, { row, dest, days: decodeSeasonDays(row.days) });
+    }
     const otherGoal: WhereGoal = goal === 'great' ? 'soar' : 'great';
     const otherLabel = otherGoal === 'great' ? 'great' : 'soar';
     /** Go share in each window month, from calendar-month shares. */
     const inWindow = (byCal: number[]) => months.map((m) => byCal[Number(m.slice(5, 7)) - 1]);
+    const count = (n: number, one: string) =>
+      `${n} ${one}${n === 1 ? '' : one.endsWith('h') ? 'es' : 's'}`;
+    const inRegion = (d: Destination) =>
+      region === 'all' || countryRegion(d.countryCode) === region;
 
-    const launchRow = (l: Launch): PlaceRow => {
-      const shares = inWindow(anyGoShares([l.days], goal));
-      const pgsitesId = l.row.siteRef.replace(/^pg:/, '');
+    /** A launch, rated or not yet. */
+    const launchRow = (dest: Destination): PlaceRow => {
+      const l = rated.get(dest.slug);
+      const shares = l ? inWindow(anyGoShares([l.days], goal)) : null;
       return {
-        key: l.dest.slug,
-        name: l.dest.name,
-        href: `/sites/${pgsitesSlug(l.row.name ?? l.dest.name, pgsitesId)}`,
-        detail: countryName(l.row.countryCode) ?? '',
-        flag: countryFlag(l.row.countryCode),
+        key: dest.slug,
+        name: dest.name,
+        href: l
+          ? `/sites/${pgsitesSlug(l.row.name ?? dest.name, l.row.siteRef.replace(/^pg:/, ''))}`
+          : null,
+        detail: countryName(dest.countryCode) ?? '',
+        flag: countryFlag(dest.countryCode),
         shares,
-        avg: mean(shares),
-        comps: compsByMonth(l.row.latitude, l.row.longitude),
-        other: { label: otherLabel, share: mean(inWindow(anyGoShares([l.days], otherGoal))) },
+        avg: shares ? mean(shares) : 0,
+        comps: compsByMonth(l?.row.latitude ?? dest.latitude, l?.row.longitude ?? dest.longitude),
+        other: l
+          ? { label: otherLabel, share: mean(inWindow(anyGoShares([l.days], otherGoal))) }
+          : undefined,
       };
     };
 
+    /** Areas or countries, each a go on a day when any of its rated launches was. */
+    const groupRows = (group: Group): PlaceRow[] => {
+      const groups = new Map<string, Destination[]>();
+      for (const dest of DESTINATIONS.filter(inRegion)) {
+        const key = group === 'country' ? dest.countryCode : dest.area;
+        groups.set(key, [...(groups.get(key) ?? []), dest]);
+      }
+      return [...groups]
+        .map(([key, dests]): PlaceRow => {
+          const members = dests.flatMap((dest) => rated.get(dest.slug) ?? []);
+          const share = (g: WhereGoal) =>
+            inWindow(
+              anyGoShares(
+                members.map((l) => l.days),
+                g,
+              ),
+            );
+          const shares = members.length > 0 ? share(goal) : null;
+          const parts = dests.map(launchRow).sort(byRank);
+          const codes = [...new Set(dests.map((dest) => dest.countryCode))];
+          const areas = [...new Set(dests.map((dest) => dest.area))];
+          return {
+            key,
+            name:
+              group === 'country'
+                ? (countryName(key) ?? key)
+                : (AREA_BY_SLUG.get(key)?.name ?? key),
+            href: planningHref(query, group === 'country' ? { country: key } : { area: key }),
+            detail:
+              group === 'country'
+                ? `${areas.length === 1 ? (AREA_BY_SLUG.get(areas[0])?.name ?? '') : count(areas.length, 'area')} · ${count(dests.length, 'launch')}`
+                : `${codes.map((c) => countryName(c)).join(', ')} · ${count(dests.length, 'launch')}`,
+            flag: codes.map((c) => countryFlag(c)).join(' '),
+            shares,
+            avg: shares ? mean(shares) : 0,
+            comps: months.map((_, i) => uniqueComps(parts.flatMap((p) => p.comps[i]))),
+            other: shares ? { label: otherLabel, share: mean(share(otherGoal)) } : undefined,
+            parts: parts
+              .filter((p) => p.shares && p.href)
+              .map((p) => ({ name: p.name.replace(/ \(.*\)$/, ''), href: p.href!, share: p.avg })),
+          };
+        })
+        .sort(byRank);
+    };
+
     if (inArea || inCountry) {
-      const members = launches.filter((l) =>
-        inArea ? l.dest.area === inArea : l.dest.countryCode === inCountry,
+      const dests = DESTINATIONS.filter((dest) =>
+        inArea ? dest.area === inArea : dest.countryCode === inCountry,
       );
       opened = {
         name: inArea ? AREA_BY_SLUG.get(inArea)!.name : (countryName(inCountry) ?? inCountry!),
-        launches: members.length,
+        launches: dests.length,
       };
-      places = members.map(launchRow).sort(byRank);
+      places = dests.map(launchRow).sort(byRank);
+      mapPoints = dests.map((dest) => {
+        const row = places.find((p) => p.key === dest.slug)!;
+        return {
+          key: dest.slug,
+          name: dest.name,
+          href: row.href,
+          latitude: dest.latitude,
+          longitude: dest.longitude,
+          share: row.shares ? row.avg : null,
+          detail: row.detail,
+        };
+      });
+      mapExtents = [...new Set(dests.map((dest) => dest.area))].map((slug) => {
+        const a = AREA_BY_SLUG.get(slug)!;
+        return { key: slug, latitude: a.latitude, longitude: a.longitude };
+      });
     } else {
-      const groups = new Map<string, Launch[]>();
-      for (const l of launches) {
-        const key = by === 'country' ? l.dest.countryCode : l.dest.area;
-        groups.set(key, [...(groups.get(key) ?? []), l]);
-      }
-      places = [...groups]
-        .flatMap(([key, members]): PlaceRow[] => {
-          const codes = [...new Set(members.map((l) => l.dest.countryCode))];
-          if (region !== 'all' && countryRegion(codes[0]) !== region) return [];
-          const shares = inWindow(
-            anyGoShares(
-              members.map((l) => l.days),
-              goal,
-            ),
-          );
-          const areas = [...new Set(members.map((l) => l.dest.area))];
-          const count = (n: number, one: string) =>
-            `${n} ${one}${n === 1 ? '' : one.endsWith('h') ? 'es' : 's'}`;
-          const parts = members.map(launchRow).sort(byRank);
-          return [
-            {
-              key,
-              name:
-                by === 'country' ? (countryName(key) ?? key) : (AREA_BY_SLUG.get(key)?.name ?? key),
-              href: planningHref(query, by === 'country' ? { country: key } : { area: key }),
-              detail:
-                by === 'country'
-                  ? `${areas.length === 1 ? (AREA_BY_SLUG.get(areas[0])?.name ?? '') : count(areas.length, 'area')} · ${count(members.length, 'launch')}`
-                  : `${codes.map((c) => countryName(c)).join(', ')} · ${count(members.length, 'launch')}`,
-              flag: codes.map((c) => countryFlag(c)).join(' '),
-              shares,
-              avg: mean(shares),
-              comps: months.map((_, i) => uniqueComps(parts.flatMap((p) => p.comps[i]))),
-              other: {
-                label: otherLabel,
-                share: mean(
-                  inWindow(
-                    anyGoShares(
-                      members.map((l) => l.days),
-                      otherGoal,
-                    ),
-                  ),
-                ),
-              },
-              parts: parts.map((p) => ({
-                name: p.name.replace(/ \(.*\)$/, ''),
-                href: p.href,
-                share: p.avg,
-              })),
-            },
-          ];
-        })
-        .sort(byRank);
+      const areaRows = groupRows('area');
+      const rows = by === 'country' ? groupRows('country') : areaRows;
+      // The ones not rated yet read as one line under the ranking
+      places = rows.filter((row) => row.shares);
+      pending = rows.filter((row) => !row.shares).map((row) => row.name);
+      // The map always shows the areas: how the world is divided up here
+      mapPoints = areaRows.map((row) => {
+        const a = AREA_BY_SLUG.get(row.key)!;
+        return {
+          key: row.key,
+          name: row.name,
+          href: row.href,
+          latitude: a.latitude,
+          longitude: a.longitude,
+          share: row.shares ? row.avg : null,
+          detail: row.detail,
+        };
+      });
+      mapExtents = mapPoints.map((p) => ({
+        key: p.key,
+        latitude: p.latitude,
+        longitude: p.longitude,
+      }));
     }
   }
 
@@ -405,10 +459,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     places,
     destinationsRated,
     opened,
+    pending,
+    mapPoints,
+    mapExtents,
   };
 }
 
-/** A rated launch at a destination, with its days. */
+/** A rated travel launch, with its days. */
 interface Launch {
   row: SiteSeason;
   dest: Destination;
@@ -567,7 +624,7 @@ const pct = (share: number) => `${Math.round(share * 100)}%`;
 
 const PENDING = 'Being rated: its last two years arrive within a day.';
 
-function ShareLegend() {
+function ShareLegend({ pending = false }: { pending?: boolean }) {
   return (
     <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <li>Share of days a go:</li>
@@ -583,6 +640,12 @@ function ShareLegend() {
           {label}
         </li>
       ))}
+      {pending && (
+        <li className="flex items-center gap-1">
+          <span className="h-3 w-4 rounded-sm border border-dashed border-muted-foreground" />
+          not rated yet
+        </li>
+      )}
     </ul>
   );
 }
@@ -590,9 +653,13 @@ function ShareLegend() {
 function PlaceName({ row }: { row: PlaceRow }) {
   return (
     <>
-      <Link to={row.href} className="block truncate text-sm font-medium hover:underline">
-        {row.name}
-      </Link>
+      {row.href ? (
+        <Link to={row.href} className="block truncate text-sm font-medium hover:underline">
+          {row.name}
+        </Link>
+      ) : (
+        <span className="block truncate text-sm font-medium">{row.name}</span>
+      )}
       <span className="text-xs text-muted-foreground">
         {row.flag ? `${row.flag} ` : ''}
         {row.detail}
@@ -785,6 +852,9 @@ export default function PlanningPage() {
     places,
     destinationsRated,
     opened,
+    pending,
+    mapPoints,
+    mapExtents,
   } = useLoaderData<typeof loader>();
   const byMonth = new Map(groupByMonth(comps, months[0]).map((g) => [g.month, g.comps]));
   const atOwnSites = comps.filter((c) => c.nearSite).length;
@@ -823,6 +893,22 @@ export default function PlanningPage() {
               </>
             )}
           </div>
+          <div className="space-y-2">
+            <div className="h-64 overflow-hidden rounded-md border sm:h-80">
+              <PlanningMapWrapper
+                points={mapPoints}
+                extents={mapExtents}
+                radiusKm={AREA_RADIUS_KM}
+              />
+            </div>
+            <ShareLegend pending />
+            <p className="text-xs text-muted-foreground">
+              Colors are the share of days a go across {when}. The {AREAS.length} flying areas are a
+              hand-picked list of trip destinations, not a standard division of the world: each is a
+              few well-known launches within {AREA_RADIUS_KM} km of its middle, close enough to fly
+              from one base. A place that isn&apos;t on the map isn&apos;t on the list yet.
+            </p>
+          </div>
           {destinationsRated === 0 ? (
             <p className="text-muted-foreground">
               The flying areas&apos; last two years are being rated now. They arrive over the next
@@ -858,20 +944,27 @@ export default function PlanningPage() {
                 )}{' '}
                 A trophy marks a comp there.
               </p>
-              {places.length === 0 ? (
-                <p className="text-muted-foreground">Nothing rated here yet.</p>
-              ) : (
+              {places.length > 0 && (
                 <Places
                   rows={places}
                   months={months}
                   label={opened ? 'Launch' : filters.by === 'country' ? 'Country' : 'Area'}
                 />
               )}
+              {places.length === 0 && pending.length === 0 && (
+                <p className="text-muted-foreground">Nothing rated here yet.</p>
+              )}
+              {pending.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Not rated yet, arriving within a day: {pending.join(', ')}.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                {destinationsRated} launches in flying areas around the world, each rated with its
-                Paragliding Earth wind directions and SoarCast&apos;s default wind limit, on
-                archived forecasts. An area or country counts a day as a go when any of its launches
-                was; open a launch for its own season. {SEASONS_NOTE}
+                {destinationsRated < DESTINATIONS.length &&
+                  `${destinationsRated} of ${DESTINATIONS.length} launches rated so far. `}
+                Each launch is rated with its Paragliding Earth wind directions and SoarCast&apos;s
+                default wind limit, on archived forecasts. An area or country counts a day as a go
+                when any of its launches was; open a launch for its own season. {SEASONS_NOTE}
               </p>
             </div>
           )}
