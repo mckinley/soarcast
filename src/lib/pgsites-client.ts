@@ -124,6 +124,72 @@ export async function getAllSites(
   return fetchApi<{ sites: PgSite[]; total: number }>(apiKey, '/api/sites', params);
 }
 
+/** A paragliding comp: FAI's calendar (CIVL Category 1 and 2) plus World Cup rounds. Dates are YYYY-MM-DD, end inclusive. */
+export interface PgComp {
+  id: string;
+  source: 'fai' | 'curated';
+  name: string;
+  start_date: string;
+  end_date: string;
+  place: string;
+  country_code: string | null;
+  category: 1 | 2 | null;
+  discipline: 'xc' | 'hike-fly' | 'accuracy' | 'acro';
+  series: 'pwc' | 'pre-pwc' | null;
+  url: string | null;
+  source_url: string | null;
+  /** The comp's place; null when it couldn't be placed */
+  latitude: number | null;
+  longitude: number | null;
+  /** Only from compsNear */
+  distance_km?: number;
+}
+
+export interface CompQuery {
+  /** Comps overlapping from..to (YYYY-MM-DD); pgsites defaults to today on */
+  from?: string;
+  to?: string;
+  disciplines?: PgComp['discipline'][];
+  limit?: number;
+}
+
+function compParams(q: CompQuery): Record<string, string | number> {
+  const params: Record<string, string | number> = {};
+  if (q.from) params.from = q.from;
+  if (q.to) params.to = q.to;
+  if (q.disciplines?.length) params.discipline = q.disciplines.join(',');
+  if (q.limit !== undefined) params.limit = q.limit;
+  return params;
+}
+
+/** Comps worldwide, earliest first. */
+export async function getComps(
+  apiKey: string,
+  q: CompQuery & { country?: string } = {},
+): Promise<PgComp[]> {
+  const params = compParams(q);
+  if (q.country) params.country = q.country;
+  const result = await fetchApi<{ comps: PgComp[] }>(apiKey, '/api/comps', params);
+  return result.comps;
+}
+
+/** Comps held within `radiusKm` of a point, earliest first; from 2015 gives a place's history. */
+export async function compsNear(
+  apiKey: string,
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  q: CompQuery = {},
+): Promise<PgComp[]> {
+  const result = await fetchApi<{ comps: PgComp[] }>(apiKey, '/api/comps/near', {
+    lat,
+    lng,
+    radius: radiusKm,
+    ...compParams(q),
+  });
+  return result.comps;
+}
+
 /** The site page slug for a pgsites site: name, then `--` and its UUID (see sites.$slug). */
 export function pgsitesSlug(name: string, id: string): string {
   const nameSlug = name

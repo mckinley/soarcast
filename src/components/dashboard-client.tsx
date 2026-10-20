@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
 import type { DayScore, Settings } from '@/types';
 import { addDays } from '@/lib/alert-schedule';
+import { compsOn } from '@/lib/comps';
 import {
   STATUS_BADGE,
   STATUS_DOT,
@@ -224,7 +225,7 @@ export function DashboardClient({
         {/* Card View */}
         <TabsContent value="cards" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.map(({ site, scores, today, siteType, slug, error }) => (
+            {data.map(({ site, scores, today, siteType, slug, error, comps }) => (
               <SiteCard
                 key={site.id}
                 site={site}
@@ -233,6 +234,7 @@ export function DashboardClient({
                 siteType={siteType}
                 slug={slug}
                 error={error}
+                comps={comps}
               />
             ))}
           </div>
@@ -258,7 +260,7 @@ export function DashboardClient({
                 </tr>
               </thead>
               <tbody>
-                {data.map(({ site, scores, siteType, slug, error }) => {
+                {data.map(({ site, scores, siteType, slug, error, comps }) => {
                   const href = siteHref(siteType, slug, site.id);
                   return (
                     <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
@@ -279,6 +281,7 @@ export function DashboardClient({
                               score={score}
                               showNotification={showNotification}
                               href={score ? href : undefined}
+                              comp={compsOn(comps, date)[0]}
                             />
                           </td>
                         );

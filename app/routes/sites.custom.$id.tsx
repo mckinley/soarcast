@@ -12,6 +12,8 @@ import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { DirectionLegend, LaunchDirectionPicker } from '@/components/launch-direction-picker';
 import { ElevationDisplay } from '@/components/elevation-display';
 import { SiteKindSelect } from '@/components/site-goal-picker';
+import { SiteCompsCard } from '@/components/site-comps';
+import { compsAtSite } from '~/app/lib/comps.server';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, Pencil } from 'lucide-react';
@@ -37,6 +39,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   }
   const site = customSiteToSite(customSite);
 
+  // Comps held here, fetched while the forecast loads
+  const compsPromise = compsAtSite(env, site.latitude, site.longitude);
+
   let scores: DayScore[] | null = null;
   let today: string | null = null;
   let forecastError = false;
@@ -50,11 +55,13 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     forecastError = true;
   }
 
-  return { site, scores, today, forecastError };
+  // Without a forecast, comps split into past and coming by the UTC date
+  const compsToday = today ?? new Date().toISOString().slice(0, 10);
+  return { site, scores, today, forecastError, comps: await compsPromise, compsToday };
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, scores, today, forecastError } = useLoaderData<typeof loader>();
+  const { site, scores, today, forecastError, comps, compsToday } = useLoaderData<typeof loader>();
 
   return (
     <div className="space-y-6">
@@ -94,8 +101,11 @@ export default function CustomSiteDetailPage() {
           scores={scores}
           today={today}
           goalTarget={{ siteId: site.id, source: 'custom' }}
+          comps={comps}
         />
       )}
+
+      <SiteCompsCard comps={comps} today={compsToday} />
 
       {/* Location & Details — always visible */}
       <Card className="p-4 sm:p-6">

@@ -13,6 +13,9 @@ import type { Site, DayScore } from '~/types';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
+import { compsWorldwide } from '~/app/lib/comps.server';
+import { addDays } from '~/lib/alert-schedule';
+import { compsAround, type Comp } from '~/lib/comps';
 
 export interface SiteForecastData {
   site: Site;
@@ -22,6 +25,8 @@ export interface SiteForecastData {
   siteType: 'launch' | 'custom';
   slug?: string;
   error?: string;
+  /** Comps held at the site this week */
+  comps: Comp[];
 }
 
 /** Forecasts fetched at once: Open-Meteo rate-limits bursts. */
@@ -76,11 +81,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];
 
+  // This week's comps anywhere, fetched while the forecasts load; each site keeps its own
+  const utcToday = new Date().toISOString().slice(0, 10);
+  const weekComps =
+    allSites.length > 0
+      ? compsWorldwide(env, { from: addDays(utcToday, -1), to: addDays(utcToday, 8) })
+      : Promise.resolve(null);
+
   // Day verdicts for every site, a few at a time
-  const data: SiteForecastData[] = await mapWithConcurrency(
+  const forecasts = await mapWithConcurrency(
     allSites,
     FORECAST_CONCURRENCY,
-    async (site) => {
+    async (site): Promise<Omit<SiteForecastData, 'comps'>> => {
       const meta = siteMetadata.get(site.id)!;
       try {
         const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
@@ -104,6 +116,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       }
     },
   );
+  const comps = (await weekComps) ?? [];
+  const data: SiteForecastData[] = forecasts.map((f) => ({
+    ...f,
+    comps: compsAround(comps, f.site.latitude, f.site.longitude),
+  }));
 
   // A pilot with no sites yet gets launches to start from on the empty dashboard
   let suggestions: SuggestedSite[] = [];

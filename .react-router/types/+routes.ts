@@ -70,12 +70,15 @@ type Pages = {
   "/settings": {
     params: {};
   };
+  "/year": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -149,6 +152,10 @@ type RouteFiles = {
     id: "routes/_auth.settings";
     page: "/settings";
   };
+  "routes/year.tsx": {
+    id: "routes/year";
+    page: "/year";
+  };
 };
 
 type RouteModules = {
@@ -171,4 +178,5 @@ type RouteModules = {
   "routes/_auth.sites.custom.new": typeof import("./app/routes/_auth.sites.custom.new.tsx");
   "routes/_auth.dashboard": typeof import("./app/routes/_auth.dashboard.tsx");
   "routes/_auth.settings": typeof import("./app/routes/_auth.settings.tsx");
+  "routes/year": typeof import("./app/routes/year.tsx");
 };
