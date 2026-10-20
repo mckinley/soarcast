@@ -1,85 +1,45 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useTheme } from 'next-themes';
 import type { AtmosphericProfile } from '@/lib/weather-profile';
-import { computeLapseRatesForHour, lapseRateToColor } from './lapse-rate-utils';
+import { lapseBand } from './lapse-rate-utils';
+import { altitudeRange, daylightHours, windgramColumn } from './windgram-data';
 
 interface WindgramThumbnailProps {
   data: AtmosphericProfile | null;
-  width?: number;
-  height?: number;
   className?: string;
 }
 
-// Altitude range for display (meters)
-const MIN_ALT_M = 0;
-const MAX_ALT_M = 5500;
-
 /**
- * SVG windgram thumbnail: lapse-rate heatmap with proportional altitude scaling.
- * No labels, no wind barbs — pure color background for dashboard cards.
- * SVG scales perfectly at any resolution with no canvas DPI tricks needed.
+ * SVG windgram thumbnail for dashboard cards: the first day's lapse-rate
+ * bands from the model ground up, in the windgram's colors, without labels
+ * or wind barbs.
  */
 export function WindgramThumbnail({ data, className = '' }: WindgramThumbnailProps) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const cells = useMemo(() => {
+    if (!data || data.hours.length === 0) return [];
+    const date = data.hours[0].time.slice(0, 10);
+    const day = data.hours.filter((h) => h.time.startsWith(date));
+    const columns = daylightHours(day, data.sunriseByDay?.[date], data.sunsetByDay?.[date]).map(
+      (h) => windgramColumn(h, data.elevation),
+    );
+    const { min, max } = altitudeRange(data);
+    const toY = (alt: number) => ((max - Math.min(max, Math.max(min, alt))) / (max - min)) * 100;
 
-  // Filter to daylight hours (6 AM – 8 PM) of the first available day
-  const daylightHours = useMemo(() => {
-    if (!data) return [];
-
-    // Get the first day's date string
-    const firstDayDate = data.hours[0]?.time.split('T')[0];
-    if (!firstDayDate) return [];
-
-    return data.hours.filter((h) => {
-      const d = new Date(h.time);
-      const sameDay = h.time.startsWith(firstDayDate);
-      const hour = d.getHours();
-      return sameDay && hour >= 6 && hour <= 20;
-    });
+    return columns.flatMap((column, t) =>
+      column.layers
+        .filter((layer) => layer.bottom < max)
+        .map((layer) => ({
+          x: (t / columns.length) * 100,
+          w: 100 / columns.length + 0.3, // slight overlap to avoid gaps
+          y: toY(layer.top),
+          h: toY(layer.bottom) - toY(layer.top) + 0.3,
+          color: lapseBand(layer.rate).color,
+        })),
+    );
   }, [data]);
 
-  // Build SVG rect descriptors
-  const cells = useMemo(() => {
-    if (daylightHours.length === 0) return [];
-
-    const numHours = daylightHours.length;
-    const altRange = MAX_ALT_M - MIN_ALT_M;
-    const rects: Array<{ x: number; y: number; w: number; h: number; color: string }> = [];
-
-    for (let t = 0; t < numHours; t++) {
-      const hour = daylightHours[t];
-      const lapseRates = computeLapseRatesForHour(hour);
-      const levels = hour.pressureLevels;
-
-      // X: uniform columns
-      const x = (t / numHours) * 100; // percent of viewBox width
-      const w = 100 / numHours + 0.3; // slight overlap to avoid gaps
-
-      for (let l = 0; l < levels.length - 1; l++) {
-        const lowerAlt = levels[l].geopotentialHeight;
-        const upperAlt = levels[l + 1].geopotentialHeight;
-
-        const clampedLower = Math.max(MIN_ALT_M, Math.min(MAX_ALT_M, lowerAlt));
-        const clampedUpper = Math.max(MIN_ALT_M, Math.min(MAX_ALT_M, upperAlt));
-        if (clampedLower >= clampedUpper) continue;
-
-        // Y: proportional — top of SVG = MAX_ALT, bottom = MIN_ALT (Y inverted)
-        const yTop = ((MAX_ALT_M - clampedUpper) / altRange) * 100;
-        const yBottom = ((MAX_ALT_M - clampedLower) / altRange) * 100;
-        const h = yBottom - yTop + 0.3; // slight overlap
-
-        const color = lapseRateToColor(lapseRates[l] ?? null, isDark);
-        rects.push({ x, y: yTop, w, h, color });
-      }
-    }
-
-    return rects;
-  }, [daylightHours, isDark]);
-
-  if (!data || daylightHours.length === 0) {
+  if (!data || cells.length === 0) {
     return (
       <div className={`bg-muted rounded flex items-center justify-center h-20 ${className}`}>
         <span className="text-xs text-muted-foreground">No data</span>

@@ -57,6 +57,7 @@ export function SiteDetailClient({ site, scores, today, goalTarget }: SiteDetail
         today={today}
         days={7}
         launchElevation={site.elevation > 0 ? site.elevation : undefined}
+        maxWindSpeed={site.maxWindSpeed}
       />
     </div>
   );
