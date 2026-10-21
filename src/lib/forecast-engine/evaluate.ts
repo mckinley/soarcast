@@ -11,6 +11,7 @@ import {
   evaluateGates,
   rainGate,
   rainTrust,
+  RAIN_SOON_HOURS,
   SECTOR_HALF_WIDTH,
   THERMAL_MIN_WSTAR,
   worstStatus,
@@ -377,8 +378,22 @@ function evaluateDay(
 /** Hour-by-hour verdicts for every hour in the profile. */
 export function evaluateHours(profile: AtmosphericProfile, launch: LaunchProfile): HourVerdict[] {
   const trust = rainTrust(profile.latitude);
-  return profile.hours.map((hour) => {
-    const conditions = deriveLaunchConditions(hour, profile.elevation, launch.elevation);
+  const all = profile.hours.map((hour) =>
+    deriveLaunchConditions(hour, profile.elevation, launch.elevation),
+  );
+  // The rain from each hour to two hours on, for the storm check
+  all.forEach((c, i) => {
+    const soon = all
+      .slice(i, i + RAIN_SOON_HOURS + 1)
+      .filter((n) => n.date === c.date && n.hour - c.hour <= RAIN_SOON_HOURS);
+    c.rainSoonMm = soon.reduce<number | null>(
+      (max, n) => (n.precipitation === null ? max : Math.max(max ?? 0, n.precipitation)),
+      null,
+    );
+    c.rainSoonChance = Math.max(...soon.map((n) => n.precipitationProbability));
+  });
+  return profile.hours.map((hour, i) => {
+    const conditions = all[i];
     const gates = evaluateGates(
       conditions,
       launch,
