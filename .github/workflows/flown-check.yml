@@ -2,16 +2,19 @@ name: Flown-day check
 
 # Rates the last two years at well-flown launches and lines the ratings up
 # with the days pilots flew there (scripts/seasons/flown-check.ts), to test
-# the forecast engine against real flying. Run it on a branch to see what an
-# engine change does. Archived forecasts are cached between runs, so only
-# the first run at a launch spends Open-Meteo calls. Runs here because
-# Open-Meteo is out of reach from Claude's sandbox. Started by hand, no AI.
+# the forecast engine against real flying. A run on main saves its ratings
+# as the baseline; a run on a branch compares an engine change with it, day
+# by day. Archived forecasts are cached between runs, so only the first run
+# at a launch spends Open-Meteo calls. Only main fetches forecasts and saves
+# the cache, so every branch run starts from main's latest forecasts and
+# baseline. Runs here because Open-Meteo is out of reach from Claude's
+# sandbox. Started by hand, no AI.
 
 on:
   workflow_dispatch:
     inputs:
       budget:
-        description: 'Open-Meteo calls to spend on launches not cached yet (about 240 a launch)'
+        description: 'Open-Meteo calls to spend on launches not cached yet (about 240 a launch; main only)'
         default: '4500'
       sites:
         description: 'More pgsites launch ids, comma-separated'
@@ -46,14 +49,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          FLOWN_CALL_BUDGET: ${{ inputs.budget || '4500' }}
+          FLOWN_CALL_BUDGET: ${{ github.ref == 'refs/heads/main' && (inputs.budget || '4500') || '0' }}
           FLOWN_SITES: ${{ inputs.sites }}
+          FLOWN_BASELINE: ${{ github.ref == 'refs/heads/main' && 'save' || 'compare' }}
         run: |
           npx esbuild scripts/seasons/flown-check.ts --bundle --platform=node --format=esm --outfile=flown-tmp/check.mjs
           node flown-tmp/check.mjs
 
       - name: Save archived forecasts
-        if: always()
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: .cache/flown-check

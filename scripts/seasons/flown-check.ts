@@ -2,8 +2,9 @@
 // the season build does, and lines the days up with the days pilots flew
 // (SoarCast's /api/flown-days, from Syncing Pilots' trackers). It prints how
 // the ratings did, and for the days rated below Go, the weather the engine
-// saw. To test a change to the engine, run it on a branch and compare the
-// two logs.
+// saw. A run on main saves its ratings as the baseline. A run on a branch
+// compares its ratings with that baseline day by day: the days a change
+// moves up to Go, or down from it, and how often pilots flew them.
 //
 // Runs in the "Flown-day check" workflow: Open-Meteo is out of reach from
 // Claude's sandbox. The archived forecasts are cached in FLOWN_CACHE between
@@ -14,7 +15,8 @@
 // Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID (to find the launches in
 // pgsites); FLOWN_CACHE (default .cache/flown-check); FLOWN_CALL_BUDGET
 // (default 4500, under Open-Meteo's 5,000 an hour); FLOWN_MIN_DAYS (default
-// 10 flown days); FLOWN_SITES: more pgsites ids, comma-separated.
+// 10 flown days); FLOWN_SITES: more pgsites ids, comma-separated;
+// FLOWN_BASELINE: "save" (on main) or "compare" (on a branch).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -62,6 +64,8 @@ const EXTRA_SITES = (process.env.FLOWN_SITES ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
+const BASELINE_MODE = process.env.FLOWN_BASELINE === 'save' ? 'save' : 'compare';
+const BASELINE_FILE = `${CACHE}/baseline.json.gz`;
 const SOARCAST = 'https://soarcast.mckinleyaviation.com';
 
 /** One day's rating next to whether, and how, pilots flew it. */
@@ -293,6 +297,161 @@ function newTallies() {
   };
 }
 
+// ---------------------------------------------------------------- baseline
+
+/** One day as saved in the baseline: [status, soaring expected, flown, soared, gate or sled reason]. */
+type SavedDay = [DayStatus, 0 | 1, 0 | 1, 0 | 1, string];
+
+interface SavedLaunch {
+  name: string;
+  goRate: number;
+  soarRate: number;
+  days: Record<string, SavedDay>;
+}
+
+interface Baseline {
+  sha: string;
+  launches: Record<string, SavedLaunch>;
+}
+
+function snapshot(launches: Launch[]): Baseline {
+  const out: Baseline = { sha: (process.env.GITHUB_SHA ?? 'local').slice(0, 7), launches: {} };
+  for (const l of launches) {
+    const days: Record<string, SavedDay> = {};
+    for (const d of l.days) {
+      days[d.score.date] = [
+        d.status,
+        expectsSoaring(d) ? 1 : 0,
+        d.flown ? 1 : 0,
+        d.flown && soaringDay(d.flown) ? 1 : 0,
+        d.status !== 'go' ? (d.season.gate ?? 'other') : `sled: ${d.score.sled?.reason ?? '-'}`,
+      ];
+    }
+    out.launches[l.job.site.id] = {
+      name: l.job.name ?? '',
+      goRate: l.goRate,
+      soarRate: l.soarRate,
+      days,
+    };
+  }
+  return out;
+}
+
+/** Days that moved one way, counted by a label, with how often pilots flew them. */
+class Moves {
+  private by = new Map<string, { days: number; flown: number; expected: number }>();
+  add(label: string, flown: boolean, expected: number) {
+    for (const key of ['all', label]) {
+      const m = this.by.get(key) ?? { days: 0, flown: 0, expected: 0 };
+      m.days++;
+      if (flown) m.flown++;
+      m.expected += expected;
+      this.by.set(key, m);
+    }
+  }
+  print(title: string, unit: string) {
+    const all = this.by.get('all');
+    if (!all) return console.log(`  ${title}: none`);
+    const line = (m: { days: number; flown: number; expected: number }) =>
+      `${String(m.days).padStart(6)} days ${String(m.flown).padStart(5)} ${unit}  x${m.expected > 0 ? (m.flown / m.expected).toFixed(2) : '-'}`;
+    console.log(`  ${title}: ${line(all)}`);
+    for (const [k, m] of [...this.by]
+      .filter(([k]) => k !== 'all')
+      .sort((a, b) => b[1].days - a[1].days))
+      console.log(`    ${k.padEnd(24)} ${line(m)}`);
+  }
+}
+
+function compare(base: Baseline, launches: Launch[]) {
+  const now = snapshot(launches);
+  const ids = Object.keys(now.launches).filter((id) => base.launches[id]);
+  console.log(`\nCOMPARED WITH MAIN (baseline ${base.sha}, ${ids.length} launches in both)`);
+  console.log(
+    "(x1.00 means the moved days were flown as often as the launch's Go days on main, or soared as often as its soaring days)",
+  );
+  const up = new Moves();
+  const down = new Moves();
+  const soarUp = new Moves();
+  const soarDown = new Moves();
+  const count = { go: [0, 0], flownGo: [0, 0], flown: 0, soarExp: [0, 0], soared: 0 };
+  const perLaunch: string[] = [];
+  for (const id of ids) {
+    const b = base.launches[id];
+    const n = now.launches[id];
+    let ups = 0;
+    let downs = 0;
+    let soarUps = 0;
+    let soarDowns = 0;
+    for (const [date, nd] of Object.entries(n.days)) {
+      const bd = b.days[date];
+      if (!bd) continue;
+      const [bStatus, bSoar, flown, soared, bWhy] = bd;
+      const [nStatus, nSoar, , , nWhy] = nd;
+      count.go[0] += Number(bStatus === 'go');
+      count.go[1] += Number(nStatus === 'go');
+      count.flownGo[0] += Number(flown && bStatus === 'go');
+      count.flownGo[1] += Number(flown && nStatus === 'go');
+      count.flown += flown;
+      count.soarExp[0] += Number(soared && bSoar);
+      count.soarExp[1] += Number(soared && nSoar);
+      count.soared += soared;
+      if (bStatus !== 'go' && nStatus === 'go') {
+        up.add(bWhy, !!flown, b.goRate);
+        ups++;
+      } else if (bStatus === 'go' && nStatus !== 'go') {
+        down.add(nWhy, !!flown, b.goRate);
+        downs++;
+      }
+      if (!bSoar && nSoar) {
+        soarUp.add(bWhy, !!soared, b.soarRate);
+        soarUps++;
+      } else if (bSoar && !nSoar) {
+        soarDown.add(nWhy, !!soared, b.soarRate);
+        soarDowns++;
+      }
+    }
+    if (ups + downs + soarUps + soarDowns > 0)
+      perLaunch.push(
+        `    ${b.name.slice(0, 32).padEnd(32)} Go +${ups} -${downs}   soaring +${soarUps} -${soarDowns}`,
+      );
+  }
+  const years = ids.length * 2;
+  console.log(
+    `  Go days a launch's year: ${(count.go[0] / years).toFixed(0)} -> ${(count.go[1] / years).toFixed(0)}`,
+  );
+  console.log(
+    `  flown days rated Go: ${pct(count.flownGo[0], count.flown)} -> ${pct(count.flownGo[1], count.flown)}`,
+  );
+  console.log(
+    `  Go days flown: ${pct(count.flownGo[0], count.go[0])} -> ${pct(count.flownGo[1], count.go[1])}`,
+  );
+  console.log(
+    `  soaring expected on days pilots soared: ${pct(count.soarExp[0], count.soared)} -> ${pct(count.soarExp[1], count.soared)}`,
+  );
+  up.print('Up to Go, by what held them back on main', 'flown');
+  down.print('Down from Go, by what holds them back now', 'flown');
+  soarUp.print('Soaring now expected, by why not on main', 'soared');
+  soarDown.print('Soaring no longer expected, by why not now', 'soared');
+  if (perLaunch.length > 0) {
+    console.log('  By launch:');
+    perLaunch.forEach((l) => console.log(l));
+  }
+}
+
+function baseline(launches: Launch[]) {
+  if (BASELINE_MODE === 'save') {
+    mkdirSync(CACHE, { recursive: true });
+    writeFileSync(BASELINE_FILE, gzipSync(JSON.stringify(snapshot(launches))));
+    console.log(`\nSaved these ratings as the baseline for branch runs.`);
+    return;
+  }
+  if (!existsSync(BASELINE_FILE)) {
+    console.log('\nNo baseline from main yet: run the check on main first.');
+    return;
+  }
+  compare(JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline, launches);
+}
+
 // ---------------------------------------------------------------- main
 
 async function main() {
@@ -475,6 +634,8 @@ async function main() {
   console.log('\nDAYS WITH NO SOARING EXPECTED (flyable ones), and how often pilots soared them');
   console.log('(x1.00 means as often as days the engine expected soaring)');
   for (const tally of Object.values(t.soaring)) tally.print();
+
+  baseline(launches);
 }
 
 main().catch((error) => {
