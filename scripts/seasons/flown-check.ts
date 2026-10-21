@@ -29,7 +29,6 @@ import {
   type LaunchProfile,
 } from '../../src/lib/forecast-engine';
 import { angleDifference } from '../../src/lib/forecast-engine/gates';
-import { TRIAL } from '../../src/lib/forecast-engine/launch-conditions';
 import {
   profileFromOpenMeteo,
   type AtmosphericProfile,
@@ -400,10 +399,10 @@ class Moves {
   }
 }
 
-function compare(base: Baseline, launches: Launch[], title = 'COMPARED WITH MAIN', minMoved = 1) {
+function compare(base: Baseline, launches: Launch[]) {
   const now = snapshot(launches);
   const ids = Object.keys(now.launches).filter((id) => base.launches[id]);
-  console.log(`\n${title} (baseline ${base.sha}, ${ids.length} launches in both)`);
+  console.log(`\nCOMPARED WITH MAIN (baseline ${base.sha}, ${ids.length} launches in both)`);
   console.log(
     "(x1.00 means the moved days were flown as often as the launch's Go days in the same month on main, or soared as often as its soaring days)",
   );
@@ -453,7 +452,7 @@ function compare(base: Baseline, launches: Launch[], title = 'COMPARED WITH MAIN
     }
     const ratio = (part: number, expected: number) =>
       expected > 0 ? `x${(part / expected).toFixed(2)}` : '-';
-    if (moved.up + moved.down + moved.soarUp >= minMoved)
+    if (moved.up + moved.down + moved.soarUp > 0)
       perLaunch.push(
         `    ${b.name.slice(0, 32).padEnd(32)} Go ${(Math.round(b.goRate * 100) + '%').padStart(4)} ` +
           `up ${String(moved.up).padStart(4)} days ${String(moved.upFlown).padStart(3)} flown ${ratio(moved.upFlown, moved.upExp).padStart(6)}, ` +
@@ -499,123 +498,6 @@ function baseline(launches: Launch[]) {
 
 // ---------------------------------------------------------------- main
 
-const MAIN_TRIAL = { ...TRIAL };
-const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
-  ['SAME AS MAIN (check)', {}],
-  ['GUST SPREAD fades from 300 m to none at 1000 m', { gustFadeStartM: 300, gustDecayM: 700 }],
-  [
-    'GUST SPREAD fades from 300 m to half at 1000 m',
-    { gustFadeStartM: 300, gustDecayM: 1400, gustFadeFloor: 0.5 },
-  ],
-  ['GUST SPREAD fades from 400 m to none at 1200 m', { gustFadeStartM: 400, gustDecayM: 800 }],
-  [
-    'GUST SPREAD fades from 400 m to a third at 1000 m',
-    { gustFadeStartM: 400, gustDecayM: 900, gustFadeFloor: 0.33 },
-  ],
-];
-
-/**
- * The days a broad loosening of the gust rule lets up to Go, split by what
- * the gusty hours looked like on main, to find the ones pilots fly like Go days.
- */
-async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
-  const broad: Partial<typeof TRIAL> = { gustDecayM: 1500 };
-  const MEAN = [8, 12, 16, 20];
-  const WS = [1, 1.5, 2, 2.5, 3];
-  const OVER = [0, 5, 10, 15];
-  const SPR = [10, 15, 20, 25];
-  const AB = [0, 300, 600, 1000];
-  const HR = [10, 12, 14, 16];
-  const t = {
-    mean: new Tally('Mean wind at launch, windiest gusty hour (km/h)', binOrder(MEAN)),
-    ws: new Tally('Thermals, weakest gusty hour (m/s)', binOrder(WS)),
-    over: new Tally('Gusts over the limit, worst gusty hour (km/h)', binOrder(OVER)),
-    spread: new Tally('Gusts over the mean wind, worst gusty hour (km/h)', binOrder(SPR)),
-    above: new Tally('Launch above the forecast ground (m)', binOrder(AB)),
-    hour: new Tally('First gusty hour', binOrder(HR)),
-    meanWs: new Tally('Mean wind x thermals', []),
-    meanOver: new Tally('Mean wind x gusts over the limit', []),
-    meanSpread: new Tally('Mean wind x gusts over the mean wind', []),
-    aboveMean: new Tally('Launch above the forecast ground x mean wind', []),
-    wsSpread: new Tally('Thermals x gusts over the mean wind', []),
-  };
-  let moved = 0;
-  for (const { job, flown } of withFlown) {
-    const raw = await archivedForecast(job, { spent: Infinity });
-    if (!raw) continue;
-    const profile = cleanProfile(profileFromOpenMeteo(raw));
-    Object.assign(TRIAL, MAIN_TRIAL);
-    const main = rate(job, profile, flown);
-    Object.assign(TRIAL, MAIN_TRIAL, broad);
-    const loose = rate(job, profile, flown);
-    const looseBy = new Map(loose.days.map((d) => [d.score.date, d]));
-    for (const d of main.days) {
-      const l = looseBy.get(d.score.date);
-      if (!l || d.status === 'go' || l.status !== 'go') continue;
-      const gusty = d.hours.filter(
-        (h) =>
-          h.gates.some((g) => g.gate === 'gusts' && g.status !== 'pass') &&
-          h.gates.every((g) => g.gate === 'gusts' || g.status === 'pass'),
-      );
-      if (gusty.length === 0) continue;
-      moved++;
-      const exp = main.goRateOn(d.score.date);
-      const f = !!d.flown;
-      const c = gusty.map((h) => h.conditions);
-      const mean = Math.max(...c.map((x) => x.windSpeed));
-      const ws = Math.min(...c.map((x) => x.wStar ?? 0));
-      const over = Math.max(...c.map((x) => x.windGust - main.launch.maxWindSpeed));
-      const spread = Math.max(...c.map((x) => x.windGust - x.windSpeed));
-      t.mean.add(bin(mean, MEAN), f, exp);
-      t.ws.add(bin(ws, WS), f, exp);
-      t.over.add(bin(over, OVER), f, exp);
-      t.spread.add(bin(spread, SPR), f, exp);
-      t.above.add(bin(main.aboveModel, AB), f, exp);
-      t.hour.add(bin(Math.min(...gusty.map((h) => h.hour)), HR), f, exp);
-      t.meanWs.add(
-        `${bin(mean, [12, 16])} / ${ws >= 1.5 ? 'thermals 1.5+' : 'thermals under 1.5'}`,
-        f,
-        exp,
-      );
-      t.meanOver.add(`${bin(mean, [12, 16])} / over ${bin(over, [5, 10])}`, f, exp);
-      t.meanSpread.add(`${bin(mean, [12, 16])} / spread ${bin(spread, [20, 25])}`, f, exp);
-      t.aboveMean.add(`${bin(main.aboveModel, [300, 600])} m / ${bin(mean, [12, 16])}`, f, exp);
-      t.wsSpread.add(
-        `${ws >= 1 ? 'thermals' : 'no thermals'} / spread ${bin(spread, [20, 25])}`,
-        f,
-        exp,
-      );
-    }
-  }
-  Object.assign(TRIAL, MAIN_TRIAL);
-  console.log(
-    `\nGUST SPLIT: ${moved} days the gust spread fading over 1500 m lets up to Go, by their gusty hours on main`,
-  );
-  Object.values(t).forEach((x) => x.print());
-}
-
-async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
-  for (const { job, flown } of withFlown) {
-    const raw = await archivedForecast(job, { spent: Infinity });
-    if (!raw) continue;
-    const l = rate(job, cleanProfile(profileFromOpenMeteo(raw)), flown);
-    console.log(
-      `  ${(job.name ?? '').slice(0, 32).padEnd(32)} ${String(Math.round(l.aboveModel)).padStart(6)} m above the forecast ground`,
-    );
-  }
-  if (process.env.FLOWN_TRIAL === 'split') await gustSplit(withFlown);
-  const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
-  for (const [title, flags] of VARIANTS) {
-    Object.assign(TRIAL, MAIN_TRIAL, flags);
-    const launches: Launch[] = [];
-    for (const { job, flown } of withFlown) {
-      const raw = await archivedForecast(job, { spent: Infinity });
-      if (raw) launches.push(rate(job, cleanProfile(profileFromOpenMeteo(raw)), flown));
-    }
-    compare(base, launches, title, 10);
-  }
-}
-
 async function main() {
   if (!ACCOUNT || !TOKEN)
     throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed');
@@ -633,7 +515,6 @@ async function main() {
   }
   withFlown.sort((a, b) => b.flown.length - a.flown.length);
   console.log(`${jobs.length} launches, ${withFlown.length} with enough flown days`);
-  if (process.env.FLOWN_TRIAL) return trial(withFlown);
 
   const budget = { spent: 0 };
   const launches: Launch[] = [];

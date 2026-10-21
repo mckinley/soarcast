@@ -87,21 +87,6 @@ export function interpolateAtHeight(samples: WindSample[], height: number): Wind
  */
 export const TERRAIN_LIFT_SHARE = 0.5;
 
-// TRIAL (branch only, never merged): switches the flown-day check flips to
-// compare variants of the gust rules in one run.
-export const TRIAL = {
-  gustSpreadShare: 1,
-  gustFloorSurface: false,
-  gustDecayM: 0,
-  gustFadeStartM: 0,
-  gustFadeFloor: 0,
-  thermicMarginalOver: 0,
-  thermicFailOver: 10,
-  failOver: 10,
-  spreadMarginal: 15,
-  spreadFail: 25,
-};
-
 /** The model's top of lift, raised for a launch that stands above the model's ground. */
 export function topOfLiftAtLaunch(
   modelTopMsl: number | null,
@@ -115,6 +100,26 @@ export function topOfLiftAtLaunch(
   return Math.round(
     cloudBaseMsl !== null ? Math.max(modelTopMsl, Math.min(raised, cloudBaseMsl)) : raised,
   );
+}
+
+/**
+ * Gusts are only forecast at the model's ground. At a launch well above it,
+ * the wind comes from the model's upper levels, which already runs stronger
+ * than on the hill itself, so adding the whole ground-level gust on top
+ * overstates the gusts there. From GUST_FADE_START_M above the model's
+ * ground, less of the gust is added: half of it at GUST_FADE_FULL_M and
+ * above. Checked against days pilots flew at 41 launches: the days this
+ * lets through were flown about as often as Go days in the same month.
+ */
+export const GUST_FADE_START_M = 300;
+export const GUST_FADE_FULL_M = 1000;
+export const GUST_FADE_SHARE = 0.5;
+
+/** The share of the model's ground-level gust added to the wind at a launch this far above the model's ground. */
+export function gustShareAtLaunch(aboveModelGround: number): number {
+  if (aboveModelGround <= GUST_FADE_START_M) return 1;
+  const along = (aboveModelGround - GUST_FADE_START_M) / (GUST_FADE_FULL_M - GUST_FADE_START_M);
+  return Math.max(GUST_FADE_SHARE, 1 - along * (1 - GUST_FADE_SHARE));
 }
 
 /**
@@ -153,8 +158,10 @@ export function deriveLaunchConditions(
     launchElevation > surfaceHeight ? interpolateAtHeight(samples, launchElevation) : samples[0];
 
   // Gusts are only forecast at the surface; carry the surface gust spread
-  // up to the launch.
-  const gustSpread = Math.max(0, surface.windGusts - surface.windSpeed);
+  // up to the launch, less of it at a launch high above the model's ground.
+  const gustSpread =
+    Math.max(0, surface.windGusts - surface.windSpeed) *
+    gustShareAtLaunch(launchElevation - surfaceHeight);
 
   const cloudBaseMsl =
     derived.estimatedCloudBase !== null ? modelElevation + derived.estimatedCloudBase : null;
@@ -165,21 +172,7 @@ export function deriveLaunchConditions(
     hour: parseInt(hour.time.slice(11, 13), 10),
     windSpeed: Math.round(atLaunch.speed),
     windDirection: Math.round(atLaunch.direction),
-    windGust: Math.round(
-      Math.max(
-        TRIAL.gustFloorSurface ? surface.windGusts : 0,
-        atLaunch.speed +
-          (TRIAL.gustDecayM > 0
-            ? Math.max(
-                TRIAL.gustFadeFloor,
-                1 -
-                  Math.max(0, launchElevation - surfaceHeight - TRIAL.gustFadeStartM) /
-                    TRIAL.gustDecayM,
-              )
-            : TRIAL.gustSpreadShare) *
-            gustSpread,
-      ),
-    ),
+    windGust: Math.round(atLaunch.speed + gustSpread),
     temperature: Math.round(atLaunch.temperature * 10) / 10,
     precipitation: surface.precipitation ?? null,
     precipitationProbability: surface.precipitationProbability ?? 0,

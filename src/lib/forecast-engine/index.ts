@@ -22,8 +22,9 @@ export type { LaunchConditions } from './launch-conditions';
  * Bump this when a change to the engine changes how past days rate. The
  * season build then rates every season again. 2: storms need showers near,
  * light cross wind with thermals passes, top of lift at high launches.
+ * 3: less of the ground-level gust at launches high above the model's ground.
  */
-export const ENGINE_VERSION = 2;
+export const ENGINE_VERSION = 3;
 
 /** Paraglider launch limit used when a site has none: most launches top out around 25 km/h. */
 export const DEFAULT_MAX_WIND_KMH = 25;
