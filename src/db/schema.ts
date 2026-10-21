@@ -261,6 +261,8 @@ export const siteSeasons = sqliteTable('site_seasons', {
   fromDate: text('from_date').notNull(),
   toDate: text('to_date').notNull(),
   builtAt: integer('built_at', { mode: 'timestamp' }).notNull(),
+  // ENGINE_VERSION the days were rated with; an older one is rated again
+  engineVersion: integer('engine_version').notNull().default(0),
 });
 
 // Export types for use in application code

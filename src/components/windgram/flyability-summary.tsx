@@ -68,6 +68,10 @@ export function FlyabilitySummary({
           {dayScore.rainNote && (
             <p className="text-xs text-muted-foreground">{dayScore.rainNote}</p>
           )}
+
+          {dayScore.stormNote && (
+            <p className="text-xs text-muted-foreground">{dayScore.stormNote}</p>
+          )}
         </div>
 
         <button

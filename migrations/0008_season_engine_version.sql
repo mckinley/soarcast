@@ -1,0 +1,1 @@
+ALTER TABLE `site_seasons` ADD `engine_version` integer DEFAULT 0 NOT NULL;

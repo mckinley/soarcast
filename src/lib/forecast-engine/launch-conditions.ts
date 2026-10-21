@@ -16,6 +16,13 @@ export interface LaunchConditions {
   temperature: number; // °C at launch altitude
   precipitation: number | null; // mm in the hour
   precipitationProbability: number; // %
+  /**
+   * The most rain (mm in an hour) and the highest chance of rain (%) from
+   * this hour to two hours on. Storms build where showers do, so the storm
+   * check looks a little ahead. Only this hour's when the next are unknown.
+   */
+  rainSoonMm: number | null;
+  rainSoonChance: number;
   cloudBaseMsl: number | null; // cumulus base, meters MSL
   cloudCoverLow: number | null; // %
   visibility: number | null; // meters
@@ -71,6 +78,31 @@ export function interpolateAtHeight(samples: WindSample[], height: number): Wind
 }
 
 /**
+ * Over mountains the top of the thermals partly follows the ground: it
+ * sits higher above sea level over a peak than over the valley floor, but
+ * not by the peak's whole height. The model's ground is smoothed, so a
+ * launch on a peak often stands hundreds of meters above it. So half the
+ * launch's height above the model's ground is added to the model's top of
+ * lift, up to the cloud base.
+ */
+export const TERRAIN_LIFT_SHARE = 0.5;
+
+/** The model's top of lift, raised for a launch that stands above the model's ground. */
+export function topOfLiftAtLaunch(
+  modelTopMsl: number | null,
+  modelElevation: number,
+  launchElevation: number,
+  cloudBaseMsl: number | null,
+): number | null {
+  if (modelTopMsl === null) return null;
+  const above = Math.max(0, launchElevation - modelElevation);
+  const raised = modelTopMsl + TERRAIN_LIFT_SHARE * above;
+  return Math.round(
+    cloudBaseMsl !== null ? Math.max(modelTopMsl, Math.min(raised, cloudBaseMsl)) : raised,
+  );
+}
+
+/**
  * @param hour - One hour of the atmospheric profile
  * @param modelElevation - Height of the model grid cell's ground (m MSL)
  * @param launchElevation - Launch altitude (m MSL); 0 or unknown uses the model ground
@@ -122,13 +154,20 @@ export function deriveLaunchConditions(
     temperature: Math.round(atLaunch.temperature * 10) / 10,
     precipitation: surface.precipitation ?? null,
     precipitationProbability: surface.precipitationProbability ?? 0,
+    rainSoonMm: surface.precipitation ?? null,
+    rainSoonChance: surface.precipitationProbability ?? 0,
     cloudBaseMsl,
     cloudCoverLow: surface.cloudCoverLow ?? null,
     visibility: surface.visibility ?? null,
     cape: surface.cape ?? 0,
     liftedIndex: surface.liftedIndex,
     wStar: derived.wStar,
-    topOfLiftMsl: derived.estimatedTopOfLift,
+    topOfLiftMsl: topOfLiftAtLaunch(
+      derived.estimatedTopOfLift,
+      modelElevation,
+      launchElevation,
+      cloudBaseMsl,
+    ),
     odPotential: derived.odPotential,
     windShearMax: derived.windShearMax,
     freezingLevelMsl: derived.freezingLevel,

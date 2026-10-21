@@ -86,6 +86,9 @@ interface Launch {
   /** Share of the launch's Go days that someone flew, and of its soaring Go days that someone soared */
   goRate: number;
   soarRate: number;
+  /** The same shares in a day's own month */
+  goRateOn: (date: string) => number;
+  soarRateOn: (date: string) => number;
 }
 
 // ---------------------------------------------------------------- inputs
@@ -171,10 +174,44 @@ function rate(job: Job, profile: AtmosphericProfile, flown: FlownDay[]): Launch 
     days,
     goRate: share(goDays.filter((d) => d.flown).length, goDays.length),
     soarRate: share(soarGo.filter((d) => d.flown && soaringDay(d.flown)).length, soarGo.length),
+    goRateOn: monthlyRate(days.map((d) => [d.score.date, d.status === 'go', !!d.flown])),
+    soarRateOn: monthlyRate(
+      days.map((d) => [d.score.date, expectsSoaring(d), !!d.flown && soaringDay(d.flown)]),
+    ),
   };
 }
 
 const share = (part: number, whole: number) => (whole > 0 ? part / whole : 0);
+
+/** Months with fewer days than this to go on use the launch's whole-year share. */
+const MIN_MONTH_DAYS = 8;
+
+/**
+ * A launch's share of days flown in each calendar month, over the days that
+ * count (its Go days, say). Pilots fly some months far more than others, for
+ * reasons beyond the weather, so a day is weighed against its own month.
+ */
+function monthlyRate(
+  days: Array<[date: string, counts: boolean, hit: boolean]>,
+): (date: string) => number {
+  const all = { n: 0, hit: 0 };
+  const byMonth = new Map<string, { n: number; hit: number }>();
+  for (const [date, counts, hit] of days) {
+    if (!counts) continue;
+    const m = byMonth.get(date.slice(5, 7)) ?? { n: 0, hit: 0 };
+    m.n++;
+    all.n++;
+    if (hit) {
+      m.hit++;
+      all.hit++;
+    }
+    byMonth.set(date.slice(5, 7), m);
+  }
+  return (date) => {
+    const m = byMonth.get(date.slice(5, 7));
+    return m && m.n >= MIN_MONTH_DAYS ? share(m.hit, m.n) : share(all.hit, all.n);
+  };
+}
 const pct = (part: number, whole: number) => `${Math.round(share(part, whole) * 100)}%`;
 
 function expectsSoaring(d: RatedDay): boolean {
@@ -367,7 +404,7 @@ function compare(base: Baseline, launches: Launch[]) {
   const ids = Object.keys(now.launches).filter((id) => base.launches[id]);
   console.log(`\nCOMPARED WITH MAIN (baseline ${base.sha}, ${ids.length} launches in both)`);
   console.log(
-    "(x1.00 means the moved days were flown as often as the launch's Go days on main, or soared as often as its soaring days)",
+    "(x1.00 means the moved days were flown as often as the launch's Go days in the same month on main, or soared as often as its soaring days)",
   );
   const up = new Moves();
   const down = new Moves();
@@ -378,10 +415,10 @@ function compare(base: Baseline, launches: Launch[]) {
   for (const id of ids) {
     const b = base.launches[id];
     const n = now.launches[id];
-    let ups = 0;
-    let downs = 0;
-    let soarUps = 0;
-    let soarDowns = 0;
+    const saved = Object.entries(b.days);
+    const goOn = monthlyRate(saved.map(([date, d]) => [date, d[0] === 'go', !!d[2]]));
+    const soarOn = monthlyRate(saved.map(([date, d]) => [date, !!d[1], !!d[3]]));
+    const moved = { up: 0, upFlown: 0, upExp: 0, down: 0, soarUp: 0, soarUpFlown: 0, soarUpExp: 0 };
     for (const [date, nd] of Object.entries(n.days)) {
       const bd = b.days[date];
       if (!bd) continue;
@@ -396,23 +433,30 @@ function compare(base: Baseline, launches: Launch[]) {
       count.soarExp[1] += Number(soared && nSoar);
       count.soared += soared;
       if (bStatus !== 'go' && nStatus === 'go') {
-        up.add(bWhy, !!flown, b.goRate);
-        ups++;
+        up.add(bWhy, !!flown, goOn(date));
+        moved.up++;
+        moved.upFlown += flown;
+        moved.upExp += goOn(date);
       } else if (bStatus === 'go' && nStatus !== 'go') {
-        down.add(nWhy, !!flown, b.goRate);
-        downs++;
+        down.add(nWhy, !!flown, goOn(date));
+        moved.down++;
       }
       if (!bSoar && nSoar) {
-        soarUp.add(bWhy, !!soared, b.soarRate);
-        soarUps++;
+        soarUp.add(bWhy, !!soared, soarOn(date));
+        moved.soarUp++;
+        moved.soarUpFlown += soared;
+        moved.soarUpExp += soarOn(date);
       } else if (bSoar && !nSoar) {
-        soarDown.add(nWhy, !!soared, b.soarRate);
-        soarDowns++;
+        soarDown.add(nWhy, !!soared, soarOn(date));
       }
     }
-    if (ups + downs + soarUps + soarDowns > 0)
+    const ratio = (part: number, expected: number) =>
+      expected > 0 ? `x${(part / expected).toFixed(2)}` : '-';
+    if (moved.up + moved.down + moved.soarUp > 0)
       perLaunch.push(
-        `    ${b.name.slice(0, 32).padEnd(32)} Go +${ups} -${downs}   soaring +${soarUps} -${soarDowns}`,
+        `    ${b.name.slice(0, 32).padEnd(32)} Go ${(Math.round(b.goRate * 100) + '%').padStart(4)} ` +
+          `up ${String(moved.up).padStart(4)} days ${String(moved.upFlown).padStart(3)} flown ${ratio(moved.upFlown, moved.upExp).padStart(6)}, ` +
+          `down ${String(moved.down).padStart(3)} | soaring up ${String(moved.soarUp).padStart(4)} days ${String(moved.soarUpFlown).padStart(3)} soared ${ratio(moved.soarUpFlown, moved.soarUpExp).padStart(6)}`,
       );
   }
   const years = ids.length * 2;
@@ -433,7 +477,7 @@ function compare(base: Baseline, launches: Launch[]) {
   soarUp.print('Soaring now expected, by why not on main', 'soared');
   soarDown.print('Soaring no longer expected, by why not now', 'soared');
   if (perLaunch.length > 0) {
-    console.log('  By launch:');
+    console.log("  By launch (Go: share of the launch's Go days flown on main):");
     perLaunch.forEach((l) => console.log(l));
   }
 }
@@ -545,7 +589,7 @@ async function main() {
   const t = newTallies();
   for (const d of all) {
     const flewIt = !!d.flown;
-    const w = d.l.goRate;
+    const w = d.l.goRateOn(d.score.date);
     if (d.status !== 'go') {
       const passing = d.hours.filter((h) => h.status === 'pass').length;
       t.window.add(bin(passing, [1, 2, 4, 6], ' h'), flewIt, w);
@@ -592,7 +636,7 @@ async function main() {
     }
     if (!expectsSoaring(d) && d.score.verdict !== 'no') {
       const soared = !!d.flown && soaringDay(d.flown);
-      const sw = d.l.soarRate;
+      const sw = d.l.soarRateOn(d.score.date);
       t.soaring.why.add(
         d.score.verdict !== 'go'
           ? `held back: ${d.season.gate ?? 'other'}`
@@ -619,7 +663,7 @@ async function main() {
 
   console.log('\nDAYS BELOW GO, by what the engine saw at its best hour that day');
   console.log(
-    "(as often as Go days: x1.00 means pilots flew those days as often as the launch's Go days)",
+    "(as often as Go days: x1.00 means pilots flew those days as often as the launch's Go days in the same month)",
   );
   t.window.print();
   for (const [gate, tallies] of Object.entries({
