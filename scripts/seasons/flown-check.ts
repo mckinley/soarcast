@@ -506,25 +506,84 @@ const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
     'THERMIC gusts marginal over limit+5, fail over +15',
     { thermicMarginalOver: 5, thermicFailOver: 15 },
   ],
-  [
-    'THERMIC gusts marginal over limit+10, fail over +20',
-    { thermicMarginalOver: 10, thermicFailOver: 20 },
-  ],
-  [
-    'THERMIC gusts marginal over limit+15, fail over +25',
-    { thermicMarginalOver: 15, thermicFailOver: 25 },
-  ],
-  ['ALL HOURS fail over limit+15', { thermicFailOver: 15, failOver: 15 }],
-  ['LAUNCH GUST half the surface spread', { gustSpreadShare: 0.5, gustFloorSurface: true }],
-  ['LAUNCH GUST no surface spread', { gustSpreadShare: 0, gustFloorSurface: true }],
-  ['NO THERMALS spread marginal 20, fail 30', { spreadMarginal: 20, spreadFail: 30 }],
-  [
-    'THERMIC +10/+20 and half spread',
-    { thermicMarginalOver: 10, thermicFailOver: 20, gustSpreadShare: 0.5, gustFloorSurface: true },
-  ],
 ];
 
+/**
+ * The days a broad loosening of the gust rule lets up to Go, split by what
+ * the gusty hours looked like on main, to find the ones pilots fly like Go days.
+ */
+async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
+  const broad: Partial<typeof TRIAL> = {
+    thermicMarginalOver: 15,
+    thermicFailOver: 25,
+    failOver: 25,
+  };
+  const MEAN = [8, 12, 16, 20];
+  const WS = [1, 1.5, 2, 2.5, 3];
+  const OVER = [0, 5, 10, 15];
+  const SPR = [10, 15, 20, 25];
+  const AB = [0, 300, 600, 1000];
+  const HR = [10, 12, 14, 16];
+  const t = {
+    mean: new Tally('Mean wind at launch, windiest gusty hour (km/h)', binOrder(MEAN)),
+    ws: new Tally('Thermals, weakest gusty hour (m/s)', binOrder(WS)),
+    over: new Tally('Gusts over the limit, worst gusty hour (km/h)', binOrder(OVER)),
+    spread: new Tally('Gusts over the mean wind, worst gusty hour (km/h)', binOrder(SPR)),
+    above: new Tally('Launch above the forecast ground (m)', binOrder(AB)),
+    hour: new Tally('First gusty hour', binOrder(HR)),
+    meanWs: new Tally('Mean wind x thermals', []),
+    meanOver: new Tally('Mean wind x gusts over the limit', []),
+  };
+  let moved = 0;
+  for (const { job, flown } of withFlown) {
+    const raw = await archivedForecast(job, { spent: Infinity });
+    if (!raw) continue;
+    const profile = cleanProfile(profileFromOpenMeteo(raw));
+    Object.assign(TRIAL, MAIN_TRIAL);
+    const main = rate(job, profile, flown);
+    Object.assign(TRIAL, MAIN_TRIAL, broad);
+    const loose = rate(job, profile, flown);
+    const looseBy = new Map(loose.days.map((d) => [d.score.date, d]));
+    for (const d of main.days) {
+      const l = looseBy.get(d.score.date);
+      if (!l || d.status === 'go' || l.status !== 'go') continue;
+      const gusty = d.hours.filter(
+        (h) =>
+          h.gates.some((g) => g.gate === 'gusts' && g.status !== 'pass') &&
+          h.gates.every((g) => g.gate === 'gusts' || g.status === 'pass'),
+      );
+      if (gusty.length === 0) continue;
+      moved++;
+      const exp = main.goRateOn(d.score.date);
+      const f = !!d.flown;
+      const c = gusty.map((h) => h.conditions);
+      const mean = Math.max(...c.map((x) => x.windSpeed));
+      const ws = Math.min(...c.map((x) => x.wStar ?? 0));
+      const over = Math.max(...c.map((x) => x.windGust - main.launch.maxWindSpeed));
+      const spread = Math.max(...c.map((x) => x.windGust - x.windSpeed));
+      t.mean.add(bin(mean, MEAN), f, exp);
+      t.ws.add(bin(ws, WS), f, exp);
+      t.over.add(bin(over, OVER), f, exp);
+      t.spread.add(bin(spread, SPR), f, exp);
+      t.above.add(bin(main.aboveModel, AB), f, exp);
+      t.hour.add(bin(Math.min(...gusty.map((h) => h.hour)), HR), f, exp);
+      t.meanWs.add(
+        `${bin(mean, [12, 16])} / ${ws >= 1.5 ? 'thermals 1.5+' : 'thermals under 1.5'}`,
+        f,
+        exp,
+      );
+      t.meanOver.add(`${bin(mean, [12, 16])} / over ${bin(over, [5, 10])}`, f, exp);
+    }
+  }
+  Object.assign(TRIAL, MAIN_TRIAL);
+  console.log(
+    `\nGUST SPLIT: ${moved} days a broad loosening lets up to Go, by their gusty hours on main`,
+  );
+  Object.values(t).forEach((x) => x.print());
+}
+
 async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
+  await gustSplit(withFlown);
   const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
   for (const [title, flags] of VARIANTS) {
     Object.assign(TRIAL, MAIN_TRIAL, flags);
