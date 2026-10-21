@@ -502,14 +502,7 @@ function baseline(launches: Launch[]) {
 const MAIN_TRIAL = { ...TRIAL };
 const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
   ['SAME AS MAIN (check)', {}],
-  ['GUST SPREAD fades out 600 m above the forecast ground', { gustDecayM: 600 }],
-  ['GUST SPREAD fades out 1000 m above the forecast ground', { gustDecayM: 1000 }],
   ['GUST SPREAD fades out 1500 m above the forecast ground', { gustDecayM: 1500 }],
-  ['GUST SPREAD fades out 2500 m above the forecast ground', { gustDecayM: 2500 }],
-  [
-    'GUST SPREAD fades out 1000 m, thermic +5/+15',
-    { gustDecayM: 1000, thermicMarginalOver: 5, thermicFailOver: 15 },
-  ],
 ];
 
 /**
@@ -517,11 +510,7 @@ const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
  * the gusty hours looked like on main, to find the ones pilots fly like Go days.
  */
 async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
-  const broad: Partial<typeof TRIAL> = {
-    thermicMarginalOver: 15,
-    thermicFailOver: 25,
-    failOver: 25,
-  };
+  const broad: Partial<typeof TRIAL> = { gustDecayM: 1500 };
   const MEAN = [8, 12, 16, 20];
   const WS = [1, 1.5, 2, 2.5, 3];
   const OVER = [0, 5, 10, 15];
@@ -537,6 +526,9 @@ async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
     hour: new Tally('First gusty hour', binOrder(HR)),
     meanWs: new Tally('Mean wind x thermals', []),
     meanOver: new Tally('Mean wind x gusts over the limit', []),
+    meanSpread: new Tally('Mean wind x gusts over the mean wind', []),
+    aboveMean: new Tally('Launch above the forecast ground x mean wind', []),
+    wsSpread: new Tally('Thermals x gusts over the mean wind', []),
   };
   let moved = 0;
   for (const { job, flown } of withFlown) {
@@ -577,11 +569,18 @@ async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
         exp,
       );
       t.meanOver.add(`${bin(mean, [12, 16])} / over ${bin(over, [5, 10])}`, f, exp);
+      t.meanSpread.add(`${bin(mean, [12, 16])} / spread ${bin(spread, [20, 25])}`, f, exp);
+      t.aboveMean.add(`${bin(main.aboveModel, [300, 600])} m / ${bin(mean, [12, 16])}`, f, exp);
+      t.wsSpread.add(
+        `${ws >= 1 ? 'thermals' : 'no thermals'} / spread ${bin(spread, [20, 25])}`,
+        f,
+        exp,
+      );
     }
   }
   Object.assign(TRIAL, MAIN_TRIAL);
   console.log(
-    `\nGUST SPLIT: ${moved} days a broad loosening lets up to Go, by their gusty hours on main`,
+    `\nGUST SPLIT: ${moved} days the gust spread fading over 1500 m lets up to Go, by their gusty hours on main`,
   );
   Object.values(t).forEach((x) => x.print());
 }
