@@ -1,0 +1,60 @@
+name: Flown-day check
+
+# Rates the last two years at well-flown launches and lines the ratings up
+# with the days pilots flew there (scripts/seasons/flown-check.ts), to test
+# the forecast engine against real flying. Run it on a branch to see what an
+# engine change does. Archived forecasts are cached between runs, so only
+# the first run at a launch spends Open-Meteo calls. Runs here because
+# Open-Meteo is out of reach from Claude's sandbox. Started by hand, no AI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: 'Open-Meteo calls to spend on launches not cached yet (about 240 a launch)'
+        default: '4500'
+      sites:
+        description: 'More pgsites launch ids, comma-separated'
+        default: ''
+
+concurrency:
+  group: flown-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Restore archived forecasts
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/flown-check
+          key: flown-check-${{ github.run_id }}
+          restore-keys: flown-check-
+
+      - name: Check ratings against flown days
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FLOWN_CALL_BUDGET: ${{ inputs.budget || '4500' }}
+          FLOWN_SITES: ${{ inputs.sites }}
+        run: |
+          npx esbuild scripts/seasons/flown-check.ts --bundle --platform=node --format=esm --outfile=flown-tmp/check.mjs
+          node flown-tmp/check.mjs
+
+      - name: Save archived forecasts
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/flown-check
+          key: flown-check-${{ github.run_id }}

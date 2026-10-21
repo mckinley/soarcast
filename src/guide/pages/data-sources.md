@@ -14,6 +14,7 @@ covers:
   - app/lib/flown-days.server.ts
   - src/components/flown-here.tsx
   - scripts/seasons/build.ts
+  - scripts/seasons/lib.ts
   - .github/workflows/season-build.yml
   - src/lib/destinations.ts
   - src/lib/pgsites-client.ts
