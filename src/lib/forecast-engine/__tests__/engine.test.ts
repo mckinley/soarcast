@@ -191,10 +191,13 @@ describe('gates', () => {
     );
   });
 
-  it('lets a light cross wind pass', () => {
+  it('lets a light cross wind pass in an hour with thermals', () => {
     expect(directionGate({ ...base, windSpeed: 10, windDirection: 270 }, swLaunch).status).toBe(
       'pass',
     );
+    expect(
+      directionGate({ ...base, windSpeed: 10, windDirection: 270, wStar: 0.5 }, swLaunch).status,
+    ).toBe('marginal');
     expect(directionGate({ ...base, windSpeed: 10, windDirection: 315 }, swLaunch).status).toBe(
       'fail',
     );
@@ -209,9 +212,10 @@ describe('gates', () => {
     expect(stormGate({ ...unstable, rainSoonChance: 40 }).status).toBe('marginal');
     expect(stormGate(veryUnstable).status).toBe('marginal');
     expect(stormGate({ ...veryUnstable, ...showers }).status).toBe('fail');
-    // In the tropics only heavy showers count
-    expect(stormGate({ ...veryUnstable, ...showers }, 'low').status).toBe('marginal');
-    expect(stormGate({ ...veryUnstable, rainSoonMm: 4 }, 'low').status).toBe('fail');
+    // In the tropics only real rain counts, not a trace or a chance of it
+    expect(stormGate({ ...veryUnstable, rainSoonMm: 0.1 }, 'low').status).toBe('marginal');
+    expect(stormGate({ ...veryUnstable, rainSoonChance: 60 }, 'low').status).toBe('marginal');
+    expect(stormGate({ ...veryUnstable, ...showers }, 'low').status).toBe('fail');
   });
 
   it('flies through thermal gusts but not through gusts over the limit', () => {

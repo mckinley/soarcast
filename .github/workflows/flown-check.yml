@@ -52,7 +52,6 @@ jobs:
           FLOWN_CALL_BUDGET: ${{ github.ref == 'refs/heads/main' && (inputs.budget || '4500') || '0' }}
           FLOWN_SITES: ${{ inputs.sites }}
           FLOWN_BASELINE: ${{ github.ref == 'refs/heads/main' && 'save' || 'compare' }}
-          FLOWN_TRIAL: '1'
         run: |
           npx esbuild scripts/seasons/flown-check.ts --bundle --platform=node --format=esm --outfile=flown-tmp/check.mjs
           node flown-tmp/check.mjs

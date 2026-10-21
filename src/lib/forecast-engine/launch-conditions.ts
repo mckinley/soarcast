@@ -81,21 +81,11 @@ export function interpolateAtHeight(samples: WindSample[], height: number): Wind
  * Over mountains the top of the thermals partly follows the ground: it
  * sits higher above sea level over a peak than over the valley floor, but
  * not by the peak's whole height. The model's ground is smoothed, so a
- * launch on a peak often stands hundreds of meters above it. That share of
- * the launch's height above the model's ground is added to the model's top
- * of lift, up to the cloud base.
+ * launch on a peak often stands hundreds of meters above it. So half the
+ * launch's height above the model's ground is added to the model's top of
+ * lift, up to the cloud base.
  */
 export const TERRAIN_LIFT_SHARE = 0.5;
-
-// TRIAL (branch only, never merged): switches the flown-day check flips to
-// compare variants of the engine changes in one run.
-export const TRIAL = {
-  crossThermal: false,
-  storm: true,
-  tropicsStormMm: 3,
-  lightCrossKmh: 12,
-  liftShare: TERRAIN_LIFT_SHARE,
-};
 
 /** The model's top of lift, raised for a launch that stands above the model's ground. */
 export function topOfLiftAtLaunch(
@@ -106,7 +96,7 @@ export function topOfLiftAtLaunch(
 ): number | null {
   if (modelTopMsl === null) return null;
   const above = Math.max(0, launchElevation - modelElevation);
-  const raised = modelTopMsl + TRIAL.liftShare * above;
+  const raised = modelTopMsl + TERRAIN_LIFT_SHARE * above;
   return Math.round(
     cloudBaseMsl !== null ? Math.max(modelTopMsl, Math.min(raised, cloudBaseMsl)) : raised,
   );

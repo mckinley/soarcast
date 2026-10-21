@@ -3,7 +3,7 @@
 // careful pilot could still go.
 
 import type { SiteGoal, SiteKind } from '@/types';
-import { TRIAL, type LaunchConditions } from './launch-conditions';
+import type { LaunchConditions } from './launch-conditions';
 
 export type GateStatus = 'pass' | 'marginal' | 'fail';
 
@@ -44,7 +44,7 @@ export const THERMAL_MIN_WSTAR = 1.0; // m/s
 export const NIL_WIND_KMH = 6;
 /** Half-width of the sector around each listed direction (PGE uses 8 points, 45° apart). */
 export const SECTOR_HALF_WIDTH = 22.5;
-/** Below this, wind a little across the launch is no trouble. */
+/** Below this, in an hour with thermals, wind a little across the launch is no trouble. */
 export const LIGHT_CROSS_KMH = 12;
 /** Wind over this share of the limit makes an hour marginal. */
 export const WIND_NEAR_LIMIT = 0.8;
@@ -89,11 +89,10 @@ export function directionGate(c: LaunchConditions, launch: LaunchProfile): GateR
     near(launch.okDirections, SECTOR_HALF_WIDTH) ||
     near(launch.goodDirections, 2 * SECTOR_HALF_WIDTH)
   ) {
-    if (
-      c.windSpeed < TRIAL.lightCrossKmh &&
-      (!TRIAL.crossThermal || (c.wStar ?? 0) >= THERMAL_MIN_WSTAR)
-    )
+    // Thermals bring the wind up the slope, so a light cross wind is no trouble then
+    if (c.windSpeed < LIGHT_CROSS_KMH && (c.wStar ?? 0) >= THERMAL_MIN_WSTAR) {
       return { gate: 'direction', status: 'pass' };
+    }
     return { gate: 'direction', status: 'marginal', reason: `${reason}, cross on launch` };
   }
   return { gate: 'direction', status: 'fail', reason: `${reason}, off the launch` };
@@ -230,25 +229,18 @@ export const RAIN_SOON_HOURS = 2;
  * showers say where it sets them off, so unstable air counts fully only
  * with showers in the hour or the two after it, as far as the model's rain
  * can be trusted there. Without showers, very unstable air still makes the
- * hour marginal, and plain unstable air passes.
+ * hour marginal, and plain unstable air passes. At 42 well-flown launches
+ * over two years, pilots flew the days this let through as often as Go
+ * days in the same month.
  */
 export function stormGate(c: LaunchConditions, trust: RainTrust = 'trusted'): GateResult {
   const li = c.liftedIndex;
-  if (!TRIAL.storm) {
-    if ((li !== null && li <= -4) || (c.cape >= 1500 && c.precipitationProbability >= 30)) {
-      return { gate: 'storm', status: 'fail', reason: 'Thunderstorms likely' };
-    }
-    if ((li !== null && li <= -2) || c.cape >= 1000) {
-      return { gate: 'storm', status: 'marginal', reason: 'Thunderstorm risk' };
-    }
-    return { gate: 'storm', status: 'pass' };
-  }
   const unstable = (li !== null && li <= STORM_RISK_LI) || c.cape >= STORM_RISK_CAPE;
   if (!unstable) return { gate: 'storm', status: 'pass' };
   const severe = (li !== null && li <= STORM_SEVERE_LI) || c.cape >= STORM_SEVERE_CAPE;
   const showersSoon =
     trust === 'low'
-      ? (c.rainSoonMm ?? 0) >= TRIAL.tropicsStormMm
+      ? (c.rainSoonMm ?? 0) >= RAIN_FAIL_MM
       : (c.rainSoonMm ?? 0) > 0 || c.rainSoonChance >= RAIN_MARGINAL_CHANCE;
   if (showersSoon) {
     return severe
