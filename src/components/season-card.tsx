@@ -262,11 +262,11 @@ export function SeasonCard({
       </details>
 
       <p className="text-xs text-muted-foreground">
-        Every day from {monthYear(season.fromDate)} to {monthYear(season.toDate)}, rated the way
-        today&apos;s forecast is, on archived forecasts. Two years is enough to see the seasons but
-        one odd year still moves a month.
+        Every day from {monthYear(season.fromDate)} to {monthYear(season.toDate)}, rated on archived
+        forecasts the same way as today&apos;s forecast. Two years is enough to show the seasons,
+        but one odd year can still shift a month.
         {!season.sameSettings &&
-          ' These use the settings the site had when it was rated; the current ones come with the next update.'}
+          " These use the site's settings from when it was rated. The current settings apply from the next update."}
       </p>
     </Card>
   );

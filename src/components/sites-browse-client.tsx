@@ -316,7 +316,7 @@ export function SitesBrowseClient({
                 <p className="text-sm text-muted-foreground">
                   {isSearchMode
                     ? 'No sites match your search'
-                    : 'No sites found here — try panning to a different area'}
+                    : 'No sites found here. Try moving the map to another area.'}
                 </p>
                 <Link to="/sites/custom/new" className="text-sm underline hover:text-primary">
                   Not listed? Add a private site

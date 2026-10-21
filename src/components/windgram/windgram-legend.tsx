@@ -64,7 +64,7 @@ export function WindgramLegend({ maxWindSpeed }: { maxWindSpeed?: number }) {
           </Sample>
           <span>
             Wind barbs point into the wind, in km/h: long feather 10, short 5, flag 50
-            {maxWindSpeed !== undefined && <>; red is over this site&apos;s {maxWindSpeed} km/h</>}
+            {maxWindSpeed !== undefined && <>. Red is over this site&apos;s {maxWindSpeed} km/h.</>}
           </span>
         </li>
         <li className="flex items-center gap-2">
@@ -101,13 +101,13 @@ export function WindgramLegend({ maxWindSpeed }: { maxWindSpeed?: number }) {
             <line x1={-13} x2={13} y1={-3} y2={-3} stroke="rgba(30,30,120,0.7)" />
             <line x1={-13} x2={13} y1={4} y2={4} stroke="#1d4ed8" strokeWidth={1.6} strokeDasharray="5 3" />
           </Sample>
-          <span>Temperature every 5 °C; dashed blue is freezing</span>
+          <span>Temperature lines every 5 °C, freezing in dashed blue</span>
         </li>
         <li className="flex items-center gap-2">
           <Sample>
             <line x1={-13} x2={13} y1={0} y2={0} stroke="currentColor" strokeWidth={1.5} strokeDasharray="7 4" />
           </Sample>
-          <span>Launch height; dark ground is the model&apos;s terrain</span>
+          <span>Launch height, with the model&apos;s ground shaded dark</span>
         </li>
       </ul>
     </div>

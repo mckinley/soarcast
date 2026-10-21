@@ -72,8 +72,8 @@ export function DashboardClient({
       <div className="flex flex-col items-center justify-center py-20">
         <h1 className="text-3xl font-bold mb-4">Welcome to SoarCast</h1>
         <p className="text-muted-foreground mb-6 text-center max-w-md">
-          No sites yet. Follow a launch and it shows up here with the days and hours it&apos;s
-          flyable this week, or pin your own launch if it isn&apos;t listed.
+          No sites yet. Add a launch to Favorites to see its flyable days and hours this week. If a
+          launch isn&apos;t listed, add it as a private site.
         </p>
         {suggestions.length > 0 && (
           <div className="mb-6 w-full max-w-md space-y-2">
@@ -197,7 +197,8 @@ export function DashboardClient({
         <div>
           <h1 className="text-3xl font-bold">This week</h1>
           <p className="text-muted-foreground mt-1">
-            When each favorite site gives the flying it&apos;s worth going for. Open a site for its windgram.
+            When each favorite site gives the flying it&apos;s worth going for. Open a site for its
+            windgram.
           </p>
           <StatusLegend />
         </div>
