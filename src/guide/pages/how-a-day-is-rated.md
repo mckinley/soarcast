@@ -49,7 +49,7 @@ SoarCast runs eight checks on each hour at the launch. Each check passes, is mar
 
 ### Wind and gusts
 
-SoarCast reads the wind at the launch's own height, not at the forecast's ground. [Data sources](/guide/data-sources#what-it-cant-tell-you) explains how.
+SoarCast reads the wind at the launch's own height, not at the forecast's ground. Gusts are only forecast near the ground, so SoarCast adds them to the wind at launch height. At a launch high above the forecast's ground, it adds less of them. [Data sources](/guide/data-sources#what-it-cant-tell-you) explains how.
 
 Each site has a wind limit. It comes from the site's listing, or it is {{defaultWindLimitKmh}} km/h when the listing has none. You can set your own limit for each site in Settings, under Favorites. A private site's limit is set on the site itself.
 

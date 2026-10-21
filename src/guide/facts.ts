@@ -34,7 +34,12 @@ import {
   XC_MIN_WSTAR,
 } from '@/lib/forecast-engine/evaluate';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
-import { TERRAIN_LIFT_SHARE } from '@/lib/forecast-engine/launch-conditions';
+import {
+  GUST_FADE_FULL_M,
+  GUST_FADE_SHARE,
+  GUST_FADE_START_M,
+  TERRAIN_LIFT_SHARE,
+} from '@/lib/forecast-engine/launch-conditions';
 import {
   STATION_RADIUS_KM,
   TRACK_RECORD_DAYS,
@@ -95,6 +100,9 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   thermalClimbMs: THERMAL_MIN_WSTAR.toFixed(1),
   soarHeightM: meters(SOAR_MIN_HEIGHT),
   terrainLiftPercent: Math.round(TERRAIN_LIFT_SHARE * 100),
+  gustFadeStartM: GUST_FADE_START_M,
+  gustFadeFullM: GUST_FADE_FULL_M,
+  gustFadeSharePercent: Math.round(GUST_FADE_SHARE * 100),
   soarHours: SOAR_MIN_HOURS,
   xcClimbMs: XC_MIN_WSTAR.toFixed(1),
   xcHeightM: meters(XC_MIN_HEIGHT),

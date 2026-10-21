@@ -9,6 +9,7 @@ import {
 } from '..';
 import {
   deriveLaunchConditions,
+  gustShareAtLaunch,
   interpolateAtHeight,
   topOfLiftAtLaunch,
 } from '../launch-conditions';
@@ -153,10 +154,27 @@ describe('deriveLaunchConditions', () => {
     expect(c.windSpeed).toBe(5);
   });
 
-  it('carries the surface gust spread up to the launch', () => {
+  it('carries the surface gust spread up to a launch near the model ground', () => {
+    // 290 m above the model ground: wind 18.5 km/h there, plus the whole 12 km/h spread
     const hour = hourAt(13, { windSpeed: 10, windAloft: 20, gusts: 22 });
-    const c = deriveLaunchConditions(hour, MODEL_ELEVATION, 1000);
-    expect(c.windGust).toBe(32);
+    const c = deriveLaunchConditions(hour, MODEL_ELEVATION, 500);
+    expect(c.windGust).toBe(31);
+  });
+
+  it('adds less of the gust spread at a launch high above the model ground', () => {
+    const hour = hourAt(13, { windSpeed: 10, windAloft: 20, gusts: 22 });
+    // 790 m above: 65% of the spread
+    expect(deriveLaunchConditions(hour, MODEL_ELEVATION, 1000).windGust).toBe(28);
+    // 1,090 m above: half of it
+    expect(deriveLaunchConditions(hour, MODEL_ELEVATION, 1300).windGust).toBe(26);
+  });
+
+  it('fades the gust spread from 300 m above the model ground to half at 1,000 m', () => {
+    expect(gustShareAtLaunch(-100)).toBe(1);
+    expect(gustShareAtLaunch(300)).toBe(1);
+    expect(gustShareAtLaunch(650)).toBeCloseTo(0.75);
+    expect(gustShareAtLaunch(1000)).toBeCloseTo(0.5);
+    expect(gustShareAtLaunch(2500)).toBe(0.5);
   });
 
   it('raises the top of lift by half the launch height above the model ground, up to cloud base', () => {
