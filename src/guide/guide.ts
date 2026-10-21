@@ -81,3 +81,17 @@ export function fillFacts(body: string, facts: Record<string, string | number>):
     return String(facts[name]);
   });
 }
+
+/** A heading's anchor: "What it can't tell you" -> "what-it-cant-tell-you". */
+export function headingId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+/** The anchors of a page's headings, for links to a section. */
+export function headingIds(body: string): string[] {
+  return [...body.matchAll(/^#{2,6}\s+(.+)$/gm)].map((m) => headingId(m[1]));
+}

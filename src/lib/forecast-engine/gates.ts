@@ -44,8 +44,24 @@ export const THERMAL_MIN_WSTAR = 1.0; // m/s
 export const NIL_WIND_KMH = 6;
 /** Half-width of the sector around each listed direction (PGE uses 8 points, 45° apart). */
 export const SECTOR_HALF_WIDTH = 22.5;
+/** Wind over this share of the limit makes an hour marginal. */
+export const WIND_NEAR_LIMIT = 0.8;
+/** Gusts this far over the wind limit fail the hour. */
+export const GUST_OVER_LIMIT_KMH = 10;
+/** Without thermals, gusts this far over the mean wind fail the hour, or make it marginal. */
+export const GUST_SPREAD_FAIL_KMH = 25;
+export const GUST_SPREAD_MARGINAL_KMH = 15;
+/** Rain in the hour (mm) or a chance of rain (%) that fails it; a lower chance makes it marginal. */
+export const RAIN_FAIL_MM = 0.3;
+export const RAIN_FAIL_CHANCE = 60;
+export const RAIN_MARGINAL_CHANCE = 30;
 /** Cloud base must clear launch by this much to launch and climb out. */
-const CLOUD_CLEARANCE_M = 150;
+export const CLOUD_CLEARANCE_M = 150;
+/** Low cloud cover (%) it takes for cloud base to cap the launch. */
+export const LOW_CLOUD_COVER = 30;
+/** Visibility (m) under which an hour is foggy, or hazy. */
+export const FOG_VISIBILITY_M = 3000;
+export const HAZE_VISIBILITY_M = 5000;
 
 export function angleDifference(a: number, b: number): number {
   const diff = Math.abs(a - b) % 360;
@@ -81,7 +97,7 @@ export function windGate(c: LaunchConditions, launch: LaunchProfile): GateResult
   if (c.windSpeed > limit) {
     return { gate: 'wind', status: 'fail', reason: `Wind ${c.windSpeed} km/h (limit ${limit})` };
   }
-  if (c.windSpeed > 0.8 * limit) {
+  if (c.windSpeed > WIND_NEAR_LIMIT * limit) {
     return {
       gate: 'wind',
       status: 'marginal',
@@ -97,10 +113,13 @@ export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult
   // thermals themselves, which pilots fly in: only how strong the gusts get
   // counts then, not how far they run over the mean wind.
   const thermic = (c.wStar ?? 0) >= THERMAL_MIN_WSTAR;
-  if (c.windGust > launch.maxWindSpeed + 10 || (!thermic && spread > 25)) {
+  if (
+    c.windGust > launch.maxWindSpeed + GUST_OVER_LIMIT_KMH ||
+    (!thermic && spread > GUST_SPREAD_FAIL_KMH)
+  ) {
     return { gate: 'gusts', status: 'fail', reason: `Gusts to ${c.windGust} km/h` };
   }
-  if (c.windGust > launch.maxWindSpeed || (!thermic && spread > 15)) {
+  if (c.windGust > launch.maxWindSpeed || (!thermic && spread > GUST_SPREAD_MARGINAL_KMH)) {
     return { gate: 'gusts', status: 'marginal', reason: `Gusty, to ${c.windGust} km/h` };
   }
   return { gate: 'gusts', status: 'pass' };
@@ -137,10 +156,10 @@ export function rainGate(c: LaunchConditions, trust: RainTrust = 'trusted'): Gat
     }
     return { gate: 'rain', status: 'pass' };
   }
-  if ((c.precipitation ?? 0) >= 0.3 || c.precipitationProbability >= 60) {
+  if ((c.precipitation ?? 0) >= RAIN_FAIL_MM || c.precipitationProbability >= RAIN_FAIL_CHANCE) {
     return { gate: 'rain', status: 'fail', reason: rainReason(c) };
   }
-  if ((c.precipitation ?? 0) > 0 || c.precipitationProbability >= 30) {
+  if ((c.precipitation ?? 0) > 0 || c.precipitationProbability >= RAIN_MARGINAL_CHANCE) {
     return { gate: 'rain', status: 'marginal', reason: rainReason(c) };
   }
   return { gate: 'rain', status: 'pass' };
@@ -156,7 +175,7 @@ export function cloudGate(c: LaunchConditions, launch: LaunchProfile): GateResul
   if (c.cloudBaseMsl === null || launch.elevation <= 0) return { gate: 'cloud', status: 'pass' };
   const clearance = c.cloudBaseMsl - launch.elevation;
   // Cloud base only caps the launch when there is cloud there to cap it.
-  const cloudy = c.cloudCoverLow === null || c.cloudCoverLow >= 30;
+  const cloudy = c.cloudCoverLow === null || c.cloudCoverLow >= LOW_CLOUD_COVER;
   if (!cloudy) return { gate: 'cloud', status: 'pass' };
   if (clearance < 0) {
     return { gate: 'cloud', status: 'fail', reason: 'Launch in cloud' };
@@ -173,14 +192,14 @@ export function cloudGate(c: LaunchConditions, launch: LaunchProfile): GateResul
 
 export function visibilityGate(c: LaunchConditions): GateResult {
   if (c.visibility === null) return { gate: 'visibility', status: 'pass' };
-  if (c.visibility < 3000) {
+  if (c.visibility < FOG_VISIBILITY_M) {
     return {
       gate: 'visibility',
       status: 'fail',
       reason: `Fog, visibility ${(c.visibility / 1000).toFixed(1)} km`,
     };
   }
-  if (c.visibility < 5000) {
+  if (c.visibility < HAZE_VISIBILITY_M) {
     return {
       gate: 'visibility',
       status: 'marginal',

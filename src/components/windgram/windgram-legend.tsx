@@ -1,5 +1,13 @@
 import { LAPSE_BANDS, LAPSE_GROUP_LABEL, type LapseGroup } from './lapse-rate-utils';
-import { windBarbPath, windSpeedToBarb } from './wind-barb-utils';
+import { THERMAL_MIN_WSTAR } from '@/lib/forecast-engine/gates';
+import {
+  BARB_FLAG_KMH,
+  BARB_LONG_KMH,
+  BARB_SHORT_KMH,
+  windBarbPath,
+  windSpeedToBarb,
+} from './wind-barb-utils';
+import { ISOTHERM_STEP_C } from './windgram-data';
 
 const GROUPS: LapseGroup[] = ['inversion', 'stable', 'conditional', 'unstable'];
 
@@ -63,7 +71,8 @@ export function WindgramLegend({ maxWindSpeed }: { maxWindSpeed?: number }) {
             </g>
           </Sample>
           <span>
-            Wind barbs point into the wind, in km/h: long feather 10, short 5, flag 50
+            Wind barbs point into the wind, in km/h: long feather {BARB_LONG_KMH}, short{' '}
+            {BARB_SHORT_KMH}, flag {BARB_FLAG_KMH}
             {maxWindSpeed !== undefined && <>. Red is over this site&apos;s {maxWindSpeed} km/h.</>}
           </span>
         </li>
@@ -72,7 +81,7 @@ export function WindgramLegend({ maxWindSpeed }: { maxWindSpeed?: number }) {
             <line x1={-13} x2={13} y1={0} y2={0} stroke="rgba(0,0,0,0.6)" strokeWidth={5} strokeLinecap="round" />
             <line x1={-13} x2={13} y1={0} y2={0} stroke="#fde047" strokeWidth={2.5} strokeLinecap="round" />
           </Sample>
-          <span>Top of lift, in hours with thermals of 1 m/s or more</span>
+          <span>Top of lift, in hours with thermals of {THERMAL_MIN_WSTAR.toFixed(1)} m/s or more</span>
         </li>
         <li className="flex items-center gap-2">
           <Sample>
@@ -101,7 +110,7 @@ export function WindgramLegend({ maxWindSpeed }: { maxWindSpeed?: number }) {
             <line x1={-13} x2={13} y1={-3} y2={-3} stroke="rgba(30,30,120,0.7)" />
             <line x1={-13} x2={13} y1={4} y2={4} stroke="#1d4ed8" strokeWidth={1.6} strokeDasharray="5 3" />
           </Sample>
-          <span>Temperature lines every 5 °C, freezing in dashed blue</span>
+          <span>Temperature lines every {ISOTHERM_STEP_C} °C, freezing in dashed blue</span>
         </li>
         <li className="flex items-center gap-2">
           <Sample>

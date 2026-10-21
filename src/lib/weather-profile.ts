@@ -207,6 +207,9 @@ export function calculateThermalIndex(
   return Math.round(lapseScore + capeScore + cinScore + windScore);
 }
 
+/** How much higher cumulus base sits for each °C between temperature and dew point. */
+export const CLOUD_BASE_M_PER_DEGREE = 125;
+
 /**
  * Estimates cumulus cloud base above the ground from the surface
  * temperature-dewpoint spread: a rising thermal reaches saturation about
@@ -214,7 +217,7 @@ export function calculateThermalIndex(
  * @returns Cloud base in meters AGL
  */
 export function estimateCloudBaseFromDewpoint(temperature: number, dewPoint: number): number {
-  return Math.max(0, Math.round(125 * (temperature - dewPoint)));
+  return Math.max(0, Math.round(CLOUD_BASE_M_PER_DEGREE * (temperature - dewPoint)));
 }
 
 /** Fraction of incoming shortwave that heats the air as sensible heat over land (a typical midday value). */

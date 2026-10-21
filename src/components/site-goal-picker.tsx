@@ -102,7 +102,7 @@ export function SiteGoalLine({ target, goal }: { target?: GoalTarget; goal: Site
       {target ? <SiteGoalSelect target={target} goal={goal} /> : <span>{GOAL_LABEL[goal]}</span>}
       <span className="text-muted-foreground">
         {GOAL_HINT[goal]}
-        {!target && ' Follow the site to change it.'}
+        {!target && ' Add the site to Favorites to change it.'}
       </span>
     </div>
   );

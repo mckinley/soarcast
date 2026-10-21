@@ -4,6 +4,11 @@
  * limit in km/h, so the barbs count in the same unit.
  */
 
+/** What a barb's flag, long feather and short feather each stand for, in km/h. */
+export const BARB_FLAG_KMH = 50;
+export const BARB_LONG_KMH = 10;
+export const BARB_SHORT_KMH = 5;
+
 export interface WindBarbConfig {
   /** Speed rounded to the nearest 5 km/h */
   speedKmh: number;
@@ -16,13 +21,13 @@ export interface WindBarbConfig {
 }
 
 export function windSpeedToBarb(speedKmh: number, direction: number): WindBarbConfig {
-  const rounded = Math.round(speedKmh / 5) * 5;
+  const rounded = Math.round(speedKmh / BARB_SHORT_KMH) * BARB_SHORT_KMH;
   let remaining = rounded;
-  const flags = Math.floor(remaining / 50);
-  remaining -= flags * 50;
-  const fullBarbs = Math.floor(remaining / 10);
-  remaining -= fullBarbs * 10;
-  const halfBarbs = remaining >= 5 ? 1 : 0;
+  const flags = Math.floor(remaining / BARB_FLAG_KMH);
+  remaining -= flags * BARB_FLAG_KMH;
+  const fullBarbs = Math.floor(remaining / BARB_LONG_KMH);
+  remaining -= fullBarbs * BARB_LONG_KMH;
+  const halfBarbs = remaining >= BARB_SHORT_KMH ? 1 : 0;
   return { speedKmh: rounded, direction, flags, fullBarbs, halfBarbs, calm: rounded === 0 };
 }
 
