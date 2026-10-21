@@ -7,12 +7,17 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import type { Settings, SiteGoal, SiteKind } from '@/types';
 import { SiteGoalSelect, SiteKindSelect } from '@/components/site-goal-picker';
+import { AreaHeader, SiteAreaSelect, type SettingsArea } from '@/components/area-controls';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SettingsSite {
   id: string;
+  /** "launch:<id>" or "custom:<id>" */
+  key: string;
+  /** The area the site is in */
+  areaId: string | null;
   name: string;
   latitude: number;
   longitude: number;
@@ -32,6 +37,8 @@ interface SettingsSite {
 interface SettingsClientProps {
   initialSettings: Settings;
   sites: SettingsSite[];
+  /** The places sites are grouped by, the one first saved in first */
+  areas?: SettingsArea[];
   vapidPublicKey?: string;
 }
 
@@ -40,7 +47,12 @@ function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-export function SettingsClient({ initialSettings, sites, vapidPublicKey }: SettingsClientProps) {
+export function SettingsClient({
+  initialSettings,
+  sites,
+  areas = [],
+  vapidPublicKey,
+}: SettingsClientProps) {
   const submit = useSubmit();
   // Each control saves through its own fetcher, so saving one never cancels
   // another, and nothing is disabled while a save is in flight.
@@ -237,6 +249,116 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
     return outputArray;
   }
 
+  // One site's row: its alerts switch, goal, kind, wind limit and area
+  const renderSite = (site: SettingsSite, areaAlertsOn: boolean) => {
+    // A site alerts when both its own switch and its area's are on
+    const isEnabled = settings.notifications.sitePreferences[site.id] ?? true;
+    const alerting = isEnabled && areaAlertsOn;
+    return (
+      <div key={site.id} className="rounded-lg border p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {alerting ? (
+              <Bell className="h-5 w-5 text-primary" />
+            ) : (
+              <BellOff className="h-5 w-5 text-muted-foreground" />
+            )}
+            <div>
+              <div className="font-medium">{site.name}</div>
+              <div className="text-sm text-muted-foreground">
+                {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}m
+              </div>
+            </div>
+          </div>
+          <Switch
+            checked={isEnabled}
+            disabled={!areaAlertsOn}
+            aria-label={`Alerts for ${site.name}`}
+            onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-4 sm:pl-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor={`goal-${site.id}`}
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              Worth going when:
+            </Label>
+            <SiteGoalSelect
+              id={`goal-${site.id}`}
+              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+              goal={site.goal}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor={`kind-${site.id}`}
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              What it gives:
+            </Label>
+            <SiteKindSelect
+              id={`kind-${site.id}`}
+              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+              kind={site.kind}
+              listedKind={site.listedKind}
+            />
+          </div>
+          {site.custom ? (
+            <div className="text-sm text-muted-foreground">
+              Wind limit {site.defaultMaxWind} km/h •{' '}
+              <Link to={`/sites/custom/${site.id}/edit`} className="underline">
+                Edit site
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground whitespace-nowrap">
+                Wind limit (km/h):
+              </Label>
+              <Input
+                type="number"
+                min="10"
+                max="100"
+                placeholder={
+                  site.defaultMaxWind ? String(site.defaultMaxWind) : String(DEFAULT_MAX_WIND_KMH)
+                }
+                inputMode="numeric"
+                value={siteCustomWinds[site.id] ?? ''}
+                onChange={(e) =>
+                  setSiteCustomWinds((prev) => ({
+                    ...prev,
+                    [site.id]: e.target.value,
+                  }))
+                }
+                onBlur={() => commitCustomWind(site.id)}
+                onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
+                className="w-[80px] h-8"
+              />
+            </div>
+          )}
+          {areas.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Label
+                htmlFor={`area-${site.id}`}
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Area:
+              </Label>
+              <SiteAreaSelect
+                id={`area-${site.id}`}
+                siteKey={site.key}
+                areaId={site.areaId}
+                areas={areas}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -400,113 +522,39 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
         </CardContent>
       </Card>
 
-      {/* Per-Site Notification Toggles */}
-      <Card>
+      {/* Favorites, by area: each site's goal, kind, wind limit and alerts */}
+      <Card id="areas" className="scroll-mt-20">
         <CardHeader>
           <CardTitle>Favorites</CardTitle>
           <CardDescription>
-            What each site gives, what makes a day worth going there, and whether to alert you about
-            it.
+            Sites are grouped into areas by where they are. The dashboard shows one area at a time.
+            Rename an area, join two, or move a site to another area. For each site, set what it
+            gives, what makes a day worth going there, and whether to alert you about it.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {sites.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No sites configured yet. Add sites to enable per-site notifications.
+              No sites yet. Add a site to Favorites, or add a private site, to set it up here.
             </p>
           ) : (
-            <div className="space-y-4">
-              {sites.map((site) => {
-                const isEnabled = settings.notifications.sitePreferences[site.id] ?? true; // default to enabled
+            <div className="space-y-8">
+              {(areas.length > 0 ? areas : [null]).map((area) => {
+                const areaSites = area ? sites.filter((s) => s.areaId === area.id) : sites;
+                const areaAlertsOn = area?.alerts ?? true;
                 return (
-                  <div key={site.id} className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {isEnabled ? (
-                          <Bell className="h-5 w-5 text-primary" />
-                        ) : (
-                          <BellOff className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <div>
-                          <div className="font-medium">{site.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} •{' '}
-                            {site.elevation}m
-                          </div>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={isEnabled}
-                        onCheckedChange={(checked) =>
-                          handleToggleSiteNotifications(site.id, checked)
-                        }
-                      />
+                  <section key={area?.id ?? 'all'} className="space-y-3">
+                    {area && <AreaHeader area={area} areas={areas} />}
+                    {!areaAlertsOn && (
+                      <p className="text-sm text-muted-foreground">
+                        Alerts are off for this area. Its sites send no alerts and are left out of
+                        the morning digest.
+                      </p>
+                    )}
+                    <div className="space-y-4">
+                      {areaSites.map((site) => renderSite(site, areaAlertsOn))}
                     </div>
-                    <div className="flex flex-wrap items-center gap-4 sm:pl-8">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Label
-                          htmlFor={`goal-${site.id}`}
-                          className="text-sm text-muted-foreground whitespace-nowrap"
-                        >
-                          Worth going when:
-                        </Label>
-                        <SiteGoalSelect
-                          id={`goal-${site.id}`}
-                          target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
-                          goal={site.goal}
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Label
-                          htmlFor={`kind-${site.id}`}
-                          className="text-sm text-muted-foreground whitespace-nowrap"
-                        >
-                          What it gives:
-                        </Label>
-                        <SiteKindSelect
-                          id={`kind-${site.id}`}
-                          target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
-                          kind={site.kind}
-                          listedKind={site.listedKind}
-                        />
-                      </div>
-                      {site.custom ? (
-                        <div className="text-sm text-muted-foreground">
-                          Wind limit {site.defaultMaxWind} km/h •{' '}
-                          <Link to={`/sites/custom/${site.id}/edit`} className="underline">
-                            Edit site
-                          </Link>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                            Wind limit (km/h):
-                          </Label>
-                          <Input
-                            type="number"
-                            min="10"
-                            max="100"
-                            placeholder={
-                              site.defaultMaxWind
-                                ? String(site.defaultMaxWind)
-                                : String(DEFAULT_MAX_WIND_KMH)
-                            }
-                            inputMode="numeric"
-                            value={siteCustomWinds[site.id] ?? ''}
-                            onChange={(e) =>
-                              setSiteCustomWinds((prev) => ({
-                                ...prev,
-                                [site.id]: e.target.value,
-                              }))
-                            }
-                            onBlur={() => commitCustomWind(site.id)}
-                            onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
-                            className="w-[80px] h-8"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  </section>
                 );
               })}
             </div>

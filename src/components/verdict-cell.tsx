@@ -12,10 +12,18 @@ interface VerdictCellProps {
   href?: string;
   /** A comp on at the site that day: launch will be busy */
   comp?: Comp | null;
+  /** The site's name, when the cell stands for an area's best site */
+  where?: string;
 }
 
 /** One site on one day: the flight it gives and when, or what stops it. Green is a go for the pilot's goal. */
-export function VerdictCell({ score, showNotification = false, href, comp }: VerdictCellProps) {
+export function VerdictCell({
+  score,
+  showNotification = false,
+  href,
+  comp,
+  where,
+}: VerdictCellProps) {
   if (!score) {
     return (
       <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
@@ -24,8 +32,9 @@ export function VerdictCell({ score, showNotification = false, href, comp }: Ver
     );
   }
 
-  const detail = cellDetail(score);
-  const title = comp ? `${verdictSummary(score)} Comp on: ${comp.name}.` : verdictSummary(score);
+  const detail = where ?? cellDetail(score);
+  const summary = where ? `${where}: ${verdictSummary(score)}` : verdictSummary(score);
+  const title = comp ? `${summary} Comp on: ${comp.name}.` : summary;
   const className = `relative flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent px-1 text-center transition-all hover:border-primary/50 ${STATUS_CELL[dayStatus(score)]}`;
 
   const content = (
@@ -42,7 +51,9 @@ export function VerdictCell({ score, showNotification = false, href, comp }: Ver
         </div>
       )}
       <div className="text-xs font-semibold leading-tight">{cellLabel(score)}</div>
-      {detail && <div className="text-[11px] leading-tight opacity-80">{detail}</div>}
+      {detail && (
+        <div className="w-full truncate text-[11px] leading-tight opacity-80">{detail}</div>
+      )}
     </>
   );
 
