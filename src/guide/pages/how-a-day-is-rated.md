@@ -51,7 +51,7 @@ SoarCast runs eight checks on each hour at the launch. Each check passes, is mar
 
 SoarCast reads the wind at the launch's own height, not at the forecast's ground. [Data sources](/guide/data-sources#what-it-cant-tell-you) explains how.
 
-Each site has a wind limit. It comes from the site's listing, or it is {{defaultWindLimitKmh}} km/h when the listing has none. You can set your own limit for each site on the Notifications page, under Favorites. A private site's limit is set on the site itself.
+Each site has a wind limit. It comes from the site's listing, or it is {{defaultWindLimitKmh}} km/h when the listing has none. You can set your own limit for each site in Settings, under Favorites. A private site's limit is set on the site itself.
 
 In an hour with thermals strong enough to climb in, the gusts are mostly the thermals themselves. So in those hours, only the gusts' top speed counts. Their gap above the average wind doesn't.
 
@@ -118,7 +118,7 @@ Each site has a kind, shown as "What it gives". The kind limits which flights a 
 | Thermals and ridge | Any flight                       |
 | Sled rides only    | Sled rides                       |
 
-The kind comes from the site's Paragliding Earth tags. A site tagged for thermals or cross-country gives thermals. A site tagged for soaring gives ridge soaring. A site with no tags can give any flight. You can change the kind on the Notifications page, under Favorites.
+The kind comes from the site's Paragliding Earth tags. A site tagged for thermals or cross-country gives thermals. A site tagged for soaring gives ridge soaring. A site with no tags can give any flight. You can change the kind in Settings, under Favorites.
 
 Ridge soaring also needs the launch's wind directions. Without them, SoarCast can't tell which wind blows onto the ridge.
 
@@ -134,7 +134,7 @@ Each site has a goal, shown as "Worth going when". It decides whether a flyable 
 
 Most sites start at Soarable. Sites that give sled rides only start at Safe launch is enough. So do hike-and-fly sites with no tags, and private sites with no kind set.
 
-You can change the goal on the site's page once it is in Favorites. It is also on the Notifications page, under Favorites. The Season card and Favorites on the Planning page use the same goal when they count Go days.
+You can change the goal on the site's page once it is in Favorites. It is also in Settings, under Favorites. The Season card and Favorites on the Planning page use the same goal when they count Go days.
 
 ## Hazards shown with the day
 
