@@ -94,6 +94,7 @@ export const TRIAL = {
   gustFloorSurface: false,
   gustDecayM: 0,
   gustFadeStartM: 0,
+  gustFadeFloor: 0,
   thermicMarginalOver: 0,
   thermicFailOver: 10,
   failOver: 10,
@@ -170,7 +171,7 @@ export function deriveLaunchConditions(
         atLaunch.speed +
           (TRIAL.gustDecayM > 0
             ? Math.max(
-                0,
+                TRIAL.gustFadeFloor,
                 1 -
                   Math.max(0, launchElevation - surfaceHeight - TRIAL.gustFadeStartM) /
                     TRIAL.gustDecayM,

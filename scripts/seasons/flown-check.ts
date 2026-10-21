@@ -503,10 +503,15 @@ const MAIN_TRIAL = { ...TRIAL };
 const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
   ['SAME AS MAIN (check)', {}],
   ['GUST SPREAD fades from 300 m to none at 1000 m', { gustFadeStartM: 300, gustDecayM: 700 }],
-  ['GUST SPREAD fades from 300 m to none at 1500 m', { gustFadeStartM: 300, gustDecayM: 1200 }],
-  ['GUST SPREAD fades from 500 m to none at 1000 m', { gustFadeStartM: 500, gustDecayM: 500 }],
-  ['GUST SPREAD fades from 500 m to none at 1500 m', { gustFadeStartM: 500, gustDecayM: 1000 }],
-  ['GUST SPREAD fades from 600 m to none at 1200 m', { gustFadeStartM: 600, gustDecayM: 600 }],
+  [
+    'GUST SPREAD fades from 300 m to half at 1000 m',
+    { gustFadeStartM: 300, gustDecayM: 1400, gustFadeFloor: 0.5 },
+  ],
+  ['GUST SPREAD fades from 400 m to none at 1200 m', { gustFadeStartM: 400, gustDecayM: 800 }],
+  [
+    'GUST SPREAD fades from 400 m to a third at 1000 m',
+    { gustFadeStartM: 400, gustDecayM: 900, gustFadeFloor: 0.33 },
+  ],
 ];
 
 /**
@@ -590,6 +595,14 @@ async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
 }
 
 async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
+  for (const { job, flown } of withFlown) {
+    const raw = await archivedForecast(job, { spent: Infinity });
+    if (!raw) continue;
+    const l = rate(job, cleanProfile(profileFromOpenMeteo(raw)), flown);
+    console.log(
+      `  ${(job.name ?? '').slice(0, 32).padEnd(32)} ${String(Math.round(l.aboveModel)).padStart(6)} m above the forecast ground`,
+    );
+  }
   if (process.env.FLOWN_TRIAL === 'split') await gustSplit(withFlown);
   const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
   for (const [title, flags] of VARIANTS) {
