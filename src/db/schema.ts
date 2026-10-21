@@ -3,6 +3,7 @@ import { text, integer, real, sqliteTable, unique } from 'drizzle-orm/sqlite-cor
 import { user } from './auth-schema';
 import type { SiteGoal, SiteKind } from '../types';
 import type { TrackRecord } from '../lib/track-record';
+import type { FlownDay } from '../lib/flown-days';
 
 // Better Auth's tables live in auth-schema.ts; app tables reference user.id.
 export * from './auth-schema';
@@ -228,6 +229,16 @@ export const trackRecordLocations = sqliteTable('track_record_locations', {
   stationId: text('station_id'),
   distanceKm: real('distance_km'),
   checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Days pilots flew from a launch, from Syncing Pilots (app/lib/flown-days.server.ts),
+// refetched every few hours.
+export const flownDaysCache = sqliteTable('flown_days', {
+  key: text('key').primaryKey(), // flownKey() in src/lib/flown-days.ts
+  fromDate: text('from_date').notNull(),
+  toDate: text('to_date').notNull(),
+  days: text('days', { mode: 'json' }).notNull().$type<FlownDay[]>(),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
 });
 
 // A site's past days rated by the engine on archived forecasts, written by

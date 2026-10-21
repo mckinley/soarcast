@@ -15,4 +15,10 @@ interface Env {
   HEALTH_ALERT_TO?: string;
   /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it. */
   EMAIL: SendEmail;
+  /** Syncing Pilots' FlownDaysApi (`[[services]]` in wrangler.toml); missing in local dev. */
+  SYNCING_PILOTS?: {
+    flownDays(
+      query: import('./src/lib/flown-days').FlownDaysQuery,
+    ): Promise<import('./src/lib/flown-days').FlownDaysResult>;
+  };
 }

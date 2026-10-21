@@ -31,6 +31,9 @@ type Pages = {
       "id": string;
     };
   };
+  "/api/flown-days": {
+    params: {};
+  };
   "/api/sites/near": {
     params: {};
   };
@@ -89,7 +92,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -110,6 +113,10 @@ type RouteFiles = {
   "routes/sites.custom.$id.tsx": {
     id: "routes/sites.custom.$id";
     page: "/sites/custom/:id";
+  };
+  "routes/api.flown-days.tsx": {
+    id: "routes/api.flown-days";
+    page: "/api/flown-days";
   };
   "routes/api.sites.near.tsx": {
     id: "routes/api.sites.near";
@@ -188,6 +195,7 @@ type RouteModules = {
   "routes/api.weather.profile": typeof import("./app/routes/api.weather.profile.tsx");
   "routes/api.track-record": typeof import("./app/routes/api.track-record.tsx");
   "routes/sites.custom.$id": typeof import("./app/routes/sites.custom.$id.tsx");
+  "routes/api.flown-days": typeof import("./app/routes/api.flown-days.tsx");
   "routes/api.sites.near": typeof import("./app/routes/api.sites.near.tsx");
   "routes/guide._index": typeof import("./app/routes/guide._index.tsx");
   "routes/sites.browse": typeof import("./app/routes/sites.browse.tsx");

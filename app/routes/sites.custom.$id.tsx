@@ -1,4 +1,5 @@
-import { useLoaderData, Link } from 'react-router';
+import { Suspense } from 'react';
+import { Await, useLoaderData, Link } from 'react-router';
 import type { Route } from './+types/sites.custom.$id';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
@@ -14,8 +15,11 @@ import { ElevationDisplay } from '@/components/elevation-display';
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
-import { seasonForSite, seasonSiteRef } from '~/app/lib/seasons.server';
+import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
+import { flownHereFor } from '~/app/lib/flown-days.server';
+import { FlownHereCard } from '@/components/flown-here';
+import { flownByMonthToShow } from '~/lib/flown-days';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, Pencil } from 'lucide-react';
@@ -46,12 +50,14 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   let scores: DayScore[] | null = null;
   let today: string | null = null;
+  let timeZone: string | null = null;
   let forecastError = false;
   try {
     setProfileDb(db);
     const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
     scores = evaluateDays(profile, launchProfileFromSite(site));
     today = profileToday(profile);
+    timeZone = profile.timezone;
   } catch (e) {
     console.error(`Forecast for ${site.name} failed:`, e);
     forecastError = true;
@@ -59,16 +65,48 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
-  const [comps, season] = await Promise.all([
+  const [comps, seasonFull] = await Promise.all([
     compsPromise,
-    seasonForSite(db, seasonSiteRef('custom', site.id), site, compsToday),
+    seasonWithDays(db, seasonSiteRef('custom', site.id), site, compsToday),
   ]);
-  return { site, scores, today, forecastError, comps, compsToday, season };
+  // Days pilots flew from here (Syncing Pilots): streamed in after the page
+  const flown =
+    today && timeZone
+      ? flownHereFor(
+          env,
+          db,
+          { latitude: site.latitude, longitude: site.longitude, altitude: site.elevation },
+          timeZone,
+          today,
+          seasonFull?.days ?? null,
+          site.goal ?? 'launch',
+        ).catch(() => null)
+      : Promise.resolve(null);
+  return {
+    site,
+    scores,
+    today,
+    forecastError,
+    comps,
+    compsToday,
+    season: seasonFull?.summary ?? null,
+    flown,
+  };
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, scores, today, forecastError, comps, compsToday, season } =
+  const { site, scores, today, forecastError, comps, compsToday, season, flown } =
     useLoaderData<typeof loader>();
+  const seasonCard = (flownByMonth: Array<number | null> | null) => (
+    <SeasonCard
+      season={season}
+      goal={site.goal ?? 'launch'}
+      today={compsToday}
+      comps={comps}
+      followed
+      flownByMonth={flownByMonth}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -113,13 +151,16 @@ export default function CustomSiteDetailPage() {
         />
       )}
 
-      <SeasonCard
-        season={season}
-        goal={site.goal ?? 'launch'}
-        today={compsToday}
-        comps={comps}
-        followed
-      />
+      <Suspense fallback={seasonCard(null)}>
+        <Await resolve={flown} errorElement={seasonCard(null)}>
+          {(f) => (
+            <>
+              {seasonCard(flownByMonthToShow(f))}
+              <FlownHereCard flown={f} goal={site.goal ?? 'launch'} />
+            </>
+          )}
+        </Await>
+      </Suspense>
 
       <SiteCompsCard comps={comps} today={compsToday} />
 

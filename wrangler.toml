@@ -29,6 +29,14 @@ crons = ["0 * * * *"]
 pattern = "soarcast.mckinleyaviation.com"
 custom_domain = true
 
+# Syncing Pilots (live inReach and SPOT tracking, same account): how many
+# pilots flew from a launch each day (app/lib/flown-days.server.ts). A
+# Worker-to-Worker call, so there is no URL or key. Local dev runs without it.
+[[services]]
+binding = "SYNCING_PILOTS"
+service = "syncing-pilots"
+entrypoint = "FlownDaysApi"
+
 # Cloudflare Email Sending (morning digest). Only the SoarCast address may send.
 [[send_email]]
 name = "EMAIL"

@@ -8,6 +8,7 @@ import {
   launchProfileKey,
   seasonMonths,
   typicalWeekGoDays,
+  type SeasonDay,
   type SeasonSummary,
 } from '~/lib/seasons';
 import type { Site, SiteGoal } from '~/types';
@@ -20,7 +21,16 @@ export function seasonSiteRef(source: 'pgsites' | 'custom', id: string): string 
 }
 
 function summarize(row: SiteSeason, site: Site, goal: SiteGoal, today: string): SeasonSummary {
-  const days = decodeSeasonDays(row.days);
+  return summarizeDays(row, decodeSeasonDays(row.days), site, goal, today);
+}
+
+function summarizeDays(
+  row: SiteSeason,
+  days: SeasonDay[],
+  site: Site,
+  goal: SiteGoal,
+  today: string,
+): SeasonSummary {
   const months = seasonMonths(days, goal);
   return {
     months,
@@ -48,10 +58,22 @@ export async function seasonForSite(
   site: Site,
   today: string,
 ): Promise<SeasonSummary | null> {
+  return (await seasonWithDays(db, siteRef, site, today))?.summary ?? null;
+}
+
+/** A site's season and its rated days (for checks against flown days), or null. */
+export async function seasonWithDays(
+  db: Db,
+  siteRef: string,
+  site: Site,
+  today: string,
+): Promise<{ summary: SeasonSummary; days: SeasonDay[] } | null> {
   try {
     const rows = await db.select().from(siteSeasons).where(eq(siteSeasons.siteRef, siteRef));
     const row = pickRow(rows, site);
-    return row ? summarize(row, site, site.goal ?? 'soar', today) : null;
+    if (!row) return null;
+    const days = decodeSeasonDays(row.days);
+    return { summary: summarizeDays(row, days, site, site.goal ?? 'soar', today), days };
   } catch (error) {
     console.error('Season lookup failed:', error);
     return null;
