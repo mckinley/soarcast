@@ -117,7 +117,7 @@ export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult
  */
 export type RainTrust = 'trusted' | 'low';
 
-const TROPICS_LATITUDE = 23.5;
+export const TROPICS_LATITUDE = 23.5;
 /** Where model rain is little trusted, this much in an hour still makes a shower worth watching for. */
 export const SHOWER_MM = 3;
 

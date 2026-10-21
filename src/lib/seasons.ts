@@ -7,6 +7,9 @@ import type { LaunchProfile } from './forecast-engine';
 import { meetsGoal } from './site-goals';
 import { dayStatus, type DayStatus } from './verdict-display';
 
+/** Whole months of past days rated for a site, ending with last month. */
+export const SEASON_MONTHS = 24;
+
 /** One past day: what the engine said, enough to judge it for any goal. */
 export interface SeasonDay {
   date: string; // YYYY-MM-DD, the site's local date

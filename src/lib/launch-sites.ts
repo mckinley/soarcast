@@ -10,6 +10,9 @@ import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { getIdealWindDirections, getOkWindDirections } from '@/lib/site-utils';
 import { defaultGoal, siteKindFromTags } from '@/lib/site-goals';
 
+/** A followed site's copy is refreshed from pgsites once it is this many days old. */
+export const SITE_REFRESH_DAYS = 7;
+
 /** The site's kind from its Paragliding Earth tags; null when it has none. */
 export function launchSiteKind(row: Pick<LaunchSite, 'isThermal' | 'isSoaring' | 'isXc'>) {
   return siteKindFromTags({ thermal: row.isThermal, soaring: row.isSoaring, xc: row.isXc });

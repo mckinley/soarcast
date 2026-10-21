@@ -11,7 +11,8 @@ export function setProfileDb(db: DrizzleD1Database<Record<string, unknown>>) {
 }
 
 const OPEN_METEO_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
-const CACHE_DURATION_HOURS = 3;
+/** A place's forecast is fetched again once its copy is this old. */
+export const CACHE_DURATION_HOURS = 3;
 
 // Pressure levels to fetch (hPa): every 25 hPa (about 250 m) up to 700 hPa,
 // where pilots fly, so the windgram resolves inversions and launch-height

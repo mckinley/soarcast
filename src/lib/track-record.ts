@@ -2,6 +2,13 @@
 // against what the airport reported in the flying hours, month by month. It
 // tells a pilot how far to trust the forecast in that part of the world.
 
+/** Farther than this, an airport says little about a site's weather. */
+export const STATION_RADIUS_KM = 60;
+/** Days of forecasts and reports in a record. */
+export const TRACK_RECORD_DAYS = 365;
+/** A record, and the airport chosen for a place, are rebuilt once this old. */
+export const TRACK_RECORD_MAX_AGE_DAYS = 30;
+
 /** Flying hours scored: rain in the hours ending 11:00..17:00, wind at 10:00..17:00 local. */
 const RAIN_HOURS = [11, 12, 13, 14, 15, 16, 17];
 const WIND_HOURS = [10, 11, 12, 13, 14, 15, 16, 17];

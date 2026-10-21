@@ -4,7 +4,10 @@ import { forecastTrackRecords, trackRecordLocations } from '~/db/schema';
 import {
   parseMetarCsv,
   scoreTrackRecord,
+  STATION_RADIUS_KM,
   totalRecord,
+  TRACK_RECORD_DAYS,
+  TRACK_RECORD_MAX_AGE_DAYS,
   type HourlyForecast,
   type TrackRecord,
   type TrackRecordStation,
@@ -17,10 +20,7 @@ import { profileLocationKey } from '~/lib/weather-profile';
 // the app uses) against the airport's METARs (Iowa Environmental Mesonet's
 // archive, which has airports worldwide). Recomputed once a month.
 
-/** Farther than this, an airport says little about a site's weather. */
-export const STATION_RADIUS_KM = 60;
-const MAX_AGE_MS = 30 * 24 * 3600 * 1000;
-const PERIOD_DAYS = 365;
+const MAX_AGE_MS = TRACK_RECORD_MAX_AGE_DAYS * 24 * 3600 * 1000;
 /** An airport with fewer scored days than this reports too little; try the next one. */
 const MIN_DAYS = 60;
 const USER_AGENT = 'SoarCast (https://soarcast.mckinleyaviation.com)';
@@ -156,7 +156,7 @@ export async function buildTrackRecord(
 ): Promise<TrackRecord> {
   const day = 24 * 3600 * 1000;
   const to = new Date(now.getTime() - day).toISOString().slice(0, 10);
-  const from = new Date(now.getTime() - PERIOD_DAYS * day).toISOString().slice(0, 10);
+  const from = new Date(now.getTime() - TRACK_RECORD_DAYS * day).toISOString().slice(0, 10);
   const { forecast, timezone } = await fetchPastForecasts(station, from, to);
   const metars = await fetchMetars(station.id, from, to, timezone);
   const months = scoreTrackRecord(forecast, parseMetarCsv(metars));

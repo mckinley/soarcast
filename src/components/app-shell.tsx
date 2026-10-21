@@ -12,6 +12,7 @@ import {
   LogOut,
   Compass,
   CalendarRange,
+  BookOpen,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { authClient } from '~/app/lib/auth-client';
@@ -61,7 +62,17 @@ const navItems = [
     href: '/settings',
     icon: Bell,
   },
+  {
+    title: 'Guide',
+    href: '/guide',
+    icon: BookOpen,
+  },
 ];
+
+/** Whether a nav item is the current section: its page or a page under it. */
+function isCurrent(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -180,7 +191,7 @@ function AppSidebar() {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href}>
+                  <SidebarMenuButton asChild isActive={isCurrent(pathname, item.href)}>
                     <Link to={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -223,7 +234,7 @@ function MobileNav() {
               to={item.href}
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                pathname === item.href ? 'bg-accent' : ''
+                isCurrent(pathname, item.href) ? 'bg-accent' : ''
               }`}
             >
               <item.icon className="h-4 w-4" />
