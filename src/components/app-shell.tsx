@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Cloud,
-  Bell,
   LayoutDashboard,
   Menu,
   Sun,
@@ -13,6 +12,7 @@ import {
   Compass,
   CalendarRange,
   BookOpen,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { authClient } from '~/app/lib/auth-client';
@@ -31,9 +31,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -41,32 +41,19 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 
-const navItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Planning',
-    href: '/planning',
-    icon: CalendarRange,
-  },
-  {
-    title: 'Browse Sites',
-    href: '/sites/browse',
-    icon: Compass,
-  },
-  {
-    title: 'Notifications',
-    href: '/settings',
-    icon: Bell,
-  },
-  {
-    title: 'Guide',
-    href: '/guide',
-    icon: BookOpen,
-  },
+type NavItem = { title: string; href: string; icon: typeof Cloud };
+
+/** The places pilots go to plan flying, at the top of the menu. */
+const mainNav: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'Planning', href: '/planning', icon: CalendarRange },
+  { title: 'Browse Sites', href: '/sites/browse', icon: Compass },
+];
+
+/** Help and settings, quieter at the bottom of the menu. */
+const footerNav: NavItem[] = [
+  { title: 'Guide', href: '/guide', icon: BookOpen },
+  { title: 'Settings', href: '/settings', icon: SettingsIcon },
 ];
 
 /** Whether a nav item is the current section: its page or a page under it. */
@@ -155,8 +142,8 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/settings" className="cursor-pointer">
-            <Bell className="mr-2 h-4 w-4" />
-            Notifications
+            <SettingsIcon className="mr-2 h-4 w-4" />
+            Settings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -172,6 +159,48 @@ function UserMenu() {
   );
 }
 
+/** The logo, which goes home: the dashboard when signed in, else the welcome page. */
+function HomeLink({ onClick }: { onClick?: () => void }) {
+  return (
+    <Link to="/" onClick={onClick} className="flex w-fit items-center gap-2 rounded-md">
+      <Cloud className="h-6 w-6" />
+      <span className="text-lg font-semibold">SoarCast</span>
+    </Link>
+  );
+}
+
+function SidebarNav({
+  items,
+  pathname,
+  quiet,
+}: {
+  items: NavItem[];
+  pathname: string;
+  quiet?: boolean;
+}) {
+  return (
+    <SidebarMenu>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton
+            asChild
+            size={quiet ? 'sm' : 'default'}
+            isActive={isCurrent(pathname, item.href)}
+            className={
+              quiet ? 'text-muted-foreground data-[active=true]:text-foreground' : undefined
+            }
+          >
+            <Link to={item.href}>
+              <item.icon className="h-4 w-4" />
+              <span>{item.title}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
+
 function AppSidebar() {
   const location = useLocation();
   const pathname = location.pathname;
@@ -179,31 +208,44 @@ function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
-        <div className="flex items-center gap-2">
-          <Cloud className="h-6 w-6" />
-          <span className="text-lg font-semibold">SoarCast</span>
-        </div>
+        <HomeLink />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isCurrent(pathname, item.href)}>
-                    <Link to={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarNav items={mainNav} pathname={pathname} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t">
+        <SidebarNav items={footerNav} pathname={pathname} quiet />
+      </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function MobileNavLink({
+  item,
+  current,
+  onClick,
+  quiet,
+}: {
+  item: NavItem;
+  current: boolean;
+  onClick: () => void;
+  quiet?: boolean;
+}) {
+  // Footer items stay full height for tapping, but in a quieter color
+  const tone = current ? 'bg-accent text-foreground' : quiet ? 'text-muted-foreground' : '';
+  return (
+    <Link
+      to={item.href}
+      onClick={onClick}
+      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${tone}`}
+    >
+      <item.icon className="h-4 w-4" />
+      <span>{item.title}</span>
+    </Link>
   );
 }
 
@@ -220,26 +262,29 @@ function MobileNav() {
           <span className="sr-only">Toggle navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="flex w-64 flex-col gap-0 p-0">
         <div className="border-b px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Cloud className="h-6 w-6" />
-            <span className="text-lg font-semibold">SoarCast</span>
-          </div>
+          <HomeLink onClick={() => setOpen(false)} />
         </div>
-        <nav className="flex flex-col gap-1 p-4">
-          {navItems.map((item) => (
-            <Link
+        <nav className="flex flex-1 flex-col gap-1 p-4">
+          {mainNav.map((item) => (
+            <MobileNavLink
               key={item.href}
-              to={item.href}
+              item={item}
+              current={isCurrent(pathname, item.href)}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                isCurrent(pathname, item.href) ? 'bg-accent' : ''
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span>{item.title}</span>
-            </Link>
+            />
+          ))}
+        </nav>
+        <nav className="flex flex-col gap-1 border-t p-4">
+          {footerNav.map((item) => (
+            <MobileNavLink
+              key={item.href}
+              item={item}
+              current={isCurrent(pathname, item.href)}
+              onClick={() => setOpen(false)}
+              quiet
+            />
           ))}
         </nav>
       </SheetContent>

@@ -100,8 +100,8 @@ export function SeasonCard({
         <h2 className="text-lg font-semibold">Season</h2>
         <p className="text-sm text-muted-foreground">
           {followed
-            ? 'Coming soon: SoarCast is rating this site’s last two years, month by month. It runs twice a day, so check back tomorrow.'
-            : 'Add this site to Favorites to see its best months: SoarCast then rates its last two years, month by month.'}
+            ? 'SoarCast is rating this site’s last two years, month by month. It runs twice a day, so check back tomorrow.'
+            : 'Add this site to Favorites to see its best months. SoarCast then rates its last two years, month by month.'}
         </p>
       </Card>
     );
@@ -132,8 +132,9 @@ export function SeasonCard({
         )}
       </p>
 
-      {/* Columns: go, then flyable stacked on top, out of every day of the month */}
-      <div className="relative pt-5" role="img" aria-label="Go and flyable days by month">
+      {/* Columns: go, then flyable stacked on top, out of every day of the month.
+          The left padding holds the percent labels inside the card. */}
+      <div className="relative pt-5 sm:pl-8" role="img" aria-label="Go and flyable days by month">
         <div className="relative h-28">
           {[0, 50, 100].map((v) => (
             <div
