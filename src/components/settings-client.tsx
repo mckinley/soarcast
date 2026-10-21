@@ -293,8 +293,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
           {pushEnabled && (
             <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <p>
-                ✓ Push notifications are on. You&apos;ll be notified when a day is a go for one of
-                your sites, by the goal you set for it below.
+                ✓ Push notifications are on. You&apos;ll get an alert when a day is a go at one of
+                your sites. Each site&apos;s goal is set below.
               </p>
             </div>
           )}
@@ -309,8 +309,8 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground">
-            Alerts come for days that are a go at a site: flyable, with the flight you want from it.
-            Set what each site is worth going for under Favorites below.
+            Alerts come for days that are a go at a site. A go means flyable, with the flight you
+            want from it. Set what each site is worth going for under Favorites below.
           </p>
 
           {/* Days Ahead Window */}
@@ -334,7 +334,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
               className="max-w-xs"
             />
             <p className="text-sm text-muted-foreground">
-              How far in advance to check for qualifying days (e.g., 2 = today and tomorrow).
+              How many days ahead to check. For example, 2 means today and tomorrow.
             </p>
           </div>
         </CardContent>
@@ -344,17 +344,14 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
       <Card>
         <CardHeader>
           <CardTitle>Email Morning Digest</CardTitle>
-          <CardDescription>
-            Receive a daily email at your delivery time showing today&apos;s flyability for your
-            sites.
-          </CardDescription>
+          <CardDescription>An email each morning, at the hour you choose.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="email-digest">Enable Email Digest</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                Each morning: which favorite sites are flyable today, and when.
+                It lists which favorite sites are flyable today, and when.
               </p>
             </div>
             <Switch
@@ -396,7 +393,7 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
                 className="max-w-[140px]"
               />
               <p className="text-sm text-muted-foreground">
-                Your local time; it goes out at the start of that hour.
+                Local time. The email goes out at the start of that hour.
               </p>
             </div>
           )}
@@ -525,9 +522,9 @@ export function SettingsClient({ initialSettings, sites, vapidPublicKey }: Setti
             <div className="text-sm text-muted-foreground">
               <p className="font-medium text-foreground mb-1">How Notifications Work</p>
               <p>
-                SoarCast checks your sites at your digest time each morning and at 6 PM, in your
-                local time. You&apos;ll get a push notification for each site with a day in your
-                notification window that is a go for what you want from it.
+                SoarCast checks your sites each morning at your digest time and again at 6 PM, in
+                your local time. You&apos;ll get a push notification for each site with a go day in
+                the notification window.
               </p>
             </div>
           </div>

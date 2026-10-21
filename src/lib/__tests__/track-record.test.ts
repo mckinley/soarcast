@@ -152,13 +152,13 @@ describe('trust', () => {
 describe('texts', () => {
   it('says how often forecast rain fell, and the rain it missed', () => {
     expect(rainText(month({ rainForecastDays: 18, rainSeenDays: 5, rainBothDays: 4 }))).toBe(
-      'The forecast called rain in the flying hours on 18 of 31 days, and rain fell on 4 of them; it also fell on 1 day forecast dry.',
+      'The forecast called rain in the flying hours on 18 of 31 days, and rain fell on 4 of them. Rain also fell on 1 day that was forecast dry.',
     );
   });
 
   it('says how far off the wind was and which way it leans', () => {
     expect(windText(month({ windBiasSum: -248 * 4 }))).toBe(
-      'Wind was off by 4 km/h on average (it reads 4 km/h low), direction within 45° 85% of the time.',
+      'Wind was off by 4 km/h on average. The forecast ran 4 km/h low. Its direction was within 45° 85% of the time.',
     );
   });
 

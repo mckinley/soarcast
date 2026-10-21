@@ -258,7 +258,7 @@ function rainNote(hours: HourVerdict[], trust: RainTrust): string | null {
       rainGate(h.conditions).status !== 'pass',
   );
   if (setAside.length === 0) return null;
-  return `Rain in the forecast ${formatHours(setAside.map((h) => h.hour))} isn't counted: in the tropics, models forecast rain on most days and little of it falls. Watch for showers building.`;
+  return `Rain in the forecast ${formatHours(setAside.map((h) => h.hour))} isn't counted. In the tropics, forecasts call for rain on most days, but little of it falls. Watch for showers building.`;
 }
 
 function evaluateDay(

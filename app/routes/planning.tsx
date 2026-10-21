@@ -622,7 +622,7 @@ function shareCell(share: number): string {
 
 const pct = (share: number) => `${Math.round(share * 100)}%`;
 
-const PENDING = 'Being rated: its last two years arrive within a day.';
+const PENDING = 'Being rated. Its last two years arrive within a day.';
 
 function ShareLegend({ pending = false }: { pending?: boolean }) {
   return (
@@ -833,7 +833,7 @@ function Places({ rows, months, label }: { rows: PlaceRow[]; months: string[]; l
 }
 
 const SEASONS_NOTE =
-  'Seasons come from the last two years of days, so a month reads the same in any year; comps are the ones listed for those dates.';
+  'Seasons come from the last two years of days, so a month reads the same in any year. Comps are the ones listed for those dates.';
 
 export default function PlanningPage() {
   const {
@@ -903,10 +903,11 @@ export default function PlanningPage() {
             </div>
             <ShareLegend pending />
             <p className="text-xs text-muted-foreground">
-              Colors are the share of days a go across {when}. The {AREAS.length} flying areas are a
-              hand-picked list of trip destinations, not a standard division of the world: each is a
-              few well-known launches within {AREA_RADIUS_KM} km of its middle, close enough to fly
-              from one base. A place that isn&apos;t on the map isn&apos;t on the list yet.
+              Colors show the share of days that were a go across {when}. The {AREAS.length} flying
+              areas are a hand-picked list of trip destinations, not a standard way to divide the
+              world. Each one is a few well-known launches within {AREA_RADIUS_KM} km of its middle,
+              close enough to fly from one base. A place that isn&apos;t on the map isn&apos;t on
+              the list yet.
             </p>
           </div>
           {destinationsRated === 0 ? (
@@ -962,9 +963,10 @@ export default function PlanningPage() {
               <p className="text-xs text-muted-foreground">
                 {destinationsRated < DESTINATIONS.length &&
                   `${destinationsRated} of ${DESTINATIONS.length} launches rated so far. `}
-                Each launch is rated with its Paragliding Earth wind directions and SoarCast&apos;s
-                default wind limit, on archived forecasts. An area or country counts a day as a go
-                when any of its launches was; open a launch for its own season. {SEASONS_NOTE}
+                Each launch is rated on archived forecasts, with its Paragliding Earth wind
+                directions and SoarCast&apos;s default wind limit. An area or country counts a day
+                as a go when any of its launches was. Open a launch to see its own season.{' '}
+                {SEASONS_NOTE}
               </p>
             </div>
           )}

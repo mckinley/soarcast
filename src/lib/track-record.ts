@@ -254,20 +254,24 @@ export function rainText(m: MonthRecord): string {
     return `The forecast called rain in the flying hours on none of ${m.days} days, and rain fell on ${m.rainSeenDays}.`;
   }
   const also =
-    missed > 0 ? `; it also fell on ${missed} ${missed === 1 ? 'day' : 'days'} forecast dry` : '';
+    missed > 0
+      ? `. Rain also fell on ${missed} ${missed === 1 ? 'day that was' : 'days that were'} forecast dry`
+      : '';
   return `The forecast called rain in the flying hours on ${m.rainForecastDays} of ${m.days} days, and rain fell on ${m.rainBothDays} of them${also}.`;
 }
 
-/** "Wind was off by 5 km/h on average (it reads 4 km/h low), direction within 45° 40% of the time." */
+/** "Wind was off by 5 km/h on average. The forecast ran 4 km/h low. Its direction was within 45° 40% of the time." */
 export function windText(m: MonthRecord): string | null {
   if (m.windHours === 0) return null;
   const error = Math.round(m.windAbsErrorSum / m.windHours);
   const bias = Math.round(m.windBiasSum / m.windHours);
   const reads =
-    Math.abs(bias) >= 3 ? ` (it reads ${Math.abs(bias)} km/h ${bias < 0 ? 'low' : 'high'})` : '';
+    Math.abs(bias) >= 3
+      ? ` The forecast ran ${Math.abs(bias)} km/h ${bias < 0 ? 'low' : 'high'}.`
+      : '';
   const direction =
     m.directionHours >= 20
-      ? `, direction within 45° ${Math.round((100 * m.directionRightHours) / m.directionHours)}% of the time`
+      ? ` Its direction was within 45° ${Math.round((100 * m.directionRightHours) / m.directionHours)}% of the time.`
       : '';
-  return `Wind was off by ${error} km/h on average${reads}${direction}.`;
+  return `Wind was off by ${error} km/h on average.${reads}${direction}`;
 }
