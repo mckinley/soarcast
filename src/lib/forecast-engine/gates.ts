@@ -3,7 +3,7 @@
 // careful pilot could still go.
 
 import type { SiteGoal, SiteKind } from '@/types';
-import type { LaunchConditions } from './launch-conditions';
+import { TRIAL, type LaunchConditions } from './launch-conditions';
 
 export type GateStatus = 'pass' | 'marginal' | 'fail';
 
@@ -89,7 +89,7 @@ export function directionGate(c: LaunchConditions, launch: LaunchProfile): GateR
     near(launch.okDirections, SECTOR_HALF_WIDTH) ||
     near(launch.goodDirections, 2 * SECTOR_HALF_WIDTH)
   ) {
-    if (c.windSpeed < LIGHT_CROSS_KMH) return { gate: 'direction', status: 'pass' };
+    if (c.windSpeed < TRIAL.lightCrossKmh) return { gate: 'direction', status: 'pass' };
     return { gate: 'direction', status: 'marginal', reason: `${reason}, cross on launch` };
   }
   return { gate: 'direction', status: 'fail', reason: `${reason}, off the launch` };
@@ -230,12 +230,21 @@ export const RAIN_SOON_HOURS = 2;
  */
 export function stormGate(c: LaunchConditions, trust: RainTrust = 'trusted'): GateResult {
   const li = c.liftedIndex;
+  if (!TRIAL.storm) {
+    if ((li !== null && li <= -4) || (c.cape >= 1500 && c.precipitationProbability >= 30)) {
+      return { gate: 'storm', status: 'fail', reason: 'Thunderstorms likely' };
+    }
+    if ((li !== null && li <= -2) || c.cape >= 1000) {
+      return { gate: 'storm', status: 'marginal', reason: 'Thunderstorm risk' };
+    }
+    return { gate: 'storm', status: 'pass' };
+  }
   const unstable = (li !== null && li <= STORM_RISK_LI) || c.cape >= STORM_RISK_CAPE;
   if (!unstable) return { gate: 'storm', status: 'pass' };
   const severe = (li !== null && li <= STORM_SEVERE_LI) || c.cape >= STORM_SEVERE_CAPE;
   const showersSoon =
     trust === 'low'
-      ? (c.rainSoonMm ?? 0) >= SHOWER_MM
+      ? (c.rainSoonMm ?? 0) >= TRIAL.tropicsStormMm
       : (c.rainSoonMm ?? 0) > 0 || c.rainSoonChance >= RAIN_MARGINAL_CHANCE;
   if (showersSoon) {
     return severe

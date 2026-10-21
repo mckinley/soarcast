@@ -87,6 +87,15 @@ export function interpolateAtHeight(samples: WindSample[], height: number): Wind
  */
 export const TERRAIN_LIFT_SHARE = 0.5;
 
+// TRIAL (branch only, never merged): switches the flown-day check flips to
+// compare variants of the engine changes in one run.
+export const TRIAL = {
+  storm: true,
+  tropicsStormMm: 3,
+  lightCrossKmh: 12,
+  liftShare: TERRAIN_LIFT_SHARE,
+};
+
 /** The model's top of lift, raised for a launch that stands above the model's ground. */
 export function topOfLiftAtLaunch(
   modelTopMsl: number | null,
@@ -96,7 +105,7 @@ export function topOfLiftAtLaunch(
 ): number | null {
   if (modelTopMsl === null) return null;
   const above = Math.max(0, launchElevation - modelElevation);
-  const raised = modelTopMsl + TERRAIN_LIFT_SHARE * above;
+  const raised = modelTopMsl + TRIAL.liftShare * above;
   return Math.round(
     cloudBaseMsl !== null ? Math.max(modelTopMsl, Math.min(raised, cloudBaseMsl)) : raised,
   );

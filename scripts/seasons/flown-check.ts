@@ -29,6 +29,7 @@ import {
   type LaunchProfile,
 } from '../../src/lib/forecast-engine';
 import { angleDifference } from '../../src/lib/forecast-engine/gates';
+import { TRIAL } from '../../src/lib/forecast-engine/launch-conditions';
 import {
   profileFromOpenMeteo,
   type AtmosphericProfile,
@@ -362,10 +363,10 @@ class Moves {
   }
 }
 
-function compare(base: Baseline, launches: Launch[]) {
+function compare(base: Baseline, launches: Launch[], title = 'COMPARED WITH MAIN', minMoved = 1) {
   const now = snapshot(launches);
   const ids = Object.keys(now.launches).filter((id) => base.launches[id]);
-  console.log(`\nCOMPARED WITH MAIN (baseline ${base.sha}, ${ids.length} launches in both)`);
+  console.log(`\n${title} (baseline ${base.sha}, ${ids.length} launches in both)`);
   console.log(
     "(x1.00 means the moved days were flown as often as the launch's Go days on main, or soared as often as its soaring days)",
   );
@@ -411,7 +412,7 @@ function compare(base: Baseline, launches: Launch[]) {
     }
     const ratio = (part: number, days: number, rate: number) =>
       days > 0 && rate > 0 ? `x${(part / (days * rate)).toFixed(2)}` : '-';
-    if (moved.up + moved.down + moved.soarUp > 0)
+    if (moved.up + moved.down + moved.soarUp >= minMoved)
       perLaunch.push(
         `    ${b.name.slice(0, 32).padEnd(32)} Go ${(Math.round(b.goRate * 100) + '%').padStart(4)} ` +
           `up ${String(moved.up).padStart(4)} days ${String(moved.upFlown).padStart(3)} flown ${ratio(moved.upFlown, moved.up, b.goRate).padStart(6)}, ` +
@@ -457,6 +458,41 @@ function baseline(launches: Launch[]) {
 
 // ---------------------------------------------------------------- main
 
+const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
+  ['SAME AS MAIN (check)', { storm: false, lightCrossKmh: 0, liftShare: 0 }],
+  [
+    'STORM, tropics showers 3 mm',
+    { storm: true, tropicsStormMm: 3, lightCrossKmh: 0, liftShare: 0 },
+  ],
+  [
+    'STORM, tropics rain 0.3 mm',
+    { storm: true, tropicsStormMm: 0.3, lightCrossKmh: 0, liftShare: 0 },
+  ],
+  [
+    'STORM, tropics any rain',
+    { storm: true, tropicsStormMm: 0.01, lightCrossKmh: 0, liftShare: 0 },
+  ],
+  ['CROSS under 10', { storm: false, lightCrossKmh: 10, liftShare: 0 }],
+  ['CROSS under 12', { storm: false, lightCrossKmh: 12, liftShare: 0 }],
+  ['CROSS under 15', { storm: false, lightCrossKmh: 15, liftShare: 0 }],
+  ['LIFT share 0.3', { storm: false, lightCrossKmh: 0, liftShare: 0.3 }],
+  ['LIFT share 0.5', { storm: false, lightCrossKmh: 0, liftShare: 0.5 }],
+  ['LIFT share 0.7', { storm: false, lightCrossKmh: 0, liftShare: 0.7 }],
+];
+
+async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
+  const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
+  for (const [title, flags] of VARIANTS) {
+    Object.assign(TRIAL, flags);
+    const launches: Launch[] = [];
+    for (const { job, flown } of withFlown) {
+      const raw = await archivedForecast(job, { spent: Infinity });
+      if (raw) launches.push(rate(job, cleanProfile(profileFromOpenMeteo(raw)), flown));
+    }
+    compare(base, launches, title, 10);
+  }
+}
+
 async function main() {
   if (!ACCOUNT || !TOKEN)
     throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed');
@@ -474,6 +510,7 @@ async function main() {
   }
   withFlown.sort((a, b) => b.flown.length - a.flown.length);
   console.log(`${jobs.length} launches, ${withFlown.length} with enough flown days`);
+  if (process.env.FLOWN_TRIAL) return trial(withFlown);
 
   const budget = { spent: 0 };
   const launches: Launch[] = [];
