@@ -502,7 +502,11 @@ function baseline(launches: Launch[]) {
 const MAIN_TRIAL = { ...TRIAL };
 const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
   ['SAME AS MAIN (check)', {}],
-  ['GUST SPREAD fades out 1500 m above the forecast ground', { gustDecayM: 1500 }],
+  ['GUST SPREAD fades from 300 m to none at 1000 m', { gustFadeStartM: 300, gustDecayM: 700 }],
+  ['GUST SPREAD fades from 300 m to none at 1500 m', { gustFadeStartM: 300, gustDecayM: 1200 }],
+  ['GUST SPREAD fades from 500 m to none at 1000 m', { gustFadeStartM: 500, gustDecayM: 500 }],
+  ['GUST SPREAD fades from 500 m to none at 1500 m', { gustFadeStartM: 500, gustDecayM: 1000 }],
+  ['GUST SPREAD fades from 600 m to none at 1200 m', { gustFadeStartM: 600, gustDecayM: 600 }],
 ];
 
 /**
