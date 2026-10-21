@@ -18,6 +18,13 @@ export type { HourVerdict } from './evaluate';
 export type { LaunchProfile, GateResult, GateStatus, GateName, RainTrust } from './gates';
 export type { LaunchConditions } from './launch-conditions';
 
+/**
+ * Bump this when a change to the engine changes how past days rate. The
+ * season build then rates every season again. 2: storms need showers near,
+ * light cross wind with thermals passes, top of lift at high launches.
+ */
+export const ENGINE_VERSION = 2;
+
 /** Paraglider launch limit used when a site has none: most launches top out around 25 km/h. */
 export const DEFAULT_MAX_WIND_KMH = 25;
 

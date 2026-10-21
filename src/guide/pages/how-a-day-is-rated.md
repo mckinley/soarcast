@@ -36,16 +36,16 @@ Push alerts only go out for days that are a Go.
 
 SoarCast runs eight checks on each hour at the launch. Each check passes, is marginal or fails. The hour takes its worst result, so one failed check rules out the hour.
 
-| Check          | Fails when                                                                                                                              | Marginal when                                                                                                       |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Wind           | The wind is over the site's wind limit.                                                                                                 | The wind is over {{windNearLimitPercent}}% of the limit.                                                            |
-| Gusts          | Gusts are more than {{gustOverLimitKmh}} km/h over the limit. Or gusts are more than {{gustSpreadFailKmh}} km/h above the average wind. | Gusts are over the site's wind limit. Or gusts are more than {{gustSpreadMarginalKmh}} km/h above the average wind. |
-| Wind direction | The wind is off the launch.                                                                                                             | The wind is cross on the launch.                                                                                    |
-| Rain           | The hour has {{rainFailMm}} mm of rain or more. Or the chance of rain is {{rainFailChance}}% or more.                                   | The hour has any rain. Or the chance of rain is {{rainMarginalChance}}% or more.                                    |
-| Storms         | Thunderstorms are likely.                                                                                                               | There is a risk of thunderstorms.                                                                                   |
-| Cloud          | The launch is in cloud.                                                                                                                 | Cloud base is less than {{cloudClearanceM}} m above launch.                                                         |
-| Visibility     | You can see less than {{fogKm}} km. The day shows this as Fog.                                                                          | You can see less than {{hazeKm}} km. The day shows this as Haze.                                                    |
-| Daylight       | It is dark.                                                                                                                             | Sunrise or sunset falls inside the hour.                                                                            |
+| Check          | Fails when                                                                                                                              | Marginal when                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Wind           | The wind is over the site's wind limit.                                                                                                 | The wind is over {{windNearLimitPercent}}% of the limit.                                                                             |
+| Gusts          | Gusts are more than {{gustOverLimitKmh}} km/h over the limit. Or gusts are more than {{gustSpreadFailKmh}} km/h above the average wind. | Gusts are over the site's wind limit. Or gusts are more than {{gustSpreadMarginalKmh}} km/h above the average wind.                  |
+| Wind direction | The wind is off the launch.                                                                                                             | The wind is cross on the launch.                                                                                                     |
+| Rain           | The hour has {{rainFailMm}} mm of rain or more. Or the chance of rain is {{rainFailChance}}% or more.                                   | The hour has any rain. Or the chance of rain is {{rainMarginalChance}}% or more.                                                     |
+| Storms         | The air is very unstable, with showers in the forecast within {{rainSoonHours}} hours.                                                  | The air is unstable, with showers in the forecast within {{rainSoonHours}} hours. Or the air is very unstable, with no showers near. |
+| Cloud          | The launch is in cloud.                                                                                                                 | Cloud base is less than {{cloudClearanceM}} m above launch.                                                                          |
+| Visibility     | You can see less than {{fogKm}} km. The day shows this as Fog.                                                                          | You can see less than {{hazeKm}} km. The day shows this as Haze.                                                                     |
+| Daylight       | It is dark.                                                                                                                             | Sunrise or sunset falls inside the hour.                                                                                             |
 
 ### Wind and gusts
 
@@ -62,6 +62,7 @@ Each launch lists the wind directions it works in. A listed site's directions co
 - The check passes when the wind is within {{sectorDegrees}}° of a Preferred direction.
 - The wind is cross on the launch when it is within {{sectorDegrees}}° of a Possible direction. It is also cross when it is within {{crossDegrees}}° of a Preferred one.
 - Any other wind is off the launch.
+- In wind under {{lightCrossKmh}} km/h, a cross wind passes in an hour with thermals. Thermals draw air up the slope, which helps on launch.
 - In wind under {{nilWindKmh}} km/h, the direction doesn't matter. You can launch facing any way.
 - A launch with no directions listed passes in any wind direction.
 
@@ -71,7 +72,15 @@ Rain counts both the amount forecast for the hour and the chance of rain.
 
 In the tropics, forecasts call for rain on far more days than it falls. Within {{tropicsLatitude}}° of the equator, only showers of {{showerMm}} mm an hour or more count. They make the hour marginal, never a fail. When SoarCast sets rain aside, the day says so.
 
-Storms grow in unstable air. That is air that keeps rising on its own once it starts. Unstable air builds thermals, and with enough of it, storm clouds. The forecast says how much energy the air holds for this. A lot of it fails the hour. Less of it makes the hour marginal.
+Storms grow in unstable air. That is air that keeps rising on its own once it starts. Unstable air builds thermals, and with enough of it, storm clouds. The forecast says how much energy the air holds for this.
+
+Unstable air alone often gives a good thermal day. A storm also needs something to set it off, and showers in the forecast are the sign of that. So SoarCast looks for showers in the hour and the {{rainSoonHours}} hours after it.
+
+- Unstable air with showers near makes the hour marginal. Very unstable air with showers near fails it.
+- Very unstable air with no showers near makes the hour marginal.
+- Unstable air with no showers near passes. The day then says the air is unstable, so you know to watch the clouds.
+
+In the tropics, rain from {{rainFailMm}} mm an hour counts as showers near. The chance of rain doesn't count there.
 
 ### Cloud and visibility
 
@@ -104,6 +113,8 @@ These are the two thermal numbers:
 
 - **Thermal strength** is how fast a typical thermal rises, in m/s. SoarCast estimates it from how strong the sun is and how high the warmed air mixes. A paraglider sinks at about {{thermalClimbMs}} m/s, so weaker thermals can't hold one up.
 - **Top of lift** is where thermals stop. It is the top of the warmed air, or cloud base when that is lower.
+
+Over mountains, the warmed air reaches higher over a peak than over the valley floor. It doesn't rise by the peak's whole height, though. A forecast's ground is smoothed, so a launch on a peak often sits well above it. For such a launch, SoarCast raises the top of lift by {{terrainLiftPercent}}% of that difference, up to cloud base.
 
 Both are estimates. Real thermals change a lot from hour to hour and from one slope to the next.
 

@@ -57,6 +57,13 @@
       "when": 1792613402096,
       "tag": "0007_flown_days",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792618739852,
+      "tag": "0008_season_engine_version",
+      "breakpoints": true
     }
   ]
 }

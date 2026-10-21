@@ -63,10 +63,10 @@ Weather services make new forecasts every one to six hours. SoarCast keeps a pla
 
 - A forecast describes a square of ground, not one spot. Detailed forecasts use squares 1 to 3 km wide. Global ones use squares about 10 to 25 km wide.
 - The forecast's ground is the average height of its square. Peaks, ridges and valleys get smoothed out.
-- A launch on a peak or ridge often sits well above that ground. SoarCast reads the wind and temperature at the launch's real height from the forecast's upper levels.
+- A launch on a peak or ridge often sits well above that ground. SoarCast reads the wind and temperature at the launch's real height from the forecast's upper levels. It raises the top of lift there too. [How a day is rated](/guide/how-a-day-is-rated#what-flight-the-day-gives) explains how.
 - Gusts are only forecast near the ground. SoarCast adds the same extra gust speed to the wind at launch height.
 - Small local winds are often missed. These include valley winds, sea breezes and wind bending around a single ridge.
-- In the tropics, forecasts call for rain on far more days than it falls. Within {{tropicsLatitude}}° of the equator, SoarCast only counts rain of {{showerMm}} mm an hour or more. When it sets rain aside, the day says so.
+- In the tropics, forecasts call for rain on far more days than it falls. Within {{tropicsLatitude}}° of the equator, the rain check only counts rain of {{showerMm}} mm an hour or more. When it sets rain aside, the day says so.
 
 ## Forecast track record
 
@@ -88,7 +88,7 @@ SoarCast rates each day of the last {{seasonMonths}} months the same way it rate
 
 So a season shows what the forecasts said, not what pilots flew. If the forecast often gets a site wrong, its season is wrong in the same way. The site's track record shows how far to trust it. [Flown days](#flown-days) show what pilots flew.
 
-SoarCast builds seasons in batches twice a day. A site gets its seasons within a day or two of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months.
+SoarCast builds seasons in batches twice a day. A site gets its seasons within a day or two of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months. They are also rebuilt when SoarCast changes how it rates a day.
 
 The flying areas on the Planning page are SoarCast's own list of places pilots travel to. Each area is a few launches within {{areaRadiusKm}} km of its middle.
 

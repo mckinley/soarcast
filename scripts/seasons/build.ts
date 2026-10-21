@@ -18,7 +18,7 @@ import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../src/db/schema';
 import { customSites, launchSites, siteSeasons, userFavoriteSites } from '../../src/db/schema';
-import { evaluateDays, launchProfileFromSite } from '../../src/lib/forecast-engine';
+import { ENGINE_VERSION, evaluateDays, launchProfileFromSite } from '../../src/lib/forecast-engine';
 import { profileFromOpenMeteo, type OpenMeteoProfileResponse } from '../../src/lib/weather-profile';
 import { launchSiteToSite } from '../../src/lib/launch-sites';
 import { customSiteToSite } from '../../src/lib/custom-sites';
@@ -101,13 +101,17 @@ async function main() {
     `Season ${range.from} to ${range.to}: ${VARIABLES.length} variables, ~${cost.toFixed(0)} calls a site, budget ${BUDGET}${DRY_RUN ? ', dry run' : ''}`,
   );
 
-  // Built rows, by key: their last day, to skip the up-to-date ones
-  const built = new Map<string, string>();
+  // Built rows, by key: their last day and engine, to skip the up-to-date ones
+  const built = new Map<string, { toDate: string; engineVersion: number }>();
   if (!DRY_RUN) {
     for (const r of await db
-      .select({ key: siteSeasons.key, toDate: siteSeasons.toDate })
+      .select({
+        key: siteSeasons.key,
+        toDate: siteSeasons.toDate,
+        engineVersion: siteSeasons.engineVersion,
+      })
       .from(siteSeasons)) {
-      built.set(r.key, r.toDate);
+      built.set(r.key, r);
     }
   }
   const staleBefore = ymd(
@@ -122,7 +126,10 @@ async function main() {
 
   // In a dry run (no site_seasons yet) only the public destinations are rated
   const jobs = [...(DRY_RUN ? [] : await ownJobs()), ...(await destinationJobs())];
-  const due = jobs.filter((j) => !built.has(j.key) || built.get(j.key)! < staleBefore);
+  const due = jobs.filter((j) => {
+    const row = built.get(j.key);
+    return !row || row.toDate < staleBefore || row.engineVersion < ENGINE_VERSION;
+  });
   console.log(`${jobs.length} sites, ${due.length} due`);
 
   let spent = 0;
@@ -172,6 +179,7 @@ async function main() {
           fromDate: seasonDays[0]?.date ?? range.from,
           toDate: seasonDays[seasonDays.length - 1]?.date ?? range.to,
           builtAt: new Date(),
+          engineVersion: ENGINE_VERSION,
         };
         await db
           .insert(siteSeasons)

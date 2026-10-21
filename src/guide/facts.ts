@@ -10,11 +10,13 @@ import {
   GUST_SPREAD_FAIL_KMH,
   GUST_SPREAD_MARGINAL_KMH,
   HAZE_VISIBILITY_M,
+  LIGHT_CROSS_KMH,
   LOW_CLOUD_COVER,
   NIL_WIND_KMH,
   RAIN_FAIL_CHANCE,
   RAIN_FAIL_MM,
   RAIN_MARGINAL_CHANCE,
+  RAIN_SOON_HOURS,
   SECTOR_HALF_WIDTH,
   SHOWER_MM,
   THERMAL_MIN_WSTAR,
@@ -32,6 +34,7 @@ import {
   XC_MIN_WSTAR,
 } from '@/lib/forecast-engine/evaluate';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { TERRAIN_LIFT_SHARE } from '@/lib/forecast-engine/launch-conditions';
 import {
   STATION_RADIUS_KM,
   TRACK_RECORD_DAYS,
@@ -79,6 +82,8 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   sectorDegrees: SECTOR_HALF_WIDTH,
   crossDegrees: 2 * SECTOR_HALF_WIDTH,
   nilWindKmh: NIL_WIND_KMH,
+  lightCrossKmh: LIGHT_CROSS_KMH,
+  rainSoonHours: RAIN_SOON_HOURS,
   rainFailMm: RAIN_FAIL_MM,
   rainFailChance: RAIN_FAIL_CHANCE,
   rainMarginalChance: RAIN_MARGINAL_CHANCE,
@@ -89,6 +94,7 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   hazeKm: HAZE_VISIBILITY_M / 1000,
   thermalClimbMs: THERMAL_MIN_WSTAR.toFixed(1),
   soarHeightM: meters(SOAR_MIN_HEIGHT),
+  terrainLiftPercent: Math.round(TERRAIN_LIFT_SHARE * 100),
   soarHours: SOAR_MIN_HOURS,
   xcClimbMs: XC_MIN_WSTAR.toFixed(1),
   xcHeightM: meters(XC_MIN_HEIGHT),
