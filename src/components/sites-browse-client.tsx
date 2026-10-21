@@ -191,10 +191,10 @@ export function SitesBrowseClient({
               <SheetTitle>Filters</SheetTitle>
               <SheetDescription>Narrow down sites in the current map view</SheetDescription>
             </SheetHeader>
-            <div className="space-y-6 mt-6">
+            <div className="space-y-6 px-4 pb-4">
               {/* Wind orientations */}
               <div className="space-y-3">
-                <Label>Wind Orientations</Label>
+                <Label>Wind directions</Label>
                 <div className="flex flex-wrap gap-2">
                   {ORIENTATIONS.map((o) => (
                     <Badge
@@ -228,7 +228,7 @@ export function SitesBrowseClient({
                   className="w-full"
                   onClick={() => setSelectedOrientations([])}
                 >
-                  Clear Filters
+                  Clear filters
                 </Button>
               )}
             </div>
