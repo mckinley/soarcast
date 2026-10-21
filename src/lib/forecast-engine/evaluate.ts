@@ -13,6 +13,8 @@ import {
   rainTrust,
   RAIN_SOON_HOURS,
   SECTOR_HALF_WIDTH,
+  STORM_RISK_CAPE,
+  STORM_RISK_LI,
   THERMAL_MIN_WSTAR,
   worstStatus,
   type GateName,
@@ -262,6 +264,23 @@ function rainNote(hours: HourVerdict[], trust: RainTrust): string | null {
   return `Rain in the forecast ${formatHours(setAside.map((h) => h.hour))} isn't counted. In the tropics, forecasts call for rain on most days, but little of it falls. Watch for showers building.`;
 }
 
+/**
+ * The daylight hours with unstable air that the storm check let pass,
+ * because no showers were forecast near them. Storms can still build.
+ */
+function stormNote(hours: HourVerdict[]): string | null {
+  const unstable = hours.filter((h) => {
+    const c = h.conditions;
+    return (
+      !h.gates.some((g) => g.gate === 'daylight' && g.status === 'fail') &&
+      h.gates.some((g) => g.gate === 'storm' && g.status === 'pass') &&
+      ((c.liftedIndex !== null && c.liftedIndex <= STORM_RISK_LI) || c.cape >= STORM_RISK_CAPE)
+    );
+  });
+  if (unstable.length === 0) return null;
+  return `The air is unstable ${formatHours(unstable.map((h) => h.hour))}, but no showers are forecast near then. Storms can still build. Watch the clouds.`;
+}
+
 function evaluateDay(
   date: string,
   hours: HourVerdict[],
@@ -372,6 +391,7 @@ function evaluateDay(
     greatDay: flight?.greatDay ?? false,
     goalMet,
     rainNote: rainNote(hours, trust),
+    stormNote: stormNote(hours),
   };
 }
 

@@ -326,6 +326,10 @@ describe('evaluateDays', () => {
     const day = today(profile(() => ({ liftedIndex: -3, cape: 800 })));
     expect(day.verdict).toBe('go');
     expect(day.flyableWindow).toBe('06:00-21:00');
+    expect(day.stormNote).toBe(
+      'The air is unstable 05:00-21:00, but no showers are forecast near then. Storms can still build. Watch the clouds.',
+    );
+    expect(today(profile()).stormNote).toBeNull();
   });
 
   it('fails a launch sitting in cloud', () => {

@@ -65,6 +65,8 @@ export interface DayScore {
   goalMet?: boolean;
   /** Where model rain is little trusted (the tropics), the forecast rain that was set aside, in words */
   rainNote?: string | null;
+  /** Unstable air the storm check let pass because no showers were forecast near it, in words */
+  stormNote?: string | null;
 }
 
 export interface Settings {
