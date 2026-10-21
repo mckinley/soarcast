@@ -34,6 +34,9 @@ type Pages = {
   "/api/sites/near": {
     params: {};
   };
+  "/guide": {
+    params: {};
+  };
   "/sites/browse": {
     params: {};
   };
@@ -42,6 +45,11 @@ type Pages = {
   };
   "/auth/signin": {
     params: {};
+  };
+  "/guide/:slug": {
+    params: {
+      "slug": string;
+    };
   };
   "/sites/:slug": {
     params: {
@@ -81,7 +89,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -107,6 +115,10 @@ type RouteFiles = {
     id: "routes/api.sites.near";
     page: "/api/sites/near";
   };
+  "routes/guide._index.tsx": {
+    id: "routes/guide._index";
+    page: "/guide";
+  };
   "routes/sites.browse.tsx": {
     id: "routes/sites.browse";
     page: "/sites/browse";
@@ -118,6 +130,10 @@ type RouteFiles = {
   "routes/auth.signin.tsx": {
     id: "routes/auth.signin";
     page: "/auth/signin";
+  };
+  "routes/guide.$slug.tsx": {
+    id: "routes/guide.$slug";
+    page: "/guide/:slug";
   };
   "routes/sites.$slug.tsx": {
     id: "routes/sites.$slug";
@@ -173,9 +189,11 @@ type RouteModules = {
   "routes/api.track-record": typeof import("./app/routes/api.track-record.tsx");
   "routes/sites.custom.$id": typeof import("./app/routes/sites.custom.$id.tsx");
   "routes/api.sites.near": typeof import("./app/routes/api.sites.near.tsx");
+  "routes/guide._index": typeof import("./app/routes/guide._index.tsx");
   "routes/sites.browse": typeof import("./app/routes/sites.browse.tsx");
   "routes/api.terrain": typeof import("./app/routes/api.terrain.tsx");
   "routes/auth.signin": typeof import("./app/routes/auth.signin.tsx");
+  "routes/guide.$slug": typeof import("./app/routes/guide.$slug.tsx");
   "routes/sites.$slug": typeof import("./app/routes/sites.$slug.tsx");
   "routes/api.auth.$": typeof import("./app/routes/api.auth.$.tsx");
   "routes/api.health": typeof import("./app/routes/api.health.tsx");

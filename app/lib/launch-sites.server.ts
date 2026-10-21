@@ -2,10 +2,9 @@ import { eq } from 'drizzle-orm';
 import { launchSites, type LaunchSite } from '~/db/schema';
 import type { Db } from './db.server';
 import { getSiteById } from '~/lib/pgsites-client';
-import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
+import { launchSiteValuesFromPgSite, SITE_REFRESH_DAYS } from '~/lib/launch-sites';
 
-/** A followed site's copy is refreshed from pgsites once it is this old. */
-const REFRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const REFRESH_AFTER_MS = SITE_REFRESH_DAYS * 24 * 60 * 60 * 1000;
 /** Sites refreshed per page load, so one load never waits on many lookups. */
 const MAX_REFRESHES = 5;
 

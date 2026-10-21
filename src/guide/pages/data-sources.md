@@ -1,0 +1,135 @@
+---
+title: Data sources
+summary: Where the forecasts, sites, comps and maps come from, and how often each one updates.
+order: 1
+covers:
+  - src/lib/weather-profile.ts
+  - src/lib/forecast-engine/gates.ts
+  - src/lib/forecast-engine/launch-conditions.ts
+  - src/lib/track-record.ts
+  - app/lib/track-record.server.ts
+  - src/components/forecast-track-record.tsx
+  - src/lib/seasons.ts
+  - scripts/seasons/build.ts
+  - .github/workflows/season-build.yml
+  - src/lib/destinations.ts
+  - src/lib/pgsites-client.ts
+  - src/lib/launch-sites.ts
+  - app/lib/launch-sites.server.ts
+  - src/lib/terrain.ts
+  - src/components/map-picker.tsx
+  - src/lib/comps.ts
+  - app/lib/comps.server.ts
+  - src/components/thermal-overlays.tsx
+  - src/components/vector-basemap.tsx
+  - src/lib/basemap.ts
+  - src/components/data-credits.tsx
+---
+
+SoarCast does not make its own weather forecasts or write its own site guide. It brings together data from the public sources below. Each section says what SoarCast uses, how often it updates and what it can't tell you.
+
+## Weather forecasts
+
+Forecasts come from [Open-Meteo](https://open-meteo.com), a free service that collects forecasts from national weather services.
+
+### Which forecast
+
+Open-Meteo chooses the forecast for each place. It starts from three global forecasts. They come from Germany's weather service, the US weather service (NOAA) and the European weather centre (ECMWF). Where a more detailed local forecast covers the place, that one comes first. In the United States this is NOAA's HRRR. Many European countries have their own.
+
+Detailed forecasts only reach a day or two ahead. Later days come from the global forecasts. [Open-Meteo's documentation](https://open-meteo.com/en/docs) lists which forecasts it uses where.
+
+### What SoarCast uses
+
+For every hour of the next {{forecastDays}} days, SoarCast takes:
+
+- Wind speed and direction near the ground, and at heights up to about 5,500 m.
+- Gusts near the ground.
+- Temperature and humidity at the same heights. These show how strong thermals are and where clouds form.
+- How high the air warmed by the ground mixes. Thermals rarely climb above this height.
+- Sunshine, which heats the ground and starts thermals.
+- Cloud cover, rain, the chance of rain and visibility.
+- Storm risk: how much energy the air holds for building storm clouds.
+- Sunrise and sunset.
+
+### How fresh
+
+Weather services make new forecasts every one to six hours. SoarCast keeps a place's forecast for {{forecastRefreshHours}} hours. After that, it gets a new one the next time a page or alert needs it.
+
+### What it can't tell you
+
+- A forecast describes a square of ground, not one spot. Detailed forecasts use squares 1 to 3 km wide. Global ones use squares about 10 to 25 km wide.
+- The forecast's ground is the average height of its square. Peaks, ridges and valleys get smoothed out.
+- A launch on a peak or ridge often sits well above that ground. SoarCast reads the wind and temperature at the launch's real height from the forecast's upper levels.
+- Gusts are only forecast near the ground. SoarCast adds the same extra gust speed to the wind at launch height.
+- Small local winds are often missed. These include valley winds, sea breezes and wind bending around a single ridge.
+- In the tropics, forecasts call for rain on far more days than it falls. Within {{tropicsLatitude}}° of the equator, SoarCast only counts rain of {{showerMm}} mm an hour or more. When it sets rain aside, the day says so.
+
+## Forecast track record
+
+Each site page has a card called "How far to trust the forecast here". It compares the forecast made the day before with what the nearest airport reported. It covers the last {{trackRecordDays}} days and rates rain and wind as Good, Fair or Poor.
+
+- **Past forecasts** come from Open-Meteo's archive of earlier forecasts. They are chosen the same way as the forecasts above.
+- **What happened** comes from airport weather reports. Most airports send one every hour. SoarCast gets them from the [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu) at Iowa State University, which keeps reports from airports worldwide.
+- **The list of airports** comes from the US [Aviation Weather Center](https://aviationweather.gov).
+
+The airport must be within {{trackRecordRadiusKm}} km of the site. SoarCast rebuilds each record every {{trackRecordRebuildDays}} days.
+
+An airport usually sits on flat ground or in a valley. Its weather can differ from the launch's. The record only checks rain and wind.
+
+## Seasons
+
+The Season card on site pages and the Planning page show how often each month was good for flying.
+
+SoarCast rates each day of the last {{seasonMonths}} months the same way it rates today's forecast. The weather for those days comes from [Open-Meteo's archive of past forecasts](https://open-meteo.com/en/docs/historical-forecast-api). For each past day, the archive keeps what the forecast said a few hours ahead.
+
+So a season shows what the forecasts said, not what pilots flew. If the forecast often gets a site wrong, its season is wrong in the same way. The site's track record shows how far to trust it.
+
+SoarCast builds seasons in batches twice a day. A site gets its seasons within a day or two of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months.
+
+The flying areas on the Planning page are SoarCast's own list of places pilots travel to. Each area is a few launches within {{areaRadiusKm}} km of its middle.
+
+## Sites
+
+Listed sites come from [Paragliding Earth](https://www.paraglidingearth.com), a site guide written by pilots.
+
+SoarCast uses each site's name and place, its launch and landing heights, and the wind directions its launch works in. It also uses the site's description and its tags for thermals, ridge soaring and cross-country flying.
+
+SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days.
+
+Pilots write these pages, so details can be missing, old or wrong. Check the site's rules and ask the local club before flying. To fix a site, edit it on Paragliding Earth. SoarCast picks up the change within a day, or within {{siteRefreshDays}} days for a site in Favorites.
+
+## Private sites
+
+A pilot can add a private site that is missing from the list. Only that pilot can see it.
+
+When a pilot drops a pin, SoarCast looks up the height of the ground there. It also looks at the slopes around the pin to suggest which way the launch faces. The heights come from the European Union's Copernicus elevation map, which has a height every 90 m. SoarCast gets them through Open-Meteo.
+
+The place search uses [OpenStreetMap](https://www.openstreetmap.org). SoarCast also lists Paragliding Earth sites near the pin, so a pilot can add one of those to Favorites instead.
+
+## Comps
+
+Comps come from the [FAI sporting calendar](https://www.fai.org/commission/civl). FAI is the world air sports federation. SoarCast lists its Category 1 and Category 2 paragliding comps.
+
+- Category 1 comps are the world and continental championships.
+- Category 2 comps include national championships, World Cup rounds and other comps FAI approves.
+
+World Cup rounds and a few races that FAI doesn't list are added by hand from [the Paragliding World Cup site](https://pwca.org).
+
+SoarCast checks the calendar once a week. It holds comps from 2015 to two years ahead. Most comps link to their own page, usually on Airtribune, CIVL Comps or the World Cup site. Those pages have the final dates, entry and results.
+
+A comp's spot on the map comes from its place name, so it can be a little off. A comp within {{compRadiusKm}} km of a site counts as held there. Comps don't change how a day is rated.
+
+## Maps
+
+The base map uses [OpenStreetMap](https://www.openstreetmap.org) data, drawn with [Protomaps](https://protomaps.com).
+
+The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://thermal.kk7.ch). kk7 builds them from millions of flight tracks that pilots uploaded. Thermal hotspots shows where pilots often found thermals. Skyways shows the lines pilots often fly between them. Both show where thermals have been in past seasons, not where they are today.
+
+## Credits
+
+| Data                         | Licence                                                               |
+| ---------------------------- | --------------------------------------------------------------------- |
+| Forecasts from Open-Meteo    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Sites from Paragliding Earth | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
+| Thermal maps from kk7        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Map data from OpenStreetMap  | [ODbL](https://www.openstreetmap.org/copyright)                       |

@@ -1,6 +1,9 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
 // forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
-// kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do.
+// kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do. The Guide's Data
+// sources page (src/guide/pages/data-sources.md) lists them all.
+
+import { Link } from 'react-router';
 
 const link = 'underline underline-offset-2 hover:text-foreground';
 
@@ -26,7 +29,10 @@ export function ForecastCredit({ className = '' }: { className?: string }) {
       >
         CC BY 4.0
       </a>
-      )
+      ) ·{' '}
+      <Link to="/guide/data-sources" className={link}>
+        Data sources
+      </Link>
     </p>
   );
 }

@@ -37,6 +37,7 @@ import {
   bestMonths,
   encodeSeasonDays,
   launchProfileKey,
+  SEASON_MONTHS,
   seasonDayFromScore,
   seasonMonths,
 } from '../../src/lib/seasons';
@@ -81,11 +82,11 @@ function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** The 24 whole months before this one. */
+/** The SEASON_MONTHS whole months before this one. */
 function seasonRange(now = new Date()): DayRange {
   const y = now.getUTCFullYear();
   const m = now.getUTCMonth();
-  return { from: ymd(new Date(Date.UTC(y, m - 24, 1))), to: ymd(new Date(Date.UTC(y, m, 0))) };
+  return { from: ymd(new Date(Date.UTC(y, m - SEASON_MONTHS, 1))), to: ymd(new Date(Date.UTC(y, m, 0))) };
 }
 
 function chunks({ from, to }: DayRange): DayRange[] {
