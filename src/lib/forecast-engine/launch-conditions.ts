@@ -90,6 +90,7 @@ export const TERRAIN_LIFT_SHARE = 0.5;
 // TRIAL (branch only, never merged): switches the flown-day check flips to
 // compare variants of the engine changes in one run.
 export const TRIAL = {
+  crossThermal: false,
   storm: true,
   tropicsStormMm: 3,
   lightCrossKmh: 12,

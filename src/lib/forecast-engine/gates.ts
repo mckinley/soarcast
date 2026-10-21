@@ -89,7 +89,11 @@ export function directionGate(c: LaunchConditions, launch: LaunchProfile): GateR
     near(launch.okDirections, SECTOR_HALF_WIDTH) ||
     near(launch.goodDirections, 2 * SECTOR_HALF_WIDTH)
   ) {
-    if (c.windSpeed < TRIAL.lightCrossKmh) return { gate: 'direction', status: 'pass' };
+    if (
+      c.windSpeed < TRIAL.lightCrossKmh &&
+      (!TRIAL.crossThermal || (c.wStar ?? 0) >= THERMAL_MIN_WSTAR)
+    )
+      return { gate: 'direction', status: 'pass' };
     return { gate: 'direction', status: 'marginal', reason: `${reason}, cross on launch` };
   }
   return { gate: 'direction', status: 'fail', reason: `${reason}, off the launch` };
