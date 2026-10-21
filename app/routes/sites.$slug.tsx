@@ -1,4 +1,5 @@
-import { useLoaderData, useFetcher, Link, redirect } from 'react-router';
+import { Suspense } from 'react';
+import { Await, useLoaderData, useFetcher, Link, redirect } from 'react-router';
 import type { Route } from './+types/sites.$slug';
 import type { DayScore, Site } from '~/types';
 import { getDb } from '~/app/lib/db.server';
@@ -26,8 +27,11 @@ import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
-import { seasonForSite, seasonSiteRef } from '~/app/lib/seasons.server';
+import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
+import { flownHereFor } from '~/app/lib/flown-days.server';
+import { FlownHereCard } from '@/components/flown-here';
+import { flownByMonthToShow } from '~/lib/flown-days';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -279,12 +283,14 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // Day verdicts for every site, local or pgsites-only
   let scores: DayScore[] | null = null;
   let today: string | null = null;
+  let timeZone: string | null = null;
   let forecastError = false;
   try {
     setProfileDb(db);
     const { profile } = await getAtmosphericProfile(site.latitude, site.longitude, 7);
     scores = evaluateDays(profile, launchProfileFromSite(engineSite));
     today = profileToday(profile);
+    timeZone = profile.timezone;
   } catch (e) {
     console.error(`Forecast for ${site.name} failed:`, e);
     forecastError = true;
@@ -292,10 +298,23 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
   const pgsitesId = localSite?.pgsitesId ?? site.id;
-  const [comps, season] = await Promise.all([
+  const [comps, seasonFull] = await Promise.all([
     compsPromise,
-    seasonForSite(db, seasonSiteRef('pgsites', pgsitesId), engineSite, compsToday),
+    seasonWithDays(db, seasonSiteRef('pgsites', pgsitesId), engineSite, compsToday),
   ]);
+  // Days pilots flew from here (Syncing Pilots): streamed in after the page
+  const flown =
+    today && timeZone
+      ? flownHereFor(
+          env,
+          db,
+          { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude },
+          timeZone,
+          today,
+          seasonFull?.days ?? null,
+          engineSite.goal ?? 'soar',
+        ).catch(() => null)
+      : Promise.resolve(null);
 
   return {
     site,
@@ -313,7 +332,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     forecastError,
     comps,
     compsToday,
-    season,
+    season: seasonFull?.summary ?? null,
+    flown,
   };
 }
 
@@ -472,7 +492,18 @@ export default function SiteDetailPage() {
     comps,
     compsToday,
     season,
+    flown,
   } = useLoaderData<typeof loader>();
+  const seasonCard = (flownByMonth: Array<number | null> | null) => (
+    <SeasonCard
+      season={season}
+      goal={engineSite.goal ?? 'soar'}
+      today={compsToday}
+      comps={comps}
+      followed={isFavorited}
+      flownByMonth={flownByMonth}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -518,13 +549,16 @@ export default function SiteDetailPage() {
         />
       )}
 
-      <SeasonCard
-        season={season}
-        goal={engineSite.goal ?? 'soar'}
-        today={compsToday}
-        comps={comps}
-        followed={isFavorited}
-      />
+      <Suspense fallback={seasonCard(null)}>
+        <Await resolve={flown} errorElement={seasonCard(null)}>
+          {(f) => (
+            <>
+              {seasonCard(flownByMonthToShow(f))}
+              <FlownHereCard flown={f} goal={engineSite.goal ?? 'soar'} />
+            </>
+          )}
+        </Await>
+      </Suspense>
 
       <SiteCompsCard comps={comps} today={compsToday} />
 

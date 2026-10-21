@@ -1,7 +1,7 @@
 import { CalendarRange, Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { GOAL_LABEL } from '@/lib/site-goals';
-import { LOST_REASON_WORD, type SeasonMonth, type SeasonSummary } from '@/lib/seasons';
+import { LOST_REASON_WORD, topMonths, type SeasonMonth, type SeasonSummary } from '@/lib/seasons';
 import type { Comp } from '@/lib/comps';
 import type { SiteGoal } from '@/types';
 
@@ -84,6 +84,7 @@ export function SeasonCard({
   today,
   comps = [],
   followed,
+  flownByMonth = null,
 }: {
   season: SeasonSummary | null;
   goal: SiteGoal;
@@ -93,6 +94,8 @@ export function SeasonCard({
   comps?: Comp[];
   /** Whether the season build rates this site (followed, custom or a destination) */
   followed: boolean;
+  /** Share of days pilots' trackers show a flight from here, by month (index 0 = Jan) */
+  flownByMonth?: Array<number | null> | null;
 }) {
   if (!season) {
     return (
@@ -111,6 +114,7 @@ export function SeasonCard({
   const peak = season.months.reduce((a, b) => (b.goShare > a.goShare ? b : a));
   const compMonths = Array.from({ length: 12 }, () => 0);
   for (const c of comps) if (c.endDate < today) compMonths[Number(c.startDate.slice(5, 7)) - 1]++;
+  const busiest = flownByMonth ? topMonths(flownByMonth) : null;
 
   return (
     <Card className="gap-3 p-4 sm:p-6">
@@ -131,6 +135,12 @@ export function SeasonCard({
           `No month here was a go (${GOAL_LABEL[goal].toLowerCase()}) in the last two years.`
         )}
       </p>
+      {busiest && (
+        <p className="text-sm">
+          Pilots&apos; trackers show the most flights here in {busiest.text}, on about{' '}
+          {Math.round(busiest.share * 100)}% of days.
+        </p>
+      )}
 
       {/* Columns: go, then flyable stacked on top, out of every day of the month.
           The left padding holds the percent labels inside the card. */}
@@ -181,6 +191,11 @@ export function SeasonCard({
                   >
                     <div className="font-medium">{MONTHS_LONG[i]}</div>
                     <div className="text-muted-foreground">{monthDetail(m)}</div>
+                    {flownByMonth?.[i] != null && (
+                      <div className="mt-1 text-muted-foreground">
+                        Tracked flights on {pct(flownByMonth[i]!, 1)}% of days
+                      </div>
+                    )}
                     {compMonths[i] > 0 && (
                       <div className="mt-1 text-muted-foreground">
                         Comps held here in {MONTHS[i]}: {compMonths[i]}
@@ -241,6 +256,7 @@ export function SeasonCard({
                 <th className="py-1 pr-2 text-right font-medium">Flyable</th>
                 <th className="py-1 pr-2 text-right font-medium">Marginal</th>
                 <th className="py-1 pr-2 text-right font-medium">Not flyable</th>
+                {flownByMonth && <th className="py-1 pr-2 text-right font-medium">Flown</th>}
                 <th className="py-1 font-medium">Mostly lost to</th>
               </tr>
             </thead>
@@ -252,6 +268,11 @@ export function SeasonCard({
                   <td className="py-1 pr-2 text-right">{pct(m.counts.flyable, m.days)}%</td>
                   <td className="py-1 pr-2 text-right">{pct(m.counts.marginal, m.days)}%</td>
                   <td className="py-1 pr-2 text-right">{pct(m.counts.no, m.days)}%</td>
+                  {flownByMonth && (
+                    <td className="py-1 pr-2 text-right">
+                      {flownByMonth[i] == null ? '' : `${pct(flownByMonth[i]!, 1)}%`}
+                    </td>
+                  )}
                   <td className="py-1">
                     {m.lost[0] ? (LOST_REASON_WORD[m.lost[0].reason] ?? m.lost[0].reason) : ''}
                   </td>
@@ -268,6 +289,8 @@ export function SeasonCard({
         but one odd year can still shift a month.
         {!season.sameSettings &&
           " These use the site's settings from when it was rated. The current settings apply from the next update."}
+        {flownByMonth &&
+          ' Flown is the share of days with a flight on a pilot’s live tracker (Syncing Pilots).'}
       </p>
     </Card>
   );

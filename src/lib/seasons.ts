@@ -73,13 +73,14 @@ export function decodeSeasonDays(encoded: string): SeasonDay[] {
   }));
 }
 
-function statusFor(day: SeasonDay, goal: SiteGoal): DayStatus {
+/** What a past day was for the goal: Go, Flyable, Marginal or Not flyable. */
+export function seasonStatus(day: SeasonDay, goal: SiteGoal): DayStatus {
   return dayStatus({ verdict: day.verdict, goalMet: meetsGoal(day, goal) });
 }
 
 /** Why a day wasn't a go for the goal: a launch check, or "weak" when it flew but gave less. */
 export function lostReason(day: SeasonDay, goal: SiteGoal): string | null {
-  if (statusFor(day, goal) === 'go') return null;
+  if (seasonStatus(day, goal) === 'go') return null;
   if (day.verdict === 'go') return 'weak';
   return day.gate ?? 'other';
 }
@@ -120,7 +121,7 @@ export function seasonMonths(days: SeasonDay[], goal: SiteGoal): SeasonMonth[] {
   for (const day of days) {
     const i = Number(day.date.slice(5, 7)) - 1;
     months[i].days++;
-    months[i].counts[statusFor(day, goal)]++;
+    months[i].counts[seasonStatus(day, goal)]++;
     const reason = lostReason(day, goal);
     if (reason) lost[i].set(reason, (lost[i].get(reason) ?? 0) + 1);
   }
@@ -142,7 +143,7 @@ export function anyGoShares(launches: SeasonDay[][], goal: SiteGoal): number[] {
   const days = new Map<string, boolean>();
   for (const launch of launches) {
     for (const day of launch) {
-      days.set(day.date, days.get(day.date) === true || statusFor(day, goal) === 'go');
+      days.set(day.date, days.get(day.date) === true || seasonStatus(day, goal) === 'go');
     }
   }
   const rated = Array.from({ length: 12 }, () => 0);
@@ -174,11 +175,18 @@ const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'O
  * within a few points of the best one. Null when no month is ever a go.
  */
 export function bestMonths(months: SeasonMonth[]): { text: string; share: number } | null {
-  const rated = months.filter((m) => m.days > 0);
-  const top = Math.max(0, ...rated.map((m) => m.goShare));
+  return topMonths(months.map((m) => (m.days > 0 ? m.goShare : null)));
+}
+
+/**
+ * The months (index 0 = Jan) within a few points of the top share, in words,
+ * with their average share. Null when every share is zero or missing.
+ */
+export function topMonths(shares: Array<number | null>): { text: string; share: number } | null {
+  const top = Math.max(0, ...shares.map((v) => v ?? 0));
   if (top === 0) return null;
-  const best = rated.filter((m) => m.goShare >= top * 0.8).map((m) => m.month);
-  const share = best.reduce((s, m) => s + months[m - 1].goShare, 0) / best.length;
+  const best = shares.flatMap((v, i) => (v != null && v >= top * 0.8 ? [i + 1] : []));
+  const share = best.reduce((sum, m) => sum + (shares[m - 1] ?? 0), 0) / best.length;
   // A run of months, allowing one across New Year, reads as a range
   const set = new Set(best);
   const start = best.find((m) => !set.has(m === 1 ? 12 : m - 1)) ?? best[0];
@@ -218,7 +226,7 @@ export function typicalWeekGoDays(
     const diff = Math.abs(dayOfYear(day.date) - target);
     if (Math.min(diff, 365 - diff) > windowDays) continue;
     n++;
-    if (statusFor(day, goal) === 'go') go++;
+    if (seasonStatus(day, goal) === 'go') go++;
   }
   return n >= windowDays ? (go / n) * 7 : null;
 }

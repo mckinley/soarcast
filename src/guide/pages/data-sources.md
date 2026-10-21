@@ -1,6 +1,6 @@
 ---
 title: Data sources
-summary: Where the forecasts, sites, comps and maps come from, and how often each one updates.
+summary: Where the forecasts, sites, flown days, comps and maps come from, and how often each one updates.
 order: 1
 covers:
   - src/lib/weather-profile.ts
@@ -10,6 +10,9 @@ covers:
   - app/lib/track-record.server.ts
   - src/components/forecast-track-record.tsx
   - src/lib/seasons.ts
+  - src/lib/flown-days.ts
+  - app/lib/flown-days.server.ts
+  - src/components/flown-here.tsx
   - scripts/seasons/build.ts
   - .github/workflows/season-build.yml
   - src/lib/destinations.ts
@@ -82,11 +85,30 @@ The Season card on site pages and the Planning page show how often each month wa
 
 SoarCast rates each day of the last {{seasonMonths}} months the same way it rates today's forecast. The weather for those days comes from [Open-Meteo's archive of past forecasts](https://open-meteo.com/en/docs/historical-forecast-api). For each past day, the archive keeps what the forecast said a few hours ahead.
 
-So a season shows what the forecasts said, not what pilots flew. If the forecast often gets a site wrong, its season is wrong in the same way. The site's track record shows how far to trust it.
+So a season shows what the forecasts said, not what pilots flew. If the forecast often gets a site wrong, its season is wrong in the same way. The site's track record shows how far to trust it. [Flown days](#flown-days) show what pilots flew.
 
 SoarCast builds seasons in batches twice a day. A site gets its seasons within a day or two of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months.
 
 The flying areas on the Planning page are SoarCast's own list of places pilots travel to. Each area is a few launches within {{areaRadiusKm}} km of its middle.
+
+## Flown days
+
+The "Flown here" card on a site page lists the latest days pilots flew from the site. When the site has a season, the card also says how SoarCast rated the days pilots flew. The Season card then shows how often pilots flew in each month.
+
+These days come from [Syncing Pilots](https://syncingpilots.com). It follows the live maps that pilots share from their Garmin inReach and SPOT trackers. SoarCast only gets counts for each day: how many pilots launched, and how many flights were glides down, soaring flights or cross-country flights. It gets no names, tracks or positions.
+
+- A flight counts when it takes off within {{flownRadiusKm}} km of the launch.
+- A soaring flight stays up a good while or climbs above the launch. A cross-country flight lands far from the launch. Anything else counts as a glide down.
+- Most trackers send a position only every few minutes. A short glide down can fall between two positions. It still counts when the tracker shows the pilot at the launch and then well below it soon after.
+
+SoarCast checks Syncing Pilots again every {{flownRefreshHours}} hours. Flown days don't change how a day is rated.
+
+### What it can't tell you
+
+- Only some pilots carry a live tracker and share its map. A day with no tracked flight may still have been flown.
+- Busy sites have many tracked pilots. Quiet sites may have few or none, so their numbers say little.
+- A pilot who drives down from a launch can now and then look like a glide down.
+- Two launches less than {{flownRadiusKm}} km apart show the same flights.
 
 ## Sites
 
