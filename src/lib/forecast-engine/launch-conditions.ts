@@ -87,6 +87,18 @@ export function interpolateAtHeight(samples: WindSample[], height: number): Wind
  */
 export const TERRAIN_LIFT_SHARE = 0.5;
 
+// TRIAL (branch only, never merged): switches the flown-day check flips to
+// compare variants of the gust rules in one run.
+export const TRIAL = {
+  gustSpreadShare: 1,
+  gustFloorSurface: false,
+  thermicMarginalOver: 0,
+  thermicFailOver: 10,
+  failOver: 10,
+  spreadMarginal: 15,
+  spreadFail: 25,
+};
+
 /** The model's top of lift, raised for a launch that stands above the model's ground. */
 export function topOfLiftAtLaunch(
   modelTopMsl: number | null,
@@ -150,7 +162,12 @@ export function deriveLaunchConditions(
     hour: parseInt(hour.time.slice(11, 13), 10),
     windSpeed: Math.round(atLaunch.speed),
     windDirection: Math.round(atLaunch.direction),
-    windGust: Math.round(atLaunch.speed + gustSpread),
+    windGust: Math.round(
+      Math.max(
+        TRIAL.gustFloorSurface ? surface.windGusts : 0,
+        atLaunch.speed + TRIAL.gustSpreadShare * gustSpread,
+      ),
+    ),
     temperature: Math.round(atLaunch.temperature * 10) / 10,
     precipitation: surface.precipitation ?? null,
     precipitationProbability: surface.precipitationProbability ?? 0,

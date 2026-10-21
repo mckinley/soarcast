@@ -29,6 +29,7 @@ import {
   type LaunchProfile,
 } from '../../src/lib/forecast-engine';
 import { angleDifference } from '../../src/lib/forecast-engine/gates';
+import { TRIAL } from '../../src/lib/forecast-engine/launch-conditions';
 import {
   profileFromOpenMeteo,
   type AtmosphericProfile,
@@ -399,10 +400,10 @@ class Moves {
   }
 }
 
-function compare(base: Baseline, launches: Launch[]) {
+function compare(base: Baseline, launches: Launch[], title = 'COMPARED WITH MAIN', minMoved = 1) {
   const now = snapshot(launches);
   const ids = Object.keys(now.launches).filter((id) => base.launches[id]);
-  console.log(`\nCOMPARED WITH MAIN (baseline ${base.sha}, ${ids.length} launches in both)`);
+  console.log(`\n${title} (baseline ${base.sha}, ${ids.length} launches in both)`);
   console.log(
     "(x1.00 means the moved days were flown as often as the launch's Go days in the same month on main, or soared as often as its soaring days)",
   );
@@ -452,7 +453,7 @@ function compare(base: Baseline, launches: Launch[]) {
     }
     const ratio = (part: number, expected: number) =>
       expected > 0 ? `x${(part / expected).toFixed(2)}` : '-';
-    if (moved.up + moved.down + moved.soarUp > 0)
+    if (moved.up + moved.down + moved.soarUp >= minMoved)
       perLaunch.push(
         `    ${b.name.slice(0, 32).padEnd(32)} Go ${(Math.round(b.goRate * 100) + '%').padStart(4)} ` +
           `up ${String(moved.up).padStart(4)} days ${String(moved.upFlown).padStart(3)} flown ${ratio(moved.upFlown, moved.upExp).padStart(6)}, ` +
@@ -498,6 +499,44 @@ function baseline(launches: Launch[]) {
 
 // ---------------------------------------------------------------- main
 
+const MAIN_TRIAL = { ...TRIAL };
+const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
+  ['SAME AS MAIN (check)', {}],
+  [
+    'THERMIC gusts marginal over limit+5, fail over +15',
+    { thermicMarginalOver: 5, thermicFailOver: 15 },
+  ],
+  [
+    'THERMIC gusts marginal over limit+10, fail over +20',
+    { thermicMarginalOver: 10, thermicFailOver: 20 },
+  ],
+  [
+    'THERMIC gusts marginal over limit+15, fail over +25',
+    { thermicMarginalOver: 15, thermicFailOver: 25 },
+  ],
+  ['ALL HOURS fail over limit+15', { thermicFailOver: 15, failOver: 15 }],
+  ['LAUNCH GUST half the surface spread', { gustSpreadShare: 0.5, gustFloorSurface: true }],
+  ['LAUNCH GUST no surface spread', { gustSpreadShare: 0, gustFloorSurface: true }],
+  ['NO THERMALS spread marginal 20, fail 30', { spreadMarginal: 20, spreadFail: 30 }],
+  [
+    'THERMIC +10/+20 and half spread',
+    { thermicMarginalOver: 10, thermicFailOver: 20, gustSpreadShare: 0.5, gustFloorSurface: true },
+  ],
+];
+
+async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
+  const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
+  for (const [title, flags] of VARIANTS) {
+    Object.assign(TRIAL, MAIN_TRIAL, flags);
+    const launches: Launch[] = [];
+    for (const { job, flown } of withFlown) {
+      const raw = await archivedForecast(job, { spent: Infinity });
+      if (raw) launches.push(rate(job, cleanProfile(profileFromOpenMeteo(raw)), flown));
+    }
+    compare(base, launches, title, 10);
+  }
+}
+
 async function main() {
   if (!ACCOUNT || !TOKEN)
     throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed');
@@ -515,6 +554,7 @@ async function main() {
   }
   withFlown.sort((a, b) => b.flown.length - a.flown.length);
   console.log(`${jobs.length} launches, ${withFlown.length} with enough flown days`);
+  if (process.env.FLOWN_TRIAL) return trial(withFlown);
 
   const budget = { spent: 0 };
   const launches: Launch[] = [];

@@ -3,7 +3,7 @@
 // careful pilot could still go.
 
 import type { SiteGoal, SiteKind } from '@/types';
-import type { LaunchConditions } from './launch-conditions';
+import { TRIAL, type LaunchConditions } from './launch-conditions';
 
 export type GateStatus = 'pass' | 'marginal' | 'fail';
 
@@ -119,13 +119,15 @@ export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult
   // thermals themselves, which pilots fly in: only how strong the gusts get
   // counts then, not how far they run over the mean wind.
   const thermic = (c.wStar ?? 0) >= THERMAL_MIN_WSTAR;
-  if (
-    c.windGust > launch.maxWindSpeed + GUST_OVER_LIMIT_KMH ||
-    (!thermic && spread > GUST_SPREAD_FAIL_KMH)
-  ) {
+  const failOver = thermic ? TRIAL.thermicFailOver : TRIAL.failOver;
+  const marginalOver = thermic ? TRIAL.thermicMarginalOver : 0;
+  if (c.windGust > launch.maxWindSpeed + failOver || (!thermic && spread > TRIAL.spreadFail)) {
     return { gate: 'gusts', status: 'fail', reason: `Gusts to ${c.windGust} km/h` };
   }
-  if (c.windGust > launch.maxWindSpeed || (!thermic && spread > GUST_SPREAD_MARGINAL_KMH)) {
+  if (
+    c.windGust > launch.maxWindSpeed + marginalOver ||
+    (!thermic && spread > TRIAL.spreadMarginal)
+  ) {
     return { gate: 'gusts', status: 'marginal', reason: `Gusty, to ${c.windGust} km/h` };
   }
   return { gate: 'gusts', status: 'pass' };
