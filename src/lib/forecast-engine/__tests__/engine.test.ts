@@ -7,8 +7,12 @@ import {
   verdictSummary,
   type LaunchProfile,
 } from '..';
-import { deriveLaunchConditions, interpolateAtHeight } from '../launch-conditions';
-import { directionGate, daylightGate, gustGate } from '../gates';
+import {
+  deriveLaunchConditions,
+  interpolateAtHeight,
+  topOfLiftAtLaunch,
+} from '../launch-conditions';
+import { directionGate, daylightGate, gustGate, stormGate } from '../gates';
 
 const DATE = '2026-07-18';
 const MODEL_ELEVATION = 200;
@@ -154,6 +158,16 @@ describe('deriveLaunchConditions', () => {
     const c = deriveLaunchConditions(hour, MODEL_ELEVATION, 1000);
     expect(c.windGust).toBe(32);
   });
+
+  it('raises the top of lift by half the launch height above the model ground, up to cloud base', () => {
+    // Model ground 200 m, its top of lift 1,200 m, cloud base 2,000 m
+    expect(topOfLiftAtLaunch(1200, 200, 1000, 2000)).toBe(1600);
+    expect(topOfLiftAtLaunch(1200, 200, 2000, 2000)).toBe(2000);
+    expect(topOfLiftAtLaunch(1200, 200, 2000, null)).toBe(2100);
+    // A launch below the model ground keeps the model's top
+    expect(topOfLiftAtLaunch(1200, 200, 100, 2000)).toBe(1200);
+    expect(topOfLiftAtLaunch(null, 200, 1000, 2000)).toBeNull();
+  });
 });
 
 describe('gates', () => {
@@ -175,6 +189,29 @@ describe('gates', () => {
     expect(directionGate({ ...base, windSpeed: 12, windDirection: 270 }, swLaunch).status).toBe(
       'marginal',
     );
+  });
+
+  it('lets a light cross wind pass', () => {
+    expect(directionGate({ ...base, windSpeed: 10, windDirection: 270 }, swLaunch).status).toBe(
+      'pass',
+    );
+    expect(directionGate({ ...base, windSpeed: 10, windDirection: 315 }, swLaunch).status).toBe(
+      'fail',
+    );
+  });
+
+  it('counts unstable air fully only with showers near', () => {
+    const unstable = { ...base, liftedIndex: -3, cape: 600 };
+    const veryUnstable = { ...base, liftedIndex: -5, cape: 2000 };
+    const showers = { rainSoonMm: 0.5, rainSoonChance: 0 };
+    expect(stormGate(unstable).status).toBe('pass');
+    expect(stormGate({ ...unstable, ...showers }).status).toBe('marginal');
+    expect(stormGate({ ...unstable, rainSoonChance: 40 }).status).toBe('marginal');
+    expect(stormGate(veryUnstable).status).toBe('marginal');
+    expect(stormGate({ ...veryUnstable, ...showers }).status).toBe('fail');
+    // In the tropics only heavy showers count
+    expect(stormGate({ ...veryUnstable, ...showers }, 'low').status).toBe('marginal');
+    expect(stormGate({ ...veryUnstable, rainSoonMm: 4 }, 'low').status).toBe('fail');
   });
 
   it('flies through thermal gusts but not through gusts over the limit', () => {
@@ -269,9 +306,26 @@ describe('evaluateDays', () => {
   });
 
   it('closes the afternoon when thunderstorms are likely', () => {
-    const day = today(profile((h) => (h >= 13 ? { liftedIndex: -5, cape: 2000 } : {})));
+    const day = today(
+      profile((h) => (h >= 13 ? { liftedIndex: -5, cape: 2000, precipitation: 1 } : {})),
+    );
     expect(day.flyableWindow).toBe('06:00-13:00');
     expect(day.reasons.some((r) => r.startsWith('Thunderstorms likely'))).toBe(true);
+  });
+
+  it('closes the window two hours before showers in unstable air', () => {
+    const day = today(
+      profile((h) => ({ liftedIndex: -3, cape: 800, precipitation: h >= 15 ? 0.2 : 0 })),
+    );
+    expect(day.verdict).toBe('go');
+    expect(day.flyableWindow).toBe('06:00-13:00');
+    expect(day.reasons.some((r) => r.startsWith('Thunderstorm risk, 13:00'))).toBe(true);
+  });
+
+  it('flies unstable air with no showers in the forecast', () => {
+    const day = today(profile(() => ({ liftedIndex: -3, cape: 800 })));
+    expect(day.verdict).toBe('go');
+    expect(day.flyableWindow).toBe('06:00-21:00');
   });
 
   it('fails a launch sitting in cloud', () => {
@@ -302,8 +356,9 @@ describe('flight type', () => {
   });
 
   it('calls lift that barely clears launch a sled ride', () => {
-    // Tops out 80 m above a 600 m launch, the Mt. Si case
-    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 680 } : {})));
+    // Tops out 80 m above a 600 m launch, the Mt. Si case: the model's 480 m
+    // plus half the launch's 400 m above the model ground
+    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 480 } : {})));
     expect(day.verdict).toBe('go');
     expect(day.flight).toBe('sled');
     expect(verdictSummary(day)).toBe(
@@ -312,7 +367,7 @@ describe('flight type', () => {
   });
 
   it('calls thermals that top out 400 m above launch a sled ride', () => {
-    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 1000 } : {})));
+    const day = today(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 800 } : {})));
     expect(day.flight).toBe('sled');
     expect(day.sled).toEqual({ reason: 'low', liftAboveLaunch: 400 });
   });
@@ -367,7 +422,7 @@ describe('flight type', () => {
       return verdictSummary(day).split(': ')[1];
     };
     expect(why(profile(() => ({ wStar: 0.6 })))).toBe('a sled ride, thermals too weak to climb.');
-    expect(why(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 550 } : {})))).toBe(
+    expect(why(profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 350 } : {})))).toBe(
       'a sled ride, thermals top out below launch.',
     );
     // A ridge site on a light-wind thermal day
@@ -389,7 +444,7 @@ describe('flight type', () => {
 });
 
 describe('goals', () => {
-  const sledDay = profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 680 } : {}));
+  const sledDay = profile((h) => (h >= 9 && h <= 18 ? { topOfLiftMsl: 480 } : {}));
 
   it('makes a sled ride a go when a safe launch is enough', () => {
     expect(today(sledDay, { ...swLaunch, goal: 'launch' }).goalMet).toBe(true);

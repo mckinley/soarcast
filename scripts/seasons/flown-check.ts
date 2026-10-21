@@ -378,10 +378,7 @@ function compare(base: Baseline, launches: Launch[]) {
   for (const id of ids) {
     const b = base.launches[id];
     const n = now.launches[id];
-    let ups = 0;
-    let downs = 0;
-    let soarUps = 0;
-    let soarDowns = 0;
+    const moved = { up: 0, upFlown: 0, down: 0, downFlown: 0, soarUp: 0, soarUpFlown: 0 };
     for (const [date, nd] of Object.entries(n.days)) {
       const bd = b.days[date];
       if (!bd) continue;
@@ -397,22 +394,28 @@ function compare(base: Baseline, launches: Launch[]) {
       count.soared += soared;
       if (bStatus !== 'go' && nStatus === 'go') {
         up.add(bWhy, !!flown, b.goRate);
-        ups++;
+        moved.up++;
+        moved.upFlown += flown;
       } else if (bStatus === 'go' && nStatus !== 'go') {
         down.add(nWhy, !!flown, b.goRate);
-        downs++;
+        moved.down++;
+        moved.downFlown += flown;
       }
       if (!bSoar && nSoar) {
         soarUp.add(bWhy, !!soared, b.soarRate);
-        soarUps++;
+        moved.soarUp++;
+        moved.soarUpFlown += soared;
       } else if (bSoar && !nSoar) {
         soarDown.add(nWhy, !!soared, b.soarRate);
-        soarDowns++;
       }
     }
-    if (ups + downs + soarUps + soarDowns > 0)
+    const ratio = (part: number, days: number, rate: number) =>
+      days > 0 && rate > 0 ? `x${(part / (days * rate)).toFixed(2)}` : '-';
+    if (moved.up + moved.down + moved.soarUp > 0)
       perLaunch.push(
-        `    ${b.name.slice(0, 32).padEnd(32)} Go +${ups} -${downs}   soaring +${soarUps} -${soarDowns}`,
+        `    ${b.name.slice(0, 32).padEnd(32)} Go ${(Math.round(b.goRate * 100) + '%').padStart(4)} ` +
+          `up ${String(moved.up).padStart(4)} days ${String(moved.upFlown).padStart(3)} flown ${ratio(moved.upFlown, moved.up, b.goRate).padStart(6)}, ` +
+          `down ${String(moved.down).padStart(3)} | soaring up ${String(moved.soarUp).padStart(4)} days ${String(moved.soarUpFlown).padStart(3)} soared ${ratio(moved.soarUpFlown, moved.soarUp, b.soarRate).padStart(6)}`,
       );
   }
   const years = ids.length * 2;
@@ -433,7 +436,7 @@ function compare(base: Baseline, launches: Launch[]) {
   soarUp.print('Soaring now expected, by why not on main', 'soared');
   soarDown.print('Soaring no longer expected, by why not now', 'soared');
   if (perLaunch.length > 0) {
-    console.log('  By launch:');
+    console.log("  By launch (Go: share of the launch's Go days flown on main):");
     perLaunch.forEach((l) => console.log(l));
   }
 }
