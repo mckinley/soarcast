@@ -502,9 +502,13 @@ function baseline(launches: Launch[]) {
 const MAIN_TRIAL = { ...TRIAL };
 const VARIANTS: Array<[string, Partial<typeof TRIAL>]> = [
   ['SAME AS MAIN (check)', {}],
+  ['GUST SPREAD fades out 600 m above the forecast ground', { gustDecayM: 600 }],
+  ['GUST SPREAD fades out 1000 m above the forecast ground', { gustDecayM: 1000 }],
+  ['GUST SPREAD fades out 1500 m above the forecast ground', { gustDecayM: 1500 }],
+  ['GUST SPREAD fades out 2500 m above the forecast ground', { gustDecayM: 2500 }],
   [
-    'THERMIC gusts marginal over limit+5, fail over +15',
-    { thermicMarginalOver: 5, thermicFailOver: 15 },
+    'GUST SPREAD fades out 1000 m, thermic +5/+15',
+    { gustDecayM: 1000, thermicMarginalOver: 5, thermicFailOver: 15 },
   ],
 ];
 
@@ -583,7 +587,7 @@ async function gustSplit(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
 }
 
 async function trial(withFlown: Array<{ job: Job; flown: FlownDay[] }>) {
-  await gustSplit(withFlown);
+  if (process.env.FLOWN_TRIAL === 'split') await gustSplit(withFlown);
   const base = JSON.parse(gunzipSync(readFileSync(BASELINE_FILE)).toString()) as Baseline;
   for (const [title, flags] of VARIANTS) {
     Object.assign(TRIAL, MAIN_TRIAL, flags);

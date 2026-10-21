@@ -92,6 +92,7 @@ export const TERRAIN_LIFT_SHARE = 0.5;
 export const TRIAL = {
   gustSpreadShare: 1,
   gustFloorSurface: false,
+  gustDecayM: 0,
   thermicMarginalOver: 0,
   thermicFailOver: 10,
   failOver: 10,
@@ -165,7 +166,11 @@ export function deriveLaunchConditions(
     windGust: Math.round(
       Math.max(
         TRIAL.gustFloorSurface ? surface.windGusts : 0,
-        atLaunch.speed + TRIAL.gustSpreadShare * gustSpread,
+        atLaunch.speed +
+          (TRIAL.gustDecayM > 0
+            ? Math.max(0, 1 - Math.max(0, launchElevation - surfaceHeight) / TRIAL.gustDecayM)
+            : TRIAL.gustSpreadShare) *
+            gustSpread,
       ),
     ),
     temperature: Math.round(atLaunch.temperature * 10) / 10,
