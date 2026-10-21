@@ -30,7 +30,7 @@ SoarCast rates a day in two steps. First it checks each hour to see if you can l
 
 A day shows its word with the flight and the time, such as "Go: thermals 12:00-16:00". Below that, it says what limits the rest of the day.
 
-Push alerts only go out for days that are a Go.
+Push alerts only go out for days that are a Go. You can turn alerts off for one site, or for a whole [area](/guide/favorites-and-areas).
 
 ## Launch checks, hour by hour
 

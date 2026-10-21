@@ -48,6 +48,7 @@ import {
 import { SEASON_MONTHS } from '@/lib/seasons';
 import { FLOWN_RADIUS_KM, FLOWN_REFRESH_HOURS } from '@/lib/flown-days';
 import { AREA_RADIUS_KM } from '@/lib/destinations';
+import { AREA_JOIN_KM } from '@/lib/site-areas';
 import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
 import { COMP_RADIUS_KM } from '@/lib/comps';
 import { LAPSE_BANDS } from '@/components/windgram/lapse-rate-utils';
@@ -72,6 +73,7 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   trackRecordRebuildDays: TRACK_RECORD_MAX_AGE_DAYS,
   seasonMonths: SEASON_MONTHS,
   areaRadiusKm: AREA_RADIUS_KM,
+  areaJoinKm: AREA_JOIN_KM,
   flownRadiusKm: FLOWN_RADIUS_KM,
   flownRefreshHours: FLOWN_REFRESH_HOURS,
   siteRefreshDays: SITE_REFRESH_DAYS,

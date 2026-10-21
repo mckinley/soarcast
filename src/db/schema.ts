@@ -58,6 +58,24 @@ export const launchSites = sqliteTable('launch_sites', {
     .default(sql`(unixepoch())`),
 });
 
+// A pilot's flying areas: the places their saved sites are grouped by, like
+// home or a trip (src/lib/site-areas.ts). Each favorite and private site sits
+// in one; a site with none is placed by distance the next time it's loaded.
+export const siteAreas = sqliteTable('site_areas', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  // Off: no alerts or digest lines for the area's sites
+  alerts: integer('alerts', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 // User favorites of launch sites with optional customizations
 export const userFavoriteSites = sqliteTable(
   'user_favorite_sites',
@@ -79,6 +97,7 @@ export const userFavoriteSites = sqliteTable(
     siteKind: text('site_kind').$type<SiteKind>(),
     goal: text('goal').$type<SiteGoal>(),
     notify: integer('notify', { mode: 'boolean' }).notNull().default(false),
+    areaId: text('area_id').references(() => siteAreas.id, { onDelete: 'set null' }),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -111,6 +130,7 @@ export const customSites = sqliteTable('custom_sites', {
   siteKind: text('site_kind').$type<SiteKind>(), // null: not said
   goal: text('goal').$type<SiteGoal>(), // null: safe launch is enough
   notes: text('notes'),
+  areaId: text('area_id').references(() => siteAreas.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -274,6 +294,8 @@ export type NewUserFavoriteSite = typeof userFavoriteSites.$inferInsert;
 
 export type CustomSite = typeof customSites.$inferSelect;
 export type NewCustomSite = typeof customSites.$inferInsert;
+
+export type SiteArea = typeof siteAreas.$inferSelect;
 
 export type ForecastCache = typeof forecastsCache.$inferSelect;
 export type NewForecastCache = typeof forecastsCache.$inferInsert;

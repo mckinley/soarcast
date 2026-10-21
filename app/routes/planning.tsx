@@ -1,8 +1,10 @@
-import { Form, Link, useLoaderData } from 'react-router';
+import { Form, Link, useFetcher, useLoaderData } from 'react-router';
 import type { Route } from './+types/planning';
 import { eq } from 'drizzle-orm';
 import { getDb } from '~/app/lib/db.server';
-import { getSession } from '~/app/lib/auth.server';
+import { getSession, requireAuth } from '~/app/lib/auth.server';
+import { ensureLaunchSite } from '~/app/lib/launch-sites.server';
+import { putInNamedArea } from '~/app/lib/site-areas.server';
 import { compsWorldwide } from '~/app/lib/comps.server';
 import { destinationSeasons, seasonSiteRef, seasonsForSites } from '~/app/lib/seasons.server';
 import { customSites, launchSites, userFavoriteSites } from '~/db/schema';
@@ -23,7 +25,7 @@ import {
 } from '~/lib/comps';
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { customSiteToSite } from '~/lib/custom-sites';
-import { pgsitesSlug } from '~/lib/pgsites-client';
+import { getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
 import {
   AREAS,
   AREA_BY_SLUG,
@@ -40,7 +42,8 @@ import { CompName, CompRow } from '@/components/site-comps';
 import { CompsCredit } from '@/components/data-credits';
 import { PlanningMapWrapper } from '@/components/planning-map-wrapper';
 import type { PlanningMapPoint, PlanningMapProps } from '@/components/planning-map';
-import { ChevronLeft, ChevronRight, MapPin, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, MapPin, Star, Trophy } from 'lucide-react';
 
 /** How many years ahead the start month can be. */
 const YEARS_AHEAD = 5;
@@ -229,6 +232,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   // Favorite and private sites, rated the way their pages rate them
   let ownSites: Array<{ siteRef: string; site: Site; href: string }> = [];
+  // Followed listed sites by pgsites id, with the area each is in
+  const followedPgIds = new Map<string, string | null>();
   if (session?.user?.id) {
     const [followed, customs] = await Promise.all([
       db
@@ -238,6 +243,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         .where(eq(userFavoriteSites.userId, session.user.id)),
       db.select().from(customSites).where(eq(customSites.userId, session.user.id)),
     ]);
+    for (const f of followed) followedPgIds.set(f.site.pgsitesId, f.favorite.areaId);
     ownSites = [
       ...followed.map((f) => ({
         siteRef: seasonSiteRef('pgsites', f.site.pgsitesId),
@@ -286,7 +292,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .sort(byRank);
   }
 
-  let opened: { name: string; launches: number } | null = null;
+  let opened: {
+    name: string;
+    launches: number;
+    /** A flying area that can be saved to Favorites as one area */
+    save: { area: string; listed: number; saved: boolean; savedIn: string | null } | null;
+  } | null = null;
   let pending: string[] = [];
   let mapPoints: PlanningMapPoint[] = [];
   let mapExtents: PlanningMapProps['extents'] = [];
@@ -377,9 +388,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       const dests = DESTINATIONS.filter((dest) =>
         inArea ? dest.area === inArea : dest.countryCode === inCountry,
       );
+      // Its launches found on Paragliding Earth can be saved; saved when all are favorites
+      const listed = dests.flatMap(
+        (dest) => rated.get(dest.slug)?.row.siteRef.replace(/^pg:/, '') ?? [],
+      );
       opened = {
         name: inArea ? AREA_BY_SLUG.get(inArea)!.name : (countryName(inCountry) ?? inCountry!),
         launches: dests.length,
+        save:
+          inArea && listed.length > 0
+            ? {
+                area: inArea,
+                listed: listed.length,
+                saved: listed.every((id) => followedPgIds.has(id)),
+                savedIn: followedPgIds.get(listed[0]) ?? null,
+              }
+            : null,
       };
       places = dests.map(launchRow).sort(byRank);
       mapPoints = dests.map((dest) => {
@@ -463,6 +487,46 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     mapPoints,
     mapExtents,
   };
+}
+
+/**
+ * Saves a flying area: its launches found on Paragliding Earth go into
+ * Favorites, together in an area of the same name. Returns that area's id.
+ */
+export async function action({ request, context }: Route.ActionArgs) {
+  const env = context.cloudflare.env as Env;
+  const session = await requireAuth(request, env);
+  const formData = await request.formData();
+  if (formData.get('intent') !== 'saveArea') return { error: 'Unknown action' };
+  const area = AREA_BY_SLUG.get(String(formData.get('area') ?? ''));
+  if (!area) return { error: 'Unknown area' };
+
+  const db = getDb(env);
+  const apiKey = getPgsitesApiKey(env);
+  const slugs = new Set(area.launches.map((l) => l.slug));
+  const refs = (await destinationSeasons(db))
+    .filter((row) => slugs.has(row.destination ?? '') && row.siteRef.startsWith('pg:'))
+    .map((row) => row.siteRef.slice(3));
+  const sites = (await Promise.all(refs.map((id) => ensureLaunchSite(db, apiKey, id)))).flatMap(
+    (s) => s ?? [],
+  );
+  if (sites.length === 0) return { error: 'None of its launches could be found' };
+
+  await Promise.all(
+    sites.map((site) =>
+      db
+        .insert(userFavoriteSites)
+        .values({ userId: session.user.id, siteId: site.id, notify: false })
+        .onConflictDoNothing(),
+    ),
+  );
+  const areaId = await putInNamedArea(
+    db,
+    session.user.id,
+    area.name,
+    sites.map((s) => s.id),
+  );
+  return { areaId };
 }
 
 /** A rated travel launch, with its days. */
@@ -832,6 +896,58 @@ function Places({ rows, months, label }: { rows: PlaceRow[]; months: string[]; l
   );
 }
 
+/** Saves an opened flying area's launches to Favorites, together as one area. */
+function SaveArea({
+  save,
+  signedIn,
+}: {
+  save: { area: string; listed: number; saved: boolean; savedIn: string | null };
+  signedIn: boolean;
+}) {
+  const fetcher = useFetcher<typeof action>();
+  const result = fetcher.data;
+  const areaId = result && 'areaId' in result ? result.areaId : null;
+  const dashboard = (id: string | null) => (id ? `/dashboard?area=${id}` : '/dashboard');
+  const launches = save.listed === 1 ? 'its launch' : `its ${save.listed} launches`;
+
+  if (!signedIn) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        <Link to="/auth/signin" className="underline">
+          Sign in
+        </Link>{' '}
+        to save this area to Favorites and see its week on the dashboard.
+      </p>
+    );
+  }
+  if (areaId || save.saved) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {areaId ? 'Saved.' : 'In Favorites.'}{' '}
+        <Link to={dashboard(areaId ?? save.savedIn)} className="underline">
+          See this week on the dashboard
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <fetcher.Form method="post" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <input type="hidden" name="intent" value="saveArea" />
+      <input type="hidden" name="area" value={save.area} />
+      <Button type="submit" variant="outline" size="sm" disabled={fetcher.state !== 'idle'}>
+        <Star className="mr-1.5 h-4 w-4" />
+        {fetcher.state !== 'idle' ? 'Saving' : 'Save this area'}
+      </Button>
+      <span className="text-xs text-muted-foreground">
+        Adds {launches} to Favorites, together as one area.
+      </span>
+      {result && 'error' in result && (
+        <span className="text-xs text-destructive">{result.error}</span>
+      )}
+    </fetcher.Form>
+  );
+}
+
 const SEASONS_NOTE =
   'Seasons come from the last two years of days, so a month reads the same in any year. Comps are the ones listed for those dates.';
 
@@ -928,6 +1044,7 @@ export default function PlanningPage() {
                     All {filters.by === 'country' ? 'countries' : 'areas'}
                   </Link>
                   <h2 className="text-xl font-semibold">{opened.name}</h2>
+                  {opened.save && <SaveArea save={opened.save} signedIn={signedIn} />}
                 </div>
               )}
               <p className="text-sm text-muted-foreground">

@@ -46,3 +46,30 @@ export async function refreshLaunchSites(
   );
   return rows.map((r) => refreshed.get(r.id) ?? r);
 }
+
+/**
+ * The local copy of a listed site, copied from pgsites the first time anyone
+ * follows it. Null when pgsites doesn't know the site.
+ */
+export async function ensureLaunchSite(
+  db: Db,
+  apiKey: string,
+  pgsitesId: string,
+): Promise<LaunchSite | null> {
+  const byPgsitesId = () =>
+    db.query.launchSites.findFirst({ where: eq(launchSites.pgsitesId, pgsitesId) });
+  const existing = await byPgsitesId();
+  if (existing) return existing;
+  const pgSite = await getSiteById(apiKey, pgsitesId);
+  if (!pgSite) return null;
+  await db
+    .insert(launchSites)
+    .values({
+      id: crypto.randomUUID(),
+      ...launchSiteValuesFromPgSite(pgSite),
+      source: 'pgsites',
+      pgsitesId: pgSite.id,
+    })
+    .onConflictDoNothing();
+  return (await byPgsitesId()) ?? null;
+}

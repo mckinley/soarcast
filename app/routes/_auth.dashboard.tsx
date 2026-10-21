@@ -16,6 +16,8 @@ import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
 import { compsWorldwide } from '~/app/lib/comps.server';
 import { addDays } from '~/lib/alert-schedule';
 import { compsAround, type Comp } from '~/lib/comps';
+import { AREA_JOIN_KM, nearestArea } from '~/lib/site-areas';
+import { requestPlace, savedSiteKey, syncAreas, type SavedSite } from '~/app/lib/site-areas.server';
 
 export interface SiteForecastData {
   site: Site;
@@ -27,6 +29,30 @@ export interface SiteForecastData {
   error?: string;
   /** Comps held at the site this week */
   comps: Comp[];
+  /** The area the site is in */
+  areaId: string | null;
+}
+
+/** An area the dashboard can show: chips at the top switch between them. */
+export interface DashboardArea {
+  id: string;
+  name: string;
+  siteCount: number;
+}
+
+/**
+ * What the dashboard shows: one area, every area side by side ("all"), or
+ * every site when there's only one area. `chosenBy` says why that area.
+ */
+export interface ShownArea {
+  area: string | 'all' | null;
+  chosenBy: 'link' | 'location' | 'size';
+}
+
+/** Listed launches near the pilot, when no saved site is. */
+export interface NearYou {
+  city: string | null;
+  sites: SuggestedSite[];
 }
 
 /** Forecasts fetched at once: Open-Meteo rate-limits bursts. */
@@ -60,24 +86,82 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     db.select().from(settings).where(eq(settings.userId, userId)).limit(1),
   ]);
 
+  // Every saved site sits in an area; new ones join one by distance
+  const saved: SavedSite[] = [
+    ...favorites.map((f) => ({
+      key: savedSiteKey('launch', f.site.id),
+      name: f.site.name,
+      latitude: f.site.latitude,
+      longitude: f.site.longitude,
+      areaId: f.favorite.areaId,
+      savedAt: f.favorite.createdAt,
+    })),
+    ...customs.map((c) => ({
+      key: savedSiteKey('custom', c.id),
+      name: c.name,
+      latitude: parseFloat(c.latitude),
+      longitude: parseFloat(c.longitude),
+      areaId: c.areaId,
+      savedAt: c.createdAt,
+    })),
+  ];
+  const { areas, areaOf } = await syncAreas(db, userId, saved);
+  const here = requestPlace(context.cloudflare.cf);
+
+  // One area at a time: the one asked for, else the one nearest the pilot
+  const url = new URL(request.url);
+  const asked = url.searchParams.get('area');
+  const placeOf = new Map(saved.map((s) => [s.key, s]));
+  const placed = areas.map((a) => ({ ...a, sites: a.siteKeys.map((k) => placeOf.get(k)!) }));
+  const nearest = here ? nearestArea(placed, here) : null;
+  const shown: ShownArea =
+    areas.length < 2
+      ? { area: null, chosenBy: 'size' }
+      : asked === 'all' || areas.some((a) => a.id === asked)
+        ? { area: asked!, chosenBy: 'link' }
+        : nearest
+          ? { area: nearest.area.id, chosenBy: 'location' }
+          : {
+              area: [...areas].sort((a, b) => b.siteKeys.length - a.siteKeys.length)[0].id,
+              chosenBy: 'size',
+            };
+  const shownKeys =
+    shown.area && shown.area !== 'all'
+      ? new Set(areas.find((a) => a.id === shown.area)!.siteKeys)
+      : null;
+  const isShown = (key: string) => !shownKeys || shownKeys.has(key);
+
   // Convert to Site format and build metadata
-  const siteMetadata = new Map<string, { siteType: 'launch' | 'custom'; slug?: string }>();
+  const siteMetadata = new Map<
+    string,
+    { siteType: 'launch' | 'custom'; slug?: string; areaId: string | null }
+  >();
 
   // Followed sites' copies pick up pgsites changes, like what a site gives
+  const shownFavorites = favorites.filter((f) => isShown(savedSiteKey('launch', f.site.id)));
   const refreshedSites = await refreshLaunchSites(
     db,
     getPgsitesApiKey(env),
-    favorites.map((f) => f.site),
+    shownFavorites.map((f) => f.site),
   );
-  const favoritesAsSites: Site[] = favorites.map((f, i) => {
-    siteMetadata.set(f.site.id, { siteType: 'launch', slug: f.site.slug });
+  const favoritesAsSites: Site[] = shownFavorites.map((f, i) => {
+    siteMetadata.set(f.site.id, {
+      siteType: 'launch',
+      slug: f.site.slug,
+      areaId: areaOf.get(savedSiteKey('launch', f.site.id)) ?? null,
+    });
     return launchSiteToSite(refreshedSites[i], f.favorite);
   });
 
-  const customSitesAsSites: Site[] = customs.map((site) => {
-    siteMetadata.set(site.id, { siteType: 'custom' });
-    return customSiteToSite(site);
-  });
+  const customSitesAsSites: Site[] = customs
+    .filter((c) => isShown(savedSiteKey('custom', c.id)))
+    .map((site) => {
+      siteMetadata.set(site.id, {
+        siteType: 'custom',
+        areaId: areaOf.get(savedSiteKey('custom', site.id)) ?? null,
+      });
+      return customSiteToSite(site);
+    });
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];
 
@@ -102,6 +186,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           today: profileToday(profile),
           siteType: meta.siteType,
           slug: meta.slug,
+          areaId: meta.areaId,
         };
       } catch (error) {
         console.error(`Forecast for ${site.name} failed:`, error);
@@ -111,6 +196,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           today: new Date().toISOString().slice(0, 10),
           siteType: meta.siteType,
           slug: meta.slug,
+          areaId: meta.areaId,
           error: 'The forecast service is busy. Reload in a minute.',
         };
       }
@@ -122,20 +208,34 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     comps: compsAround(comps, f.site.latitude, f.site.longitude),
   }));
 
-  // A pilot with no sites yet gets launches to start from on the empty dashboard
+  // Listed launches near the pilot: to start from on the empty dashboard, or
+  // where they are when no saved site is near
+  const toSuggested = (sites: Awaited<ReturnType<typeof nearbySites>>): SuggestedSite[] =>
+    sites.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: pgsitesSlug(s.name, s.id),
+      elevation: s.altitude,
+    }));
   let suggestions: SuggestedSite[] = [];
-  if (allSites.length === 0) {
+  let nearYou: NearYou | null = null;
+  if (saved.length === 0) {
     try {
-      // SoarCast's pilots are around Seattle so far: suggest launches within 150 km
-      const sites = await nearbySites(getPgsitesApiKey(env), 47.5, -121.8, 150, 3);
-      suggestions = sites.map((s) => ({
-        id: s.id,
-        name: s.name,
-        slug: pgsitesSlug(s.name, s.id),
-        elevation: s.altitude,
-      }));
+      // Near the pilot when the connection says where; else around Seattle,
+      // where SoarCast's pilots are so far
+      const at = here ?? { latitude: 47.5, longitude: -121.8 };
+      suggestions = toSuggested(
+        await nearbySites(getPgsitesApiKey(env), at.latitude, at.longitude, 150, 3),
+      );
     } catch (error) {
       console.error('Launch suggestions failed:', error);
+    }
+  } else if (here && nearest && nearest.km > AREA_JOIN_KM) {
+    try {
+      const sites = await nearbySites(getPgsitesApiKey(env), here.latitude, here.longitude, 100, 3);
+      if (sites.length > 0) nearYou = { city: here.city, sites: toSuggested(sites) };
+    } catch (error) {
+      console.error('Launches near the pilot failed:', error);
     }
   }
 
@@ -159,11 +259,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     data,
     settings: appSettings,
     suggestions,
+    suggestionsNearYou: saved.length === 0 && here !== null,
+    areas: areas.map((a) => ({ id: a.id, name: a.name, siteCount: a.siteKeys.length })),
+    shown,
+    nearYou,
   };
 }
 
 export default function DashboardPage() {
-  const { data, settings: appSettings, suggestions } = useLoaderData<typeof loader>();
+  const {
+    data,
+    settings: appSettings,
+    suggestions,
+    suggestionsNearYou,
+    areas,
+    shown,
+    nearYou,
+  } = useLoaderData<typeof loader>();
 
   const defaultSettings = {
     notifications: {
@@ -181,6 +293,10 @@ export default function DashboardPage() {
       settings={appSettings ?? defaultSettings}
       isAuthenticated={true}
       suggestions={suggestions}
+      suggestionsNearYou={suggestionsNearYou}
+      areas={areas}
+      shown={shown}
+      nearYou={nearYou}
     />
   );
 }

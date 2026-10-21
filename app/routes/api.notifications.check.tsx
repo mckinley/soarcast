@@ -30,6 +30,7 @@ import type { AtmosphericProfile } from '~/lib/weather-profile';
 import type { Site } from '~/types';
 import webpush from 'web-push';
 import { sendPush } from '~/lib/push-send';
+import { mutedAreaIds } from '~/app/lib/site-areas.server';
 
 /** The settings a pilot has before saving any: the schema's column defaults. */
 function defaultSettings(userId: string, now: Date): typeof settingsTable.$inferSelect {
@@ -122,10 +123,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
           .from(customSites)
           .where(eq(customSites.userId, user.id));
 
-        // Each with the pilot's goal for it, which decides what is worth an alert
+        // Each with the pilot's goal for it, which decides what is worth an
+        // alert; sites in an area with alerts off are left out
+        const muted = await mutedAreaIds(db, user.id);
+        const alerting = (areaId: string | null) => !areaId || !muted.has(areaId);
         const userSites: Site[] = [
-          ...favoriteSitesResult.map((f) => launchSiteToSite(f.site, f.favorite)),
-          ...customSitesResult.map(customSiteToSite),
+          ...favoriteSitesResult
+            .filter((f) => alerting(f.favorite.areaId))
+            .map((f) => launchSiteToSite(f.site, f.favorite)),
+          ...customSitesResult.filter((c) => alerting(c.areaId)).map(customSiteToSite),
         ];
         if (userSites.length === 0) continue;
         // Where an alert about each site opens

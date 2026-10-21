@@ -4,10 +4,16 @@ import { VerdictCell } from '@/components/verdict-cell';
 import { SiteCard } from '@/components/dashboard/site-card';
 import { ForecastCredit } from '@/components/data-credits';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { SiteForecastData } from '~/app/routes/_auth.dashboard';
+import type {
+  DashboardArea,
+  NearYou,
+  ShownArea,
+  SiteForecastData,
+} from '~/app/routes/_auth.dashboard';
 import type { DayScore, Settings } from '@/types';
 import { addDays } from '@/lib/alert-schedule';
 import { compsOn } from '@/lib/comps';
+import { bestSiteDay } from '@/lib/site-areas';
 import {
   STATUS_BADGE,
   STATUS_DOT,
@@ -45,7 +51,7 @@ function StatusLegend() {
   );
 }
 
-/** A listed launch offered to a pilot who follows no sites yet. */
+/** A listed launch offered to a pilot who follows no sites yet, or none near where they are. */
 export interface SuggestedSite {
   id: string;
   name: string;
@@ -53,11 +59,155 @@ export interface SuggestedSite {
   elevation: number | null;
 }
 
+/** Listed launches as links to their pages. */
+function SuggestedSites({ sites }: { sites: SuggestedSite[] }) {
+  return (
+    <div className="space-y-2">
+      {sites.map((site) => (
+        <Link
+          key={site.id}
+          to={`/sites/${site.slug}`}
+          className="flex items-center gap-2 rounded-md border border-border p-3 transition-colors hover:bg-accent"
+        >
+          <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">{site.name}</div>
+            {site.elevation != null && (
+              <div className="text-xs text-muted-foreground">
+                {site.elevation.toLocaleString('en-US')} m
+              </div>
+            )}
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** One chip per area, and All areas: the dashboard shows one at a time. */
+function AreaChips({ areas, shown }: { areas: DashboardArea[]; shown: ShownArea }) {
+  const chips = [
+    ...areas.map((a) => ({ key: a.id, label: a.name })),
+    { key: 'all', label: 'All areas' },
+  ];
+  return (
+    <nav aria-label="Areas" className="flex flex-wrap items-center gap-1.5">
+      {chips.map((chip) => {
+        const active = chip.key === shown.area;
+        return (
+          <Link
+            key={chip.key}
+            to={`?area=${encodeURIComponent(chip.key)}`}
+            preventScrollReset
+            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+              active
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border hover:bg-accent'
+            }`}
+            aria-current={active ? 'true' : undefined}
+          >
+            {chip.label}
+          </Link>
+        );
+      })}
+      {shown.chosenBy === 'location' && (
+        <span className="text-xs text-muted-foreground">Nearest to you</span>
+      )}
+      <Link
+        to="/settings#areas"
+        className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      >
+        Edit areas
+      </Link>
+    </nav>
+  );
+}
+
+/** Every area side by side: each day is its best site that day. */
+function AreasTable({
+  areas,
+  data,
+  dates,
+  today,
+}: {
+  areas: DashboardArea[];
+  data: SiteForecastData[];
+  dates: string[];
+  today: string;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="border-b">
+            <th className="py-3 px-4 text-left font-semibold min-w-[160px] sticky left-0 bg-background z-10">
+              Area
+            </th>
+            {dates.map((date) => (
+              <th key={date} className="py-3 px-1 text-center font-semibold min-w-[76px]">
+                <div className="text-sm">{dayName(date, today)}</div>
+                <div className="text-xs text-muted-foreground font-normal">{shortDate(date)}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {areas.map((area) => {
+            const sites = data.filter((d) => d.areaId === area.id);
+            const comps = sites.flatMap((d) => d.comps);
+            return (
+              <tr key={area.id} className="border-b hover:bg-muted/30 transition-colors">
+                <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
+                  <Link
+                    to={`?area=${encodeURIComponent(area.id)}`}
+                    className="block hover:text-primary"
+                  >
+                    <div className="font-semibold">{area.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {area.siteCount === 1 ? '1 site' : `${area.siteCount} sites`}
+                    </div>
+                  </Link>
+                </td>
+                {dates.map((date) => {
+                  const best = bestSiteDay(
+                    sites.map((d) => ({ site: d, scores: d.scores })),
+                    date,
+                  );
+                  return (
+                    <td key={date} className="py-2 px-1">
+                      <VerdictCell
+                        score={best?.score ?? null}
+                        href={
+                          best
+                            ? siteHref(best.site.siteType, best.site.slug, best.site.site.id)
+                            : undefined
+                        }
+                        where={best?.site.site.name}
+                        comp={compsOn(comps, date)[0]}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface DashboardClientProps {
   data: SiteForecastData[];
   settings: Settings;
   isAuthenticated: boolean; // Always true since dashboard requires auth
   suggestions?: SuggestedSite[];
+  /** The suggestions are near the pilot, not around Seattle */
+  suggestionsNearYou?: boolean;
+  areas?: DashboardArea[];
+  shown?: ShownArea;
+  nearYou?: NearYou | null;
 }
 
 export function DashboardClient({
@@ -65,6 +215,10 @@ export function DashboardClient({
   settings,
   isAuthenticated,
   suggestions = [],
+  suggestionsNearYou = false,
+  areas = [],
+  shown = { area: null, chosenBy: 'size' },
+  nearYou = null,
 }: DashboardClientProps) {
   // Empty state when authenticated user has no sites
   if (data.length === 0 && isAuthenticated) {
@@ -77,25 +231,10 @@ export function DashboardClient({
         </p>
         {suggestions.length > 0 && (
           <div className="mb-6 w-full max-w-md space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Launches around Seattle</p>
-            {suggestions.map((site) => (
-              <Link
-                key={site.id}
-                to={`/sites/${site.slug}`}
-                className="flex items-center gap-2 rounded-md border border-border p-3 transition-colors hover:bg-accent"
-              >
-                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{site.name}</div>
-                  {site.elevation != null && (
-                    <div className="text-xs text-muted-foreground">
-                      {site.elevation.toLocaleString('en-US')} m
-                    </div>
-                  )}
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </Link>
-            ))}
+            <p className="text-xs font-medium text-muted-foreground">
+              {suggestionsNearYou ? 'Launches near you' : 'Launches around Seattle'}
+            </p>
+            <SuggestedSites sites={suggestions} />
           </div>
         )}
         <div className="flex flex-wrap justify-center gap-3">
@@ -197,8 +336,9 @@ export function DashboardClient({
         <div>
           <h1 className="text-3xl font-bold">This week</h1>
           <p className="text-muted-foreground mt-1">
-            When each favorite site gives the flying it&apos;s worth going for. Open a site for its
-            windgram.
+            {shown.area === 'all'
+              ? 'Each area shows its best site each day. A day is a go when any site in the area is. Open an area for all its sites.'
+              : "When each favorite site gives the flying it's worth going for. Open a site for its windgram."}
           </p>
           <StatusLegend />
         </div>
@@ -210,91 +350,110 @@ export function DashboardClient({
         </Button>
       </div>
 
+      {areas.length > 1 && <AreaChips areas={areas} shown={shown} />}
+
+      {nearYou && (
+        <div className="max-w-md space-y-2 rounded-lg border p-4">
+          <p className="text-sm">
+            No saved sites near {nearYou.city ?? 'you'}. Listed launches nearby:
+          </p>
+          <SuggestedSites sites={nearYou.sites} />
+        </div>
+      )}
+
+      {shown.area === 'all' && <AreasTable areas={areas} data={data} dates={dates} today={today} />}
+
       {/* Tabbed View: Cards (default) vs Table */}
-      <Tabs defaultValue="cards" className="w-full">
-        <TabsList>
-          <TabsTrigger value="cards">
-            <LayoutGrid className="mr-2 h-4 w-4" />
-            Cards
-          </TabsTrigger>
-          <TabsTrigger value="table">
-            <Table className="mr-2 h-4 w-4" />
-            Table
-          </TabsTrigger>
-        </TabsList>
+      {shown.area !== 'all' && (
+        <Tabs defaultValue="cards" className="w-full">
+          <TabsList>
+            <TabsTrigger value="cards">
+              <LayoutGrid className="mr-2 h-4 w-4" />
+              Cards
+            </TabsTrigger>
+            <TabsTrigger value="table">
+              <Table className="mr-2 h-4 w-4" />
+              Table
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Card View */}
-        <TabsContent value="cards" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.map(({ site, scores, today, siteType, slug, error, comps }) => (
-              <SiteCard
-                key={site.id}
-                site={site}
-                scores={scores}
-                today={today}
-                siteType={siteType}
-                slug={slug}
-                error={error}
-                comps={comps}
-              />
-            ))}
-          </div>
-        </TabsContent>
+          {/* Card View */}
+          <TabsContent value="cards" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.map(({ site, scores, today, siteType, slug, error, comps }) => (
+                <SiteCard
+                  key={site.id}
+                  site={site}
+                  scores={scores}
+                  today={today}
+                  siteType={siteType}
+                  slug={slug}
+                  error={error}
+                  comps={comps}
+                />
+              ))}
+            </div>
+          </TabsContent>
 
-        {/* Table View */}
-        <TabsContent value="table" className="mt-4">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-3 px-4 text-left font-semibold min-w-[160px] sticky left-0 bg-background z-10">
-                    Site
-                  </th>
-                  {dates.map((date) => (
-                    <th key={date} className="py-3 px-1 text-center font-semibold min-w-[76px]">
-                      <div className="text-sm">{dayName(date, today)}</div>
-                      <div className="text-xs text-muted-foreground font-normal">
-                        {shortDate(date)}
-                      </div>
+          {/* Table View */}
+          <TabsContent value="table" className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-3 px-4 text-left font-semibold min-w-[160px] sticky left-0 bg-background z-10">
+                      Site
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.map(({ site, scores, siteType, slug, error, comps }) => {
-                  const href = siteHref(siteType, slug, site.id);
-                  return (
-                    <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
-                        <Link to={href} className="block hover:text-primary">
-                          <div className="font-semibold">{site.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {error ?? `${site.elevation}m • ${site.maxWindSpeed}km/h max`}
-                          </div>
-                        </Link>
-                      </td>
-                      {dates.map((date, dateIndex) => {
-                        const score = scores.find((s) => s.date === date) || null;
-                        const showNotification = shouldShowNotification(score, site.id, dateIndex);
-                        return (
-                          <td key={date} className="py-2 px-1">
-                            <VerdictCell
-                              score={score}
-                              showNotification={showNotification}
-                              href={score ? href : undefined}
-                              comp={compsOn(comps, date)[0]}
-                            />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
-      </Tabs>
+                    {dates.map((date) => (
+                      <th key={date} className="py-3 px-1 text-center font-semibold min-w-[76px]">
+                        <div className="text-sm">{dayName(date, today)}</div>
+                        <div className="text-xs text-muted-foreground font-normal">
+                          {shortDate(date)}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map(({ site, scores, siteType, slug, error, comps }) => {
+                    const href = siteHref(siteType, slug, site.id);
+                    return (
+                      <tr key={site.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="py-2 px-4 font-medium sticky left-0 bg-background z-10">
+                          <Link to={href} className="block hover:text-primary">
+                            <div className="font-semibold">{site.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {error ?? `${site.elevation}m • ${site.maxWindSpeed}km/h max`}
+                            </div>
+                          </Link>
+                        </td>
+                        {dates.map((date, dateIndex) => {
+                          const score = scores.find((s) => s.date === date) || null;
+                          const showNotification = shouldShowNotification(
+                            score,
+                            site.id,
+                            dateIndex,
+                          );
+                          return (
+                            <td key={date} className="py-2 px-1">
+                              <VerdictCell
+                                score={score}
+                                showNotification={showNotification}
+                                href={score ? href : undefined}
+                                comp={compsOn(comps, date)[0]}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
       <ForecastCredit />
     </div>

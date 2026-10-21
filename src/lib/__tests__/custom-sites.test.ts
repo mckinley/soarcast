@@ -97,6 +97,7 @@ describe('customSiteToSite', () => {
       siteKind: null,
       goal: null,
       notes: null,
+      areaId: null,
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
     };

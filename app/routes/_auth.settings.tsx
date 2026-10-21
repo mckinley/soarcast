@@ -16,6 +16,14 @@ import { isValidTimeZone } from '~/lib/alert-schedule';
 import { isSiteGoal, isSiteKind } from '~/lib/site-goals';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { launchSiteKind, launchSiteToSite } from '~/lib/launch-sites';
+import {
+  joinAreas,
+  moveSite,
+  renameArea,
+  savedSiteKey,
+  setAreaAlerts,
+  syncAreas,
+} from '~/app/lib/site-areas.server';
 
 export function meta() {
   return [{ title: 'Settings | SoarCast' }];
@@ -76,9 +84,31 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     };
   }
 
+  // Sites are listed by area, the one first saved in first
+  const { areas, areaOf } = await syncAreas(db, userId, [
+    ...favorites.map((f) => ({
+      key: savedSiteKey('launch', f.site.id),
+      name: f.site.name,
+      latitude: f.site.latitude,
+      longitude: f.site.longitude,
+      areaId: f.favorite.areaId,
+      savedAt: f.favorite.createdAt,
+    })),
+    ...customs.map((c) => ({
+      key: savedSiteKey('custom', c.id),
+      name: c.name,
+      latitude: parseFloat(c.latitude),
+      longitude: parseFloat(c.longitude),
+      areaId: c.areaId,
+      savedAt: c.createdAt,
+    })),
+  ]);
+
   const sites = [
     ...customs.map((c) => ({
       id: c.id,
+      key: savedSiteKey('custom', c.id),
+      areaId: areaOf.get(savedSiteKey('custom', c.id)) ?? null,
       name: c.name,
       latitude: parseFloat(c.latitude),
       longitude: parseFloat(c.longitude),
@@ -91,6 +121,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     })),
     ...favorites.map((f) => ({
       id: f.site.id,
+      key: savedSiteKey('launch', f.site.id),
+      areaId: areaOf.get(savedSiteKey('launch', f.site.id)) ?? null,
       name: f.site.name,
       latitude: f.site.latitude,
       longitude: f.site.longitude,
@@ -102,11 +134,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       kind: f.favorite.siteKind,
       listedKind: launchSiteKind(f.site),
     })),
-  ];
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   return {
     settings: appSettings,
     sites,
+    areas: areas.map((a) => ({ id: a.id, name: a.name, alerts: a.alerts })),
     vapidPublicKey: env.VAPID_PUBLIC_KEY || '',
   };
 }
@@ -248,15 +281,61 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { success: true };
     }
 
+    // Areas: the places saved sites are grouped by
+    case 'renameArea': {
+      const ok = await renameArea(
+        db,
+        userId,
+        String(formData.get('areaId') ?? ''),
+        String(formData.get('name') ?? ''),
+      );
+      return ok ? { success: true } : { error: 'An area needs a name' };
+    }
+
+    case 'setAreaAlerts': {
+      await setAreaAlerts(
+        db,
+        userId,
+        String(formData.get('areaId') ?? ''),
+        formData.get('enabled') === 'true',
+      );
+      return { success: true };
+    }
+
+    case 'joinArea': {
+      const ok = await joinAreas(
+        db,
+        userId,
+        String(formData.get('areaId') ?? ''),
+        String(formData.get('into') ?? ''),
+      );
+      return ok ? { success: true } : { error: 'Unknown area' };
+    }
+
+    case 'moveSite': {
+      const ok = await moveSite(
+        db,
+        userId,
+        String(formData.get('siteKey') ?? ''),
+        String(formData.get('areaId') ?? ''),
+      );
+      return ok ? { success: true } : { error: 'Unknown site or area' };
+    }
+
     default:
       return { error: 'Unknown action' };
   }
 }
 
 export default function SettingsPage() {
-  const { settings: appSettings, sites, vapidPublicKey } = useLoaderData<typeof loader>();
+  const { settings: appSettings, sites, areas, vapidPublicKey } = useLoaderData<typeof loader>();
 
   return (
-    <SettingsClient initialSettings={appSettings} sites={sites} vapidPublicKey={vapidPublicKey} />
+    <SettingsClient
+      initialSettings={appSettings}
+      sites={sites}
+      areas={areas}
+      vapidPublicKey={vapidPublicKey}
+    />
   );
 }
