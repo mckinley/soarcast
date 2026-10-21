@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LAPSE_BANDS, lapseMeaning } from './lapse-rate-utils';
 import { compassPoint, windBarbPath, windSpeedToBarb } from './wind-barb-utils';
 import {
+  ISOTHERM_STEP_C,
+  MODEL_CLOUD_PERCENT,
   altitudeRange,
   daylightHours,
   lapseRateAt,
@@ -34,7 +36,6 @@ interface WindgramD3Props {
 }
 
 const FT_PER_M = 3.28084;
-const ISOTHERM_STEP_C = 5;
 const TERRAIN_COLOR = '#57534e';
 const LIFT_COLOR = '#fde047';
 const BARB_COLOR = '#ffffff';
@@ -164,7 +165,7 @@ export function WindgramD3({
     const { spec, values } = sampleGrid(columns, range, (c, alt) =>
       levelValueAt(c.levels, alt, (l) => l.cloudCover),
     );
-    const [cloud] = d3.contours().size([spec.nx, spec.ny]).thresholds([50])(values);
+    const [cloud] = d3.contours().size([spec.nx, spec.ny]).thresholds([MODEL_CLOUD_PERCENT])(values);
     return gridPath(spec, x, y)(cloud) || null;
   }, [columns, range, x, y]);
 
@@ -648,6 +649,6 @@ function describePoint(column: WindgramColumn, alt: number): string {
     `${Math.round(wind.temperature)}°C`,
   ];
   if (rate !== null) parts.push(`cooling ${rate.toFixed(1)}°C/1000 ft, ${lapseMeaning(rate)}`);
-  if (cloud >= 50) parts.push('in cloud');
+  if (cloud >= MODEL_CLOUD_PERCENT) parts.push('in cloud');
   return parts.join(' · ');
 }

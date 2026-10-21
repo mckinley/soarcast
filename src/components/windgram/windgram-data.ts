@@ -15,6 +15,11 @@ import { calculateLapseRateBetweenLevels } from './lapse-rate-utils';
  */
 const MIN_LEVEL_ABOVE_GROUND_M = 20;
 
+/** Temperature lines are drawn this many °C apart. */
+export const ISOTHERM_STEP_C = 5;
+/** Cloud cover (%) at a height that the chart hatches as cloud. */
+export const MODEL_CLOUD_PERCENT = 50;
+
 export interface WindgramLevel {
   alt: number; // m MSL
   temperature: number; // °C

@@ -1,5 +1,5 @@
 import { Marked, type Tokens } from 'marked';
-import { fillFacts, guidePagesFromFiles, type GuidePage } from '~/guide/guide';
+import { fillFacts, guidePagesFromFiles, headingId, type GuidePage } from '~/guide/guide';
 import { GUIDE_FACTS } from '~/guide/facts';
 
 // The Guide's pages, read from src/guide/pages at build time and rendered to
@@ -19,6 +19,10 @@ function escapeAttribute(value: string): string {
 
 const markdown = new Marked({
   renderer: {
+    // Headings get an id, so a link can open a page at a section.
+    heading({ tokens, depth, text }: Tokens.Heading) {
+      return `<h${depth} id="${headingId(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+    },
     // Outside sources open in a new tab; links within SoarCast stay in it.
     link({ href, title, tokens }: Tokens.Link) {
       const text = this.parser.parseInline(tokens);

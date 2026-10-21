@@ -46,7 +46,7 @@ export default function GuidePageRoute() {
       </Link>
       <h1 className="text-3xl font-bold">{page.title}</h1>
       <div
-        className="prose prose-neutral max-w-none dark:prose-invert prose-a:underline-offset-2 prose-table:my-0"
+        className="prose prose-neutral max-w-none dark:prose-invert prose-a:underline-offset-2 prose-headings:scroll-mt-20 prose-table:my-0"
         onClick={followLink}
         dangerouslySetInnerHTML={{ __html: page.html }}
       />

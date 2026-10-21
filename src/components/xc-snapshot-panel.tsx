@@ -206,8 +206,8 @@ export function XcSnapshotPanel({ dayScore, profile, dateString, loading }: XcSn
         </div>
       </MetricCard>
 
-      {/* 6. OD Risk */}
-      <MetricCard title="OD Risk">
+      {/* 6. Overdevelopment risk */}
+      <MetricCard title="Overdevelopment">
         <span
           className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${riskColor(dayScore.odRisk)}`}
         >

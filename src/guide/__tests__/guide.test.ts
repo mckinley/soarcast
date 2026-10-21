@@ -4,6 +4,8 @@ import path from 'path';
 import {
   fillFacts,
   guidePagesFromFiles,
+  headingId,
+  headingIds,
   parseGuidePage,
   placeholderNames,
   type GuidePage,
@@ -110,6 +112,14 @@ describe('Guide pages', () => {
     expect(() => fillFacts(page.body, {})).toThrow(/Unknown guide fact/);
   });
 
+  it('gives headings plain anchors', () => {
+    expect(headingId("What it can't tell you")).toBe('what-it-cant-tell-you');
+    expect(headingIds('Intro\n\n## Wind and gusts\n\n### Rain, storms')).toEqual([
+      'wind-and-gusts',
+      'rain-storms',
+    ]);
+  });
+
   it('uses only facts the code defines, and every fact is used', () => {
     const used = new Set(pages.flatMap((p) => placeholderNames(p.body)));
     for (const name of used) expect(GUIDE_FACTS, `{{${name}}}`).toHaveProperty(name);
@@ -126,11 +136,18 @@ describe('Guide pages', () => {
     }
   });
 
-  it('links only to Guide pages that exist', () => {
-    const slugs = new Set(pages.map((p) => p.slug));
+  it('links only to Guide pages and sections that exist', () => {
+    const bySlug = new Map(pages.map((p) => [p.slug, p]));
     for (const page of pages) {
-      for (const [, slug] of page.body.matchAll(/\]\(\/guide\/([\w-]+)/g)) {
-        expect(slugs, `${page.slug} links to /guide/${slug}`).toContain(slug);
+      for (const [, slug, anchor] of page.body.matchAll(/\]\(\/guide\/([\w-]+)(?:#([\w-]+))?\)/g)) {
+        const target = bySlug.get(slug);
+        expect(target, `${page.slug} links to /guide/${slug}`).toBeDefined();
+        if (anchor) {
+          expect(
+            headingIds(target!.body),
+            `${page.slug} links to /guide/${slug}#${anchor}`,
+          ).toContain(anchor);
+        }
       }
     }
   });
