@@ -125,3 +125,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet stacks its panes and controls at z-index 400 to 1000. Keep that
+   stacking inside each map, so sheets, dialogs and menus (z-50) draw above it. */
+.leaflet-container {
+  isolation: isolate;
+}
