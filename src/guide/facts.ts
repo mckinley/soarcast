@@ -49,6 +49,12 @@ import { SEASON_MONTHS, SEASON_YEARS } from '@/lib/seasons';
 import { FLOWN_RADIUS_KM, FLOWN_REFRESH_HOURS } from '@/lib/flown-days';
 import { UP_NOW_AIR_KM } from '@/lib/up-now';
 import { KK7_LATE_HOURS, KK7_MORNING_HOURS, MAP_NOW_REFRESH_MINUTES } from '@/lib/map-layers';
+import {
+  WIND_COLOR_KMH,
+  WIND_NOW_MAX_AGE_MINUTES,
+  WIND_NOW_RADIUS_KM,
+  WIND_NOW_STATIONS,
+} from '@/lib/wind-now';
 import { AREA_RADIUS_KM } from '@/lib/destinations';
 import { AREA_JOIN_KM } from '@/lib/site-areas';
 import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
@@ -91,6 +97,11 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   kk7MorningHours: KK7_MORNING_HOURS,
   kk7LateHours: KK7_LATE_HOURS,
   mapRefreshMinutes: MAP_NOW_REFRESH_MINUTES,
+  windNowStations: WIND_NOW_STATIONS,
+  windNowRadiusKm: WIND_NOW_RADIUS_KM,
+  windNowMaxAgeMinutes: WIND_NOW_MAX_AGE_MINUTES,
+  windAmberKmh: WIND_COLOR_KMH.amber,
+  windRedKmh: WIND_COLOR_KMH.red,
   siteRefreshDays: SITE_REFRESH_DAYS,
   compRadiusKm: COMP_RADIUS_KM,
   nogaNearKm: NOGA_NEAR_KM,

@@ -21,12 +21,10 @@ import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
 import { upNowAt } from '~/app/lib/up-now.server';
 import { UpNowCard } from '@/components/up-now';
+import { windNowAt } from '~/app/lib/wind-now.server';
+import { WindNowCard } from '@/components/wind-now';
 import { flownHere } from '~/lib/flown-days';
-import {
-  howSureExperiment,
-  showsExperiments,
-  windsExperiment,
-} from '~/app/lib/experiments.server';
+import { howSureExperiment, showsExperiments, windsExperiment } from '~/app/lib/experiments.server';
 import { ExperimentsSection, FlownWindsCard } from '@/components/flown-winds';
 import { HowSureCard } from '@/components/how-sure';
 import { FlownHereCard } from '@/components/flown-here';
@@ -101,8 +99,14 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   );
   // Pilots up here now (Syncing Pilots): streamed in after the page
   const upNow = timeZone
-    ? upNowAt(env, { latitude: site.latitude, longitude: site.longitude, altitude: site.elevation }, timeZone)
+    ? upNowAt(
+        env,
+        { latitude: site.latitude, longitude: site.longitude, altitude: site.elevation },
+        timeZone,
+      )
     : Promise.resolve(null);
+  // Wind at the nearest weather stations now (winds.mobi): streamed in too
+  const windNow = windNowAt({ latitude: site.latitude, longitude: site.longitude });
   // Experiments, for pilots who switched them on in Settings
   const windsOnFlownDays = experiments ? windsExperiment(db, seasonRef, site, flownDays) : null;
   const howSure = experiments ? howSureExperiment(db, seasonRef, site) : null;
@@ -120,6 +124,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     season: seasonFull?.summary ?? null,
     flown,
     upNow,
+    windNow,
     xc,
     windsOnFlownDays,
     howSure,
@@ -138,6 +143,7 @@ export default function CustomSiteDetailPage() {
     season,
     flown,
     upNow,
+    windNow,
     xc,
     windsOnFlownDays,
     howSure,
@@ -195,6 +201,20 @@ export default function CustomSiteDetailPage() {
       <Suspense fallback={null}>
         <Await resolve={upNow} errorElement={null}>
           {(u) => (u ? <UpNowCard up={u} launchAltitude={site.elevation ?? null} /> : null)}
+        </Await>
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <Await resolve={windNow} errorElement={null}>
+          {(w) =>
+            w ? (
+              <WindNowCard
+                stations={w.stations}
+                checkedAt={w.checkedAt}
+                launchAltitude={site.elevation ?? null}
+              />
+            ) : null
+          }
         </Await>
       </Suspense>
 

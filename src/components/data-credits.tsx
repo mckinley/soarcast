@@ -6,7 +6,8 @@
 // tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
 // name. A takeoff from OpenStreetMap credits OpenStreetMap (ODbL) and links
 // its page there. Cross-country flights credit NOGA's map and XContest,
-// whose flights it counts. The map's weather layers credit RainViewer (rain),
+// whose flights it counts. Wind now credits winds.mobi and the station
+// networks it gathers. The map's weather layers credit RainViewer (rain),
 // NASA GIBS and EUMETSAT (clouds), NOAA and EUMETSAT (lightning) and openAIP
 // (airspace, CC BY-NC 4.0) while they are on. The Guide's Data sources page
 // (src/guide/pages/data-sources.md) lists them all.
@@ -21,6 +22,8 @@ export const PGE_ATTRIBUTION =
 
 export const KK7_ATTRIBUTION =
   'Thermals: <a href="https://thermal.kk7.ch">thermal.kk7.ch</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>)';
+
+export const WINDS_MOBI_ATTRIBUTION = 'Wind: <a href="https://winds.mobi">winds.mobi</a>';
 
 export const RAINVIEWER_ATTRIBUTION = 'Rain: <a href="https://www.rainviewer.com">RainViewer</a>';
 

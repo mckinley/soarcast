@@ -17,6 +17,9 @@ covers:
   - src/lib/up-now.ts
   - app/lib/up-now.server.ts
   - src/components/up-now.tsx
+  - src/lib/wind-now.ts
+  - app/lib/wind-now.server.ts
+  - src/components/wind-now.tsx
   - src/lib/noga.ts
   - app/lib/noga.server.ts
   - jobs/noga-sync.ts
@@ -100,6 +103,18 @@ Each site page has a card called "How far to trust the forecast here". It compar
 The airport must be within {{trackRecordRadiusKm}} km of the site. SoarCast rebuilds each record every {{trackRecordRebuildDays}} days.
 
 An airport usually sits on flat ground or in a valley. Its weather can differ from the launch's. The record only checks rain and wind.
+
+## Wind now
+
+A site page lists what the nearest weather stations measure right now. These are readings, not a forecast. The "Wind now" card shows up to {{windNowStations}} stations within {{windNowRadiusKm}} km of the launch, nearest first. Each line says where the wind blows from, its average speed, the strongest gust and how old the reading is. It also says how far away the station is and how high it sits against the launch.
+
+The readings come from [winds.mobi](https://winds.mobi), which gathers many station networks. Airports report through [aviationweather.gov](https://aviationweather.gov) about once an hour. Stations that pilots put at launches and landing fields, such as those on [OpenWindMap](https://www.openwindmap.org), report every few minutes. A reading older than {{windNowMaxAgeMinutes}} minutes is left out. Holfuy stations are left out too, since Holfuy shares its readings only on its own pages.
+
+The map's Wind now layer draws the same stations as arrows. An arrow points the way the wind blows, and its number is the average speed in km/h. The arrow turns amber from {{windAmberKmh}} km/h and red from {{windRedKmh}} km/h, counting gusts.
+
+### What wind now can't tell you
+
+A station shows the wind where it stands. An airport in a valley can be calm while the launch above it blows hard, or the other way round. A station far from the launch, or far below it, says more about the day's general wind than about the launch. Stations are sparse in many places, so the card can be missing. Wind now doesn't change how a day is rated.
 
 ## Seasons
 
@@ -235,7 +250,7 @@ A comp's spot on the map comes from its place name, so it can be a little off. A
 
 The base map uses [OpenStreetMap](https://www.openstreetmap.org) data, drawn with [Protomaps](https://protomaps.com).
 
-The Map layers button at the top right of a map turns layers on and off. SoarCast remembers the choice in this browser. No layer changes how a day is rated.
+The Map layers button at the top right of a map turns layers on and off. SoarCast remembers the choice in this browser. No layer changes how a day is rated. The Wind now layer is explained under [Wind now](#wind-now).
 
 ### Thermals
 
@@ -268,3 +283,4 @@ A clear lightning or rain layer doesn't prove the air is safe. Storms can build 
 | Satellite pictures from NASA GIBS              | Free to use. Credited on the map.                                     |
 | Satellite pictures and lightning from EUMETSAT | Free to use. Credited on the map.                                     |
 | Lightning from NOAA                            | Public domain. Credited on the map.                                   |
+| Wind readings gathered by winds.mobi           | None stated. Credited on the card and the map.                        |
