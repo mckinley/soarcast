@@ -1,0 +1,67 @@
+name: Perf probe
+
+# Read-only numbers for page-speed work: where the D1 database runs, how big
+# the forecast cache rows are, how many saved sites a dashboard loads, how
+# long a 7-day Open-Meteo profile takes, and how long pages took for real
+# (request_timings: page patterns and durations only, so the public log never
+# says which site anyone looked at). Run it from the Actions tab.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-zjn5p6]
+    paths: [.github/workflows/perf-probe.yml]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: D1 location and table sizes
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7c0ef4ee4d820ffe791557c534882957
+        run: |
+          curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/e92d8ad3-7ca9-47aa-b26b-e2288ec3b963" \
+            | jq '.result | {name, created_at, version, num_tables, file_size, running_in_region, read_replication}'
+          q() { npx wrangler d1 execute soarcast --remote --json --command "$1" | jq -c '.[0] | {results, meta: (.meta | {duration, served_by, served_by_region, served_by_primary, timings})}'; }
+          q "SELECT 1 AS one"
+          q "SELECT COUNT(*) AS rows, ROUND(AVG(LENGTH(data))) AS avg_bytes, MAX(LENGTH(data)) AS max_bytes, COUNT(DISTINCT location_key) AS places FROM atmospheric_profiles_cache"
+          q "SELECT fetch_date, COUNT(*) AS rows FROM atmospheric_profiles_cache GROUP BY fetch_date ORDER BY fetch_date DESC LIMIT 5"
+          q "SELECT (SELECT COUNT(*) FROM user) AS users, (SELECT COUNT(*) FROM user_favorite_sites) AS favorites, (SELECT COUNT(*) FROM custom_sites) AS custom_sites, (SELECT COUNT(*) FROM site_areas) AS areas, (SELECT COUNT(*) FROM session) AS sessions"
+          q "SELECT COUNT(*) AS rows, ROUND(AVG(LENGTH(days))) AS avg_bytes FROM site_seasons" || true
+          q "SELECT COUNT(*) AS rows FROM flown_days" || true
+      - name: Page load timings (request_timings)
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7c0ef4ee4d820ffe791557c534882957
+        run: |
+          q() { npx wrangler d1 execute soarcast --remote --json --command "$1" | jq -r '.[0].results[] | [.[]] | @tsv'; }
+          echo "page | signed in | fresh start | loads | avg ms | max ms | avg D1 queries | avg D1 ms"
+          q "SELECT page, signed_in, cold, COUNT(*), ROUND(AVG(total_ms)), MAX(total_ms), ROUND(AVG(d1_count), 1), ROUND(AVG(d1_ms)) FROM request_timings WHERE at > unixepoch() - 7 * 86400 GROUP BY page, signed_in, cold ORDER BY COUNT(*) DESC LIMIT 40"
+          echo; echo "latest 40: page | signed in | fresh start | total ms | D1 queries | D1 ms | calls | colo"
+          q "SELECT page, signed_in, cold, total_ms, d1_count, d1_ms, calls, colo FROM request_timings ORDER BY id DESC LIMIT 40"
+      - name: Open-Meteo 7-day profile timing
+        run: |
+          levels="1000 975 950 925 900 875 850 825 800 775 750 725 700 650 600 500"
+          hourly="temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,cape,precipitation_probability,boundary_layer_height,convective_inhibition,lifted_index,shortwave_radiation,dew_point_2m,precipitation,cloud_cover_low,visibility"
+          for p in temperature wind_speed wind_direction relative_humidity geopotential_height cloud_cover; do for l in $levels; do hourly="$hourly,${p}_${l}hPa"; done; done
+          for i in 1 2 3; do
+            curl -sS -o /tmp/om.json -w "open-meteo http=%{http_code} ttfb=%{time_starttransfer}s total=%{time_total}s bytes=%{size_download}\n" \
+              "https://api.open-meteo.com/v1/forecast?latitude=47.50&longitude=-122.01&hourly=$hourly&daily=sunrise,sunset&forecast_days=7&timezone=auto&elevation=nan"
+            sleep 2
+          done
+      - name: Live page timings from this runner
+        run: |
+          B=https://soarcast.mckinleyaviation.com
+          for u in / /guide /planning /sites/browse /sites/tiger-mountain; do
+            for i in 1 2 3; do curl -s -o /dev/null -w "$u new-conn tls=%{time_appconnect} ttfb=%{time_starttransfer}\n" "$B$u"; done
+          done
+          curl -s $B/cdn-cgi/trace | grep colo

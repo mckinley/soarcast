@@ -336,3 +336,26 @@ export const appState = sqliteTable('app_state', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+// How long page loads took, one row per page or data request, newest kept
+// (worker.ts, src/lib/request-timing.ts). Pages are stored as patterns such
+// as /sites/:slug, never which site or who.
+export const requestTimings = sqliteTable('request_timings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  at: integer('at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  page: text('page').notNull(),
+  status: integer('status').notNull(),
+  signedIn: integer('signed_in', { mode: 'boolean' }).notNull(),
+  cold: integer('cold', { mode: 'boolean' }).notNull(),
+  totalMs: integer('total_ms').notNull(),
+  d1Count: integer('d1_count').notNull(),
+  d1Ms: integer('d1_ms').notNull(),
+  /** Calls to other services: { name: { count, ms } } */
+  calls: text('calls', { mode: 'json' })
+    .notNull()
+    .$type<Record<string, { count: number; ms: number }>>(),
+  /** Where the Worker ran (Cloudflare colo, e.g. SEA) */
+  colo: text('colo'),
+});
