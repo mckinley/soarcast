@@ -73,6 +73,7 @@ export function launchSiteValuesFromPgSite(
     isHike: !!pgSite.is_hike,
     description: pgSite.description,
     pgeLink: pgSite.pge_link,
+    origin: pgSite.source === 'flown' ? 'flown' : 'pge',
     lastSyncedAt: new Date(),
   };
 }

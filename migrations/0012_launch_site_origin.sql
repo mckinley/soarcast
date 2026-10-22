@@ -1,0 +1,1 @@
+ALTER TABLE `launch_sites` ADD `origin` text DEFAULT 'pge' NOT NULL;

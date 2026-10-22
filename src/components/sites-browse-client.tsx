@@ -40,6 +40,8 @@ export interface BrowseSite {
   createdAt: string | null;
   /** Pilots tracked flying from here in the last year; null when none */
   flownPilots: number | null;
+  /** A busy launch found from tracked flights, which no site guide lists */
+  foundFromFlights?: boolean;
 }
 
 interface SitesBrowseClientProps {
@@ -400,6 +402,7 @@ function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: bo
         {site.countryCode && <span>{site.countryCode}</span>}
         {site.altitude && <span>{site.altitude}m</span>}
         {site.flownPilots ? <FlownPilots count={site.flownPilots} /> : null}
+        {site.foundFromFlights && <FoundFromFlights />}
         {activeOrientations.length > 0 && (
           <span className="text-muted-foreground/80">{activeOrientations.join(' ')}</span>
         )}
@@ -432,9 +435,23 @@ function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolea
             <FlownPilots count={site.flownPilots} />
           </p>
         ) : null}
+        {site.foundFromFlights && (
+          <p>
+            <FoundFromFlights />
+          </p>
+        )}
         {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
       </div>
     </Link>
+  );
+}
+
+// ── A launch no site guide lists, found from tracked flights ──
+function FoundFromFlights() {
+  return (
+    <span title="No site guide lists this launch. It was found from tracked flights.">
+      Found from flights
+    </span>
   );
 }
 

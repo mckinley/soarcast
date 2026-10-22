@@ -38,6 +38,17 @@ export interface PgSite {
   flown_pilots?: number | null;
   flown_days?: number | null;
   flown_last?: string | null;
+  /**
+   * 'pge' for a Paragliding Earth site. 'flown' for a busy launch no listed
+   * site covered, found from flights Syncing Pilots tracked: its name comes
+   * from OpenStreetMap, its wind directions are the directions pilots flew off
+   * launch, and it has no Paragliding Earth page (empty pge_link).
+   */
+  source?: 'pge' | 'flown';
+  /** Where tracked pilots really launch near the site, when they do. Null when none. */
+  launch_latitude?: number | null;
+  launch_longitude?: number | null;
+  launch_altitude?: number | null;
 }
 
 /** A place pgsites' search found by name ("Cali"), with the listed sites near it, busiest first. */

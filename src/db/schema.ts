@@ -49,6 +49,9 @@ export const launchSites = sqliteTable('launch_sites', {
   landingDescription: text('landing_description'),
   maxWindSpeed: integer('max_wind_speed'), // km/h
   pgeLink: text('pge_link'), // ParaglidingEarth URL
+  // Where pgsites got the site: 'pge' (Paragliding Earth) or 'flown' (a busy
+  // launch it found from flights Syncing Pilots tracked, named from OpenStreetMap)
+  origin: text('origin').notNull().default('pge'),
   lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()

@@ -64,6 +64,8 @@ interface DetailSite {
   description: string | null;
   landingDescription: string | null;
   pgeLink: string | null;
+  /** 'flown': a busy launch found from tracked flights, not a Paragliding Earth site */
+  origin: 'pge' | 'flown';
   source: string;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +116,7 @@ function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
     description: site.description || null,
     landingDescription: null,
     pgeLink: site.pge_link || null,
+    origin: site.source === 'flown' ? 'flown' : 'pge',
     source: 'pgsites',
     createdAt: site.created_at
       ? new Date(site.created_at * 1000).toISOString()
@@ -156,6 +159,7 @@ function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSit
     description: site.description || null,
     landingDescription: site.landingDescription || null,
     pgeLink: site.pgeLink || null,
+    origin: site.origin === 'flown' ? 'flown' : 'pge',
     source: site.source,
     createdAt: site.createdAt ? new Date(site.createdAt).toISOString() : new Date().toISOString(),
     updatedAt: site.updatedAt ? new Date(site.updatedAt).toISOString() : new Date().toISOString(),
@@ -614,6 +618,12 @@ export default function SiteDetailPage() {
                 <div>
                   <div className="font-medium mb-2">Ideal Wind Directions:</div>
                   <WindDirectionBadges directions={idealDirs} />
+                  {site.origin === 'flown' && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      These are the directions tracked pilots took off in. Check them with local
+                      pilots.
+                    </p>
+                  )}
                 </div>
               ) : null;
             })()}
@@ -660,7 +670,7 @@ export default function SiteDetailPage() {
             <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
           </div>
 
-          <SiteSourceCredit pgeLink={site.pgeLink} />
+          <SiteSourceCredit pgeLink={site.pgeLink} origin={site.origin} />
         </div>
       </Card>
     </div>

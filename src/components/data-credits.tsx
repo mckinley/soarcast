@@ -1,8 +1,10 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
 // forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
 // kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do, and GeoNames (CC BY
-// 4.0) wherever a search lists sites near a town. The Guide's Data
-// sources page (src/guide/pages/data-sources.md) lists them all.
+// 4.0) wherever a search lists sites near a town. A launch found from
+// tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
+// name. The Guide's Data sources page (src/guide/pages/data-sources.md)
+// lists them all.
 
 import { Link } from 'react-router';
 
@@ -38,14 +40,42 @@ export function ForecastCredit({ className = '' }: { className?: string }) {
   );
 }
 
-/** Credit for one Paragliding Earth site, linking its own page when known. */
+/**
+ * Credit for one listed site: its Paragliding Earth page, or for a launch
+ * found from tracked flights, Syncing Pilots and OpenStreetMap.
+ */
 export function SiteSourceCredit({
   pgeLink,
+  origin = 'pge',
   className = '',
 }: {
   pgeLink?: string | null;
+  origin?: 'pge' | 'flown';
   className?: string;
 }) {
+  if (origin === 'flown') {
+    return (
+      <p className={`text-xs text-muted-foreground ${className}`}>
+        No site guide lists this launch. SoarCast found it from flights{' '}
+        <a href="https://syncingpilots.com" className={link} target="_blank" rel="noreferrer">
+          Syncing Pilots
+        </a>{' '}
+        tracked. Its name comes from{' '}
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          OpenStreetMap
+        </a>{' '}
+        (ODbL). Ask local pilots about the site&apos;s rules and landing before flying.{' '}
+        <Link to="/guide/data-sources#launches-found-from-flights" className={link}>
+          More
+        </Link>
+      </p>
+    );
+  }
   return (
     <p className={`text-xs text-muted-foreground ${className}`}>
       Site information from{' '}
