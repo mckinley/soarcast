@@ -43,6 +43,7 @@ function defaultSettings(userId: string, now: Date): typeof settingsTable.$infer
     morningDigestEnabled: false,
     morningDigestTime: DEFAULT_DIGEST_TIME,
     timeZone: null,
+    showExperiments: false,
     onboardingCompleted: false,
     updatedAt: now,
   };

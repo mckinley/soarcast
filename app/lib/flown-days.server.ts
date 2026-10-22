@@ -5,14 +5,10 @@ import {
   FLOWN_RADIUS_KM,
   FLOWN_REFRESH_HOURS,
   flownFrom,
-  flownHere,
   flownKey,
   type FlownDay,
   type FlownDaysQuery,
-  type FlownHere,
 } from '~/lib/flown-days';
-import type { SeasonDay } from '~/lib/seasons';
-import type { SiteGoal } from '~/types';
 
 // Days pilots flew from a launch, from Syncing Pilots over the
 // SYNCING_PILOTS service binding (its FlownDaysApi): every day from the
@@ -73,18 +69,4 @@ export async function flownDaysAt(
     console.error('Flown days from Syncing Pilots failed:', error);
     return cached;
   }
-}
-
-/** What a site page shows of the days flown there, or null without any. */
-export async function flownHereFor(
-  env: Pick<Env, 'SYNCING_PILOTS'>,
-  db: Db,
-  place: { latitude: number; longitude: number; altitude: number | null },
-  timeZone: string,
-  today: string,
-  season: SeasonDay[] | null,
-  goal: SiteGoal,
-): Promise<FlownHere | null> {
-  const flown = await flownDaysAt(env, db, place, timeZone, today);
-  return flown ? flownHere(flown, season, goal) : null;
 }

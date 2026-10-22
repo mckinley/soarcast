@@ -79,5 +79,7 @@ export interface Settings {
     enabled: boolean; // morning email digest toggle
     digestTime: string; // HH:MM format, default '08:00'
   };
+  /** Show the experiments on site pages (the Guide's Experiments page) */
+  experiments: boolean;
   updatedAt: string;
 }

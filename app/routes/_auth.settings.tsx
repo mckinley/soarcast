@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS = {
     sitePreferences: {} as Record<string, boolean>,
   },
   emailDigest: { enabled: false, digestTime: '08:00' },
+  experiments: false,
   updatedAt: new Date().toISOString(),
 };
 
@@ -80,6 +81,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         enabled: dbSettings.morningDigestEnabled,
         digestTime: dbSettings.morningDigestTime ?? '08:00',
       },
+      experiments: dbSettings.showExperiments,
       updatedAt: dbSettings.updatedAt.toISOString(),
     };
   }
@@ -218,6 +220,18 @@ export async function action({ request, context }: Route.ActionArgs) {
             ...(timeZone && { timeZone }),
             updatedAt: new Date(),
           },
+        });
+      return { success: true };
+    }
+
+    case 'toggleExperiments': {
+      const showExperiments = formData.get('enabled') === 'true';
+      await db
+        .insert(settings)
+        .values({ userId, showExperiments, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: settings.userId,
+          set: { showExperiments, updatedAt: new Date() },
         });
       return { success: true };
     }

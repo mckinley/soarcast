@@ -250,6 +250,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           enabled: userSettings.morningDigestEnabled,
           digestTime: userSettings.morningDigestTime ?? '08:00',
         },
+        experiments: userSettings.showExperiments,
         updatedAt: userSettings.updatedAt.toISOString(),
       }
     : null;
@@ -284,6 +285,7 @@ export default function DashboardPage() {
       sitePreferences: {} as Record<string, boolean>,
     },
     emailDigest: { enabled: false, digestTime: '08:00' },
+    experiments: false,
     updatedAt: new Date().toISOString(),
   };
 

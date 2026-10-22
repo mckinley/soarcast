@@ -562,6 +562,33 @@ export function SettingsClient({
         </CardContent>
       </Card>
 
+      {/* Experiments: ideas still being tested, at the foot of site pages */}
+      <Card id="experiments" className="scroll-mt-20">
+        <CardHeader>
+          <CardTitle>Experiments</CardTitle>
+          <CardDescription>
+            Ideas still being tested, shown at the foot of site pages. They never change a
+            day&apos;s rating.{' '}
+            <Link to="/guide/experiments" className="underline underline-offset-2">
+              What each one is and how it tested
+            </Link>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="experiments">Show experiments</Label>
+            <Switch
+              id="experiments"
+              checked={settings.experiments}
+              onCheckedChange={(checked) => {
+                setSettings({ ...settings, experiments: checked });
+                save('experiments', { intent: 'toggleExperiments', enabled: String(checked) });
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Info Card */}
       <Card className="bg-muted/50">
         <CardContent className="pt-6">

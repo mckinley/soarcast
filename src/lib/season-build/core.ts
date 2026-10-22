@@ -4,6 +4,8 @@
 // rating a site's past days through the forecast engine.
 
 import { DEFAULT_MAX_WIND_KMH, evaluateDays, launchProfileFromSite } from '../forecast-engine';
+import { deriveLaunchConditions } from '../forecast-engine/launch-conditions';
+import { WIND_FIRST_HOUR, WIND_LAST_HOUR, type DayWinds, type HourWind } from '../flown-winds';
 import { defaultGoal, siteKindFromTags } from '../site-goals';
 import { getIdealWindDirections, getOkWindDirections } from '../site-utils';
 import type { Destination } from '../destinations';
@@ -241,6 +243,44 @@ export function rateSite(
     for (const score of evaluateDays(profile, launch)) days.push(seasonDayFromScore(score));
   }
   return days;
+}
+
+/**
+ * The wind at the launch each hour from WIND_FIRST_HOUR to WIND_LAST_HOUR
+ * local, every day of the range, a local month at a time (the experiment
+ * "Wind on flown days", src/lib/flown-winds.ts).
+ */
+export function launchWinds(
+  job: Job,
+  series: Era5Series,
+  timeZone: string,
+  { from, to }: DayRange,
+): DayWinds[] {
+  const { latitude: lat, longitude: lon, elevation } = job.site;
+  const days = new Map<string, Array<HourWind | null>>();
+  for (
+    let month = new Date(`${from.slice(0, 7)}-01T00:00:00Z`);
+    ymd(month) <= to;
+    month = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1))
+  ) {
+    const first = ymd(month);
+    const last = ymd(new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0)));
+    const profile = era5Profile(
+      series,
+      first < from ? from : first,
+      last > to ? to : last,
+      timeZone,
+      lat,
+      lon,
+    );
+    for (const hour of profile.hours) {
+      const c = deriveLaunchConditions(hour, profile.elevation, elevation > 0 ? elevation : 0);
+      if (c.hour < WIND_FIRST_HOUR || c.hour > WIND_LAST_HOUR) continue;
+      if (!days.has(c.date)) days.set(c.date, Array(WIND_LAST_HOUR - WIND_FIRST_HOUR + 1).fill(null));
+      days.get(c.date)![c.hour - WIND_FIRST_HOUR] = { speed: c.windSpeed, direction: c.windDirection };
+    }
+  }
+  return [...days].map(([date, hours]) => ({ date, hours }));
 }
 
 /** Days in a range, both ends counted. */

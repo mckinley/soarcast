@@ -199,6 +199,8 @@ export const settings = sqliteTable('settings', {
   morningDigestTime: text('morning_digest_time').default('08:00'), // HH:MM format in user's local timezone
   // IANA zone from the user's browser; alerts go out by local time (src/lib/alert-schedule.ts)
   timeZone: text('time_zone'),
+  // Show the experiments (the Guide's Experiments page) on site pages
+  showExperiments: integer('show_experiments', { mode: 'boolean' }).notNull().default(false),
   // Unused since the welcome popup was removed; kept so migrations stay additive
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()
@@ -301,6 +303,9 @@ export const siteSeasons = sqliteTable('site_seasons', {
   source: text('source'),
   // JSON SeasonStats (src/lib/seasons.ts) over the whole span; null on old rows
   summary: text('summary'),
+  // encodeDayWinds() (src/lib/flown-winds.ts): the wind at the launch each
+  // hour of the day over the days kept one by one; null on rows built before
+  winds: text('winds'),
 });
 
 // A copy of NOGA's map of cross-country takeoffs (noga.es/paragliding/map):

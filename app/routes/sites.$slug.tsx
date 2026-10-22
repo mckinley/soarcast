@@ -36,7 +36,10 @@ import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
 import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
-import { flownHereFor } from '~/app/lib/flown-days.server';
+import { flownDaysAt } from '~/app/lib/flown-days.server';
+import { flownHere } from '~/lib/flown-days';
+import { showsExperiments, windsExperiment } from '~/app/lib/experiments.server';
+import { ExperimentsSection, FlownWindsCard } from '@/components/flown-winds';
 import { FlownHereCard } from '@/components/flown-here';
 import { flownByMonthToShow } from '~/lib/flown-days';
 import { nogaFlightsAt } from '~/app/lib/noga.server';
@@ -322,24 +325,31 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
   const pgsitesId = localSite?.pgsitesId ?? site.id;
-  const [comps, seasonFull, xc] = await Promise.all([
+  const seasonRef = seasonSiteRef('pgsites', pgsitesId);
+  const [comps, seasonFull, xc, experiments] = await Promise.all([
     compsPromise,
-    seasonWithDays(db, seasonSiteRef('pgsites', pgsitesId), engineSite, compsToday),
+    seasonWithDays(db, seasonRef, engineSite, compsToday),
     nogaFlightsAt(db, site.latitude, site.longitude),
+    showsExperiments(db, session?.user?.id),
   ]);
   // Days pilots flew from here (Syncing Pilots): streamed in after the page
-  const flown =
+  const flownDays =
     today && timeZone
-      ? flownHereFor(
+      ? flownDaysAt(
           env,
           db,
           { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude },
           timeZone,
           today,
-          seasonFull?.days ?? null,
-          engineSite.goal ?? 'soar',
         ).catch(() => null)
       : Promise.resolve(null);
+  const flown = flownDays.then((f) =>
+    f ? flownHere(f, seasonFull?.days ?? null, engineSite.goal ?? 'soar') : null,
+  );
+  // Experiments, for pilots who switched them on in Settings
+  const windsOnFlownDays = experiments
+    ? windsExperiment(db, seasonRef, engineSite, flownDays)
+    : null;
 
   return {
     site,
@@ -360,6 +370,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     season: seasonFull?.summary ?? null,
     flown,
     xc,
+    windsOnFlownDays,
   };
 }
 
@@ -520,6 +531,7 @@ export default function SiteDetailPage() {
     season,
     flown,
     xc,
+    windsOnFlownDays,
   } = useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -701,6 +713,16 @@ export default function SiteDetailPage() {
           />
         </div>
       </Card>
+
+      {windsOnFlownDays && (
+        <ExperimentsSection>
+          <Suspense fallback={null}>
+            <Await resolve={windsOnFlownDays} errorElement={null}>
+              {(w) => <FlownWindsCard experiment={w} followed={isFavorited} />}
+            </Await>
+          </Suspense>
+        </ExperimentsSection>
+      )}
     </div>
   );
 }

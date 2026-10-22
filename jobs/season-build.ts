@@ -10,11 +10,13 @@
 // cell is a step per five years, so launches in the same cell share one
 // read, then a step that joins and writes them. A step that fails is tried
 // again. Only each site's time zone comes from
-// Open-Meteo's API (one small call).
+// Open-Meteo's API (one small call). For the last SEASON_MONTHS months it
+// also keeps the wind at each launch hour by hour (site_seasons.winds), for
+// the experiment "Wind on flown days" (src/lib/flown-winds.ts).
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import * as schema from '../src/db/schema';
 import { customSites, launchSites, siteSeasons, userFavoriteSites } from '../src/db/schema';
 import { ENGINE_VERSION } from '../src/lib/forecast-engine';
@@ -38,6 +40,7 @@ import {
   findDestinationSite,
   jobFor,
   jobTag,
+  launchWinds,
   rateSite,
   recordRange,
   seasonRange,
@@ -49,6 +52,7 @@ import {
 } from '../src/lib/season-build/core';
 import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '../src/lib/season-build/run';
 import { era5Cell, era5Series, HOUR_MS, missing } from '../src/lib/season-build/era5';
+import { encodeDayWinds } from '../src/lib/flown-winds';
 import type { JobsEnv } from './env';
 
 const SOURCE = 'era5';
@@ -87,10 +91,14 @@ interface CellResult {
   skipped: number;
 }
 
-/** A block of years at a cell: each launch's days, encoded (encodeSeasonDays). */
+/**
+ * A block of years at a cell: each launch's days (encodeSeasonDays), and the
+ * launch wind on its days in the recent span (encodeDayWinds; empty before it).
+ */
 interface BlockResult {
   lines: string[];
   days: Record<string, string>;
+  winds: Record<string, string>;
 }
 
 async function ownJobs(env: JobsEnv): Promise<Job[]> {
@@ -146,7 +154,10 @@ async function plan(env: JobsEnv, params: SeasonBuildParams): Promise<Plan> {
   const recent = seasonRange(now);
   const db = drizzle(env.DB, { schema });
 
-  const built = new Map<string, { toDate: string; engineVersion: number; source: string | null }>();
+  const built = new Map<
+    string,
+    { toDate: string; engineVersion: number; source: string | null; hasWinds: boolean }
+  >();
   if (!params.dryRun) {
     for (const r of await db
       .select({
@@ -154,6 +165,7 @@ async function plan(env: JobsEnv, params: SeasonBuildParams): Promise<Plan> {
         toDate: siteSeasons.toDate,
         engineVersion: siteSeasons.engineVersion,
         source: siteSeasons.source,
+        hasWinds: sql<boolean>`${siteSeasons.winds} is not null`.mapWith(Boolean),
       })
       .from(siteSeasons)) {
       built.set(r.key, r);
@@ -177,7 +189,8 @@ async function plan(env: JobsEnv, params: SeasonBuildParams): Promise<Plan> {
       !row ||
       row.source !== SOURCE ||
       row.toDate < staleBefore ||
-      row.engineVersion < ENGINE_VERSION
+      row.engineVersion < ENGINE_VERSION ||
+      !row.hasWinds
     );
   });
   const limit = params.limit ?? (params.dryRun ? DRY_RUN_SITES : Infinity);
@@ -206,6 +219,7 @@ async function writeSeason(
   days: SeasonDay[],
   stats: SeasonStats,
   recent: DayRange,
+  winds: string,
 ) {
   const row = {
     key: job.key,
@@ -222,6 +236,7 @@ async function writeSeason(
     engineVersion: ENGINE_VERSION,
     source: SOURCE,
     summary: JSON.stringify(stats),
+    winds,
   };
   await drizzle(env.DB, { schema })
     .insert(siteSeasons)
@@ -240,10 +255,18 @@ function blocks({ from, to }: DayRange): DayRange[] {
   return out;
 }
 
+/** The days two ranges share, or null. */
+function overlap(a: DayRange, b: DayRange): DayRange | null {
+  const from = a.from > b.from ? a.from : b.from;
+  const to = a.to < b.to ? a.to : b.to;
+  return from <= to ? { from, to } : null;
+}
+
 /** Reads a block of years of one ERA5 cell and rates each of its launches over it. */
 async function rateBlock(
   { cell, jobs }: Plan['cells'][number],
   block: DayRange,
+  recent: DayRange,
 ): Promise<BlockResult> {
   // ERA5 hours from the first local day to the last, with half a day either side
   const fromMs = Date.parse(`${block.from}T00:00:00Z`) - 14 * HOUR_MS;
@@ -256,12 +279,17 @@ async function rateBlock(
       `cell ${cell}, ${block.from.slice(0, 4)} to ${block.to.slice(0, 4)}: ERA5 read in ${((Date.now() - t0) / 1000).toFixed(0)} s`,
     ],
     days: {},
+    winds: {},
   };
   if (missing.size > 0)
     result.lines.push(`  files missing from the bucket: ${[...missing].join(', ')}`);
   for (const job of jobs) {
     const timeZone = await timeZoneAt(job.site.latitude, job.site.longitude);
     result.days[job.key] = encodeSeasonDays(rateSite(job, series, timeZone, block));
+    const windSpan = overlap(block, recent);
+    result.winds[job.key] = windSpan
+      ? encodeDayWinds(launchWinds(job, series, timeZone, windSpan))
+      : '';
   }
   for (const line of result.lines) console.log(line);
   return result;
@@ -294,7 +322,11 @@ async function writeCell(
       result.skipped++;
       continue;
     }
-    if (!dryRun) await writeSeason(env, job, days, stats, recent);
+    const winds = rated
+      .map((b) => b.winds?.[job.key] ?? '')
+      .filter(Boolean)
+      .join(',');
+    if (!dryRun) await writeSeason(env, job, days, stats, recent, winds);
     result.built++;
   }
   for (const line of result.lines) console.log(line);
@@ -320,7 +352,7 @@ export class SeasonBuild extends WorkflowEntrypoint<JobsEnv, SeasonBuildParams> 
         for (const block of blocks(planned.range)) {
           rated.push(
             await step.do(`cell ${group.cell} ${block.from.slice(0, 4)}`, tries, () =>
-              rateBlock(group, block),
+              rateBlock(group, block, planned.recent),
             ),
           );
         }

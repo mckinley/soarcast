@@ -11,6 +11,7 @@ import {
   type SeasonStats,
   type SeasonSummary,
 } from '~/lib/seasons';
+import { decodeDayWinds, type DayWinds } from '~/lib/flown-winds';
 import type { Site, SiteGoal } from '~/types';
 
 type Db = ReturnType<typeof getDb>;
@@ -20,8 +21,11 @@ export function seasonSiteRef(source: 'pgsites' | 'custom', id: string): string 
   return `${source === 'pgsites' ? 'pg' : 'custom'}:${id}`;
 }
 
-/** A row without its day list, unless it is an old row that has nothing else. */
-export type SeasonRow = Omit<SiteSeason, 'days'> & { days: string };
+/**
+ * A row without its day list, unless it is an old row that has nothing else,
+ * and without its winds (read only for the experiment, seasonWinds).
+ */
+export type SeasonRow = Omit<SiteSeason, 'days' | 'winds'> & { days: string };
 
 // The day list only where there's no summary: rows from before it
 const lightColumns = {
@@ -95,7 +99,10 @@ export async function seasonWithDays(
   today: string,
 ): Promise<{ summary: SeasonSummary; days: SeasonDay[] } | null> {
   try {
-    const rows = await db.select().from(siteSeasons).where(eq(siteSeasons.siteRef, siteRef));
+    const rows = await db
+      .select({ ...lightColumns, days: siteSeasons.days })
+      .from(siteSeasons)
+      .where(eq(siteSeasons.siteRef, siteRef));
     const row = pickRow(rows, site);
     if (!row) return null;
     return {
@@ -105,6 +112,24 @@ export async function seasonWithDays(
   } catch (error) {
     console.error('Season lookup failed:', error);
     return null;
+  }
+}
+
+/**
+ * The wind at the launch hour by hour over a site's latest days (the
+ * experiment "Wind on flown days"), from the row seasonWithDays picks.
+ * Empty before the season build has kept them.
+ */
+export async function seasonWinds(db: Db, siteRef: string, site: Site): Promise<DayWinds[]> {
+  try {
+    const rows = await db
+      .select({ ...lightColumns, winds: siteSeasons.winds })
+      .from(siteSeasons)
+      .where(eq(siteSeasons.siteRef, siteRef));
+    return decodeDayWinds(pickRow(rows, site)?.winds);
+  } catch (error) {
+    console.error('Season winds failed:', error);
+    return [];
   }
 }
 
