@@ -14,6 +14,7 @@ import {
   summaryFromStats,
   typicalWeekGoDays,
   anyGoSharesFromStats,
+  topMonths,
   type SeasonDay,
 } from '../seasons';
 import type { DayScore } from '@/types';
@@ -112,6 +113,12 @@ describe('bestMonths', () => {
       ...month(2025, 6, 2),
     ];
     expect(bestMonths(seasonMonths(days, 'soar'))?.text).toBe('Dec to Feb');
+  });
+
+  it('names the months left out when nearly every month is best', () => {
+    const shares = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.3, 0.8];
+    expect(topMonths(shares)?.text).toBe('every month but Nov');
+    expect(topMonths(shares.map(() => 0.5))?.text).toBe('every month');
   });
 
   it('lists months apart, and nothing when no day is a go', () => {

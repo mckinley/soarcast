@@ -183,6 +183,13 @@ export function topMonths(shares: Array<number | null>): { text: string; share: 
   if (top === 0) return null;
   const best = shares.flatMap((v, i) => (v != null && v >= top * 0.8 ? [i + 1] : []));
   const share = best.reduce((sum, m) => sum + (shares[m - 1] ?? 0), 0) / best.length;
+  // Nearly every month reads as the months left out
+  if (best.length >= 9) {
+    const rest = MONTH.filter((_, i) => !best.includes(i + 1));
+    if (rest.length === 0) return { text: 'every month', share };
+    const last = rest.pop()!;
+    return { text: `every month but ${rest.length ? `${rest.join(', ')} and ` : ''}${last}`, share };
+  }
   // A run of months, allowing one across New Year, reads as a range
   const set = new Set(best);
   const start = best.find((m) => !set.has(m === 1 ? 12 : m - 1)) ?? best[0];
