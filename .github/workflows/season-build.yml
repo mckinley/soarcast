@@ -42,14 +42,18 @@ jobs:
           while true; do
             sleep 30
             curl -sS -H "$auth" "$api/$id" > instance.json
-            # Each finished step once: the plan's counts, each cell's lines, the run's record
+            # Each finished step once: the plan's counts, each cell's lines, the run's record.
+            # The API may hand a step's output back as JSON text, so read it either way.
             jq -r --argjson from "$shown" '
+              def parsed: if type == "string" then (fromjson? // .) else . end;
+              def field($k): if type == "object" then .[$k] else null end;
               [.result.steps[]? | select(.type == "step" and .end != null)] | .[$from:][] |
-              if .name == "plan" then "plan: \(.output.sites) sites, \(.output.due) due"
-              elif .name == "record" then "run: \(.output | tostring)"
-              elif .success then (.output.lines // [] | .[])
-              else "\(.name): failed, \(.error // .attempts[-1].error // {} | tostring)" end
-            ' instance.json
+              (.output | parsed) as $out |
+              if .name == "plan" then "plan: \($out | field("sites")) sites, \($out | field("due")) due"
+              elif .name == "record" then "run: \($out | tojson)"
+              elif .success then (($out | field("lines")) // [$out | tojson] | .[])
+              else "\(.name): failed, \(.error // .attempts[-1].error // {} | tojson)" end
+            ' instance.json || echo "(could not read the steps: $(head -c 300 instance.json))"
             shown=$(jq '[.result.steps[]? | select(.type == "step" and .end != null)] | length' instance.json)
             status=$(jq -r '.result.status' instance.json)
             case "$status" in
