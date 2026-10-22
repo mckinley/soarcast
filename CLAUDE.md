@@ -11,7 +11,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 ## Key Architecture
 
 - **Framework:** React Router v7 with SSR on Cloudflare Workers
-- **Auth:** Better Auth with GitHub and Google OAuth (`app/lib/auth.server.ts`)
+- **Auth:** Better Auth with GitHub and Google OAuth (`app/lib/auth.server.ts`). Better Auth is imported on first use (`createAuth` returns a promise), so a visitor with no session cookie never loads it. `getSession` looks the session up once per request, keyed by the env object `worker.ts` makes for each request, so call it freely from any loader. The header reads the user from the root loader, never `authClient.useSession()`.
 - **DB:** Cloudflare D1 (`DB` binding, database `soarcast`), Drizzle ORM (`src/db/schema.ts`, Better Auth tables in `src/db/auth-schema.ts`). App tables reference Better Auth's `user.id`.
 - **DB Access:** Via `getDb(env)` from `app/lib/db.server.ts`. D1 has no interactive transactions (use `db.batch`), at most 100 bound parameters per query, and can't bind a `Date` (use Drizzle `timestamp`/`timestamp_ms` columns).
 - **Migrations:** `npx drizzle-kit generate --name <change>` writes `migrations/NNNN_*.sql`; the deploy workflow runs `wrangler d1 migrations apply soarcast --remote` before deploying, so keep migrations additive. Locally: `npx wrangler d1 migrations apply soarcast --local`.

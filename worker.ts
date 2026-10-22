@@ -127,6 +127,8 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const cf = request.cf as IncomingRequestCfProperties | undefined;
     return withRequestTiming(async (timing) => {
+      // Each request gets its own env object: getSession looks the session
+      // up once per request by it (app/lib/auth.server.ts)
       const response = await requestHandler(request, {
         cloudflare: { env: { ...env, DB: timedD1(env.DB) }, ctx, cf },
       });

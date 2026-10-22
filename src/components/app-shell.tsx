@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate, useRouteLoaderData } from 'react-router';
 import {
   Cloud,
   LayoutDashboard,
@@ -15,7 +15,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { authClient } from '~/app/lib/auth-client';
+import type { loader as rootLoader } from '~/app/root';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -92,14 +92,11 @@ function ThemeToggle() {
 }
 
 function UserMenu() {
-  const { data: session, isPending } = authClient.useSession();
+  // The root loader already looked up who is signed in
+  const user = useRouteLoaderData<typeof rootLoader>('root')?.user ?? null;
   const navigate = useNavigate();
 
-  if (isPending) {
-    return <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />;
-  }
-
-  if (!session?.user) {
+  if (!user) {
     return (
       <Button onClick={() => navigate('/auth/signin')} variant="default" size="sm">
         Sign In
@@ -108,18 +105,21 @@ function UserMenu() {
   }
 
   const userInitials =
-    session.user.name
+    user.name
       ?.split(' ')
       .map((n: string) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2) ||
-    session.user.email?.[0]?.toUpperCase() ||
+    user.email?.[0]?.toUpperCase() ||
     '?';
 
   const handleSignOut = async () => {
+    // Loaded on demand: only signing out needs the auth client in the browser
+    const { authClient } = await import('~/app/lib/auth-client');
     await authClient.signOut();
-    navigate('/');
+    // A full load, so every loader sees the signed-out state
+    window.location.assign('/');
   };
 
   return (
@@ -127,7 +127,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={session.user.image || undefined} alt={session.user.name || 'User'} />
+            <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -135,8 +135,8 @@ function UserMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{session.user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
