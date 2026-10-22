@@ -1,0 +1,1 @@
+ALTER TABLE `atmospheric_profiles_cache` ADD `data_gz` text;
