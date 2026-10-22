@@ -678,6 +678,48 @@ export function isCachedProfileFresh(
 }
 
 /**
+ * Fetches a place's forecast from Open-Meteo and caches it, whatever the
+ * cache holds. The hourly job calls it for saved sites before their copy
+ * expires, so their pages never wait on Open-Meteo. A failed cache write
+ * still returns the profile.
+ */
+export async function refreshAtmosphericProfile(
+  latitude: number,
+  longitude: number,
+): Promise<AtmosphericProfile> {
+  const db = _injectedDb;
+  if (!db) {
+    throw new Error(
+      'Profile DB not initialized. Call setProfileDb(getDb(env)) before using profile functions.',
+    );
+  }
+  const { atmosphericProfilesCache } = await import('@/db/schema');
+  const profile = await fetchAtmosphericProfile(latitude, longitude, PROFILE_DAYS);
+  try {
+    await db
+      .insert(atmosphericProfilesCache)
+      .values({
+        locationKey: profileLocationKey(latitude, longitude),
+        fetchDate: profile.fetchedAt.slice(0, 10), // the UTC fetch date
+        data: profile,
+        fetchedAt: new Date(profile.fetchedAt),
+        expiresAt: new Date(profile.expiresAt),
+      })
+      .onConflictDoUpdate({
+        target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
+        set: {
+          data: profile,
+          fetchedAt: new Date(profile.fetchedAt),
+          expiresAt: new Date(profile.expiresAt),
+        },
+      });
+  } catch (cacheError) {
+    console.error('Could not cache the atmospheric profile:', cacheError);
+  }
+  return profile;
+}
+
+/**
  * Gets the cached atmospheric profile, or fetches a fresh one when the cache
  * is stale, missing or shorter than PROFILE_DAYS. Falls back to the stale
  * cache if Open-Meteo fails.
@@ -696,24 +738,20 @@ export async function getAtmosphericProfile(
     );
   }
   const { atmosphericProfilesCache } = await import('@/db/schema');
-  const { eq, and } = await import('drizzle-orm');
+  const { eq, desc } = await import('drizzle-orm');
 
   const now = new Date();
-  const today = now.toISOString().split('T')[0]; // the cache row's key: the UTC fetch date
 
   // Create cache key from rounded coordinates (2 decimal precision ~1km)
   const cacheKey = profileLocationKey(latitude, longitude);
 
-  // Try to get cached profile (both fresh and stale)
+  // The place's newest copy, fresh or stale. Rows are keyed by the UTC date
+  // they were fetched on, so a copy from just before UTC midnight still serves.
   const [cachedRow] = await db
     .select()
     .from(atmosphericProfilesCache)
-    .where(
-      and(
-        eq(atmosphericProfilesCache.locationKey, cacheKey),
-        eq(atmosphericProfilesCache.fetchDate, today),
-      ),
-    )
+    .where(eq(atmosphericProfilesCache.locationKey, cacheKey))
+    .orderBy(desc(atmosphericProfilesCache.fetchDate))
     .limit(1);
 
   const fetchDays = Math.max(days, PROFILE_DAYS);
@@ -726,31 +764,7 @@ export async function getAtmosphericProfile(
 
   // Try to fetch fresh data
   try {
-    const freshProfile = await fetchAtmosphericProfile(latitude, longitude, fetchDays);
-
-    // Store in cache (upsert pattern). A failed write, such as Turso
-    // blocking writes, must not cost the pilot the profile we already have.
-    try {
-      await db
-        .insert(atmosphericProfilesCache)
-        .values({
-          locationKey: cacheKey,
-          fetchDate: today,
-          data: freshProfile,
-          fetchedAt: new Date(freshProfile.fetchedAt),
-          expiresAt: new Date(freshProfile.expiresAt),
-        })
-        .onConflictDoUpdate({
-          target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
-          set: {
-            data: freshProfile,
-            fetchedAt: new Date(freshProfile.fetchedAt),
-            expiresAt: new Date(freshProfile.expiresAt),
-          },
-        });
-    } catch (cacheError) {
-      console.error('Could not cache the atmospheric profile:', cacheError);
-    }
+    const freshProfile = await refreshAtmosphericProfile(latitude, longitude);
 
     return {
       profile: trimProfileDays(freshProfile, days, now),
