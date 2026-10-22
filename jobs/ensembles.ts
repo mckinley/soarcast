@@ -140,9 +140,13 @@ export class EnsembleRefresh extends WorkflowEntrypoint<JobsEnv, EnsembleParams>
   async run(event: WorkflowEvent<EnsembleParams>, step: WorkflowStep) {
     const startedAt = new Date().toISOString();
     const cells = await step.do('plan', async () => {
-      const all = cellsFor(await ownJobs(this.env));
+      const jobs = await ownJobs(this.env);
+      const all = cellsFor(jobs);
       const limit = Math.min(event.payload?.limit ?? MAX_CELLS, MAX_CELLS);
-      return { all: all.length, cells: all.slice(0, limit) };
+      const chosen = all.slice(0, limit);
+      // Lines first, so the "Cloudflare job" workflow prints them
+      const lines = [`plan: ${jobs.length} sites in ${all.length} squares, fetching ${chosen.length}`];
+      return { lines, all: all.length, cells: chosen };
     });
     const failed: string[] = [];
     let fetched = 0;
