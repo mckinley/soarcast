@@ -20,6 +20,9 @@ type Pages = {
   "/api/notifications/check": {
     params: {};
   };
+  "/api/forecasts/refresh": {
+    params: {};
+  };
   "/api/weather/profile": {
     params: {};
   };
@@ -92,7 +95,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -101,6 +104,10 @@ type RouteFiles = {
   "routes/api.notifications.check.tsx": {
     id: "routes/api.notifications.check";
     page: "/api/notifications/check";
+  };
+  "routes/api.forecasts.refresh.tsx": {
+    id: "routes/api.forecasts.refresh";
+    page: "/api/forecasts/refresh";
   };
   "routes/api.weather.profile.tsx": {
     id: "routes/api.weather.profile";
@@ -192,6 +199,7 @@ type RouteModules = {
   "root": typeof import("./app/root.tsx");
   "routes/api.notifications.subscribe": typeof import("./app/routes/api.notifications.subscribe.tsx");
   "routes/api.notifications.check": typeof import("./app/routes/api.notifications.check.tsx");
+  "routes/api.forecasts.refresh": typeof import("./app/routes/api.forecasts.refresh.tsx");
   "routes/api.weather.profile": typeof import("./app/routes/api.weather.profile.tsx");
   "routes/api.track-record": typeof import("./app/routes/api.track-record.tsx");
   "routes/sites.custom.$id": typeof import("./app/routes/sites.custom.$id.tsx");

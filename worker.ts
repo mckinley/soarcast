@@ -148,11 +148,22 @@ export default {
     });
   },
 
-  // Hourly cron (wrangler.toml): run the alerts check, which decides whose
-  // morning or evening run is due in their local time, then the health check.
+  // Hourly cron (wrangler.toml): refresh saved sites' forecasts before they
+  // expire, run the alerts check, which decides whose morning or evening run
+  // is due in their local time, then the health check.
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     const context = { cloudflare: { env, ctx } };
     const headers = { authorization: `Bearer ${env.CRON_SECRET}` };
+
+    // A failed refresh only means pages fetch for themselves, so it never stops the alerts
+    const refresh = await requestHandler(
+      new Request(new URL('/api/forecasts/refresh', env.BETTER_AUTH_URL), {
+        method: 'POST',
+        headers,
+      }),
+      context,
+    ).catch((error: unknown) => new Response(String(error), { status: 500 }));
+    console.log(`Forecast refresh: ${refresh.status} ${await refresh.text()}`);
 
     const alerts = await requestHandler(
       new Request(new URL('/api/notifications/check', env.BETTER_AUTH_URL), {

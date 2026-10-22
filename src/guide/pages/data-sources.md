@@ -4,6 +4,7 @@ summary: Where the forecasts, sites, flown days, comps and maps come from, and h
 order: 1
 covers:
   - src/lib/weather-profile.ts
+  - app/lib/forecast-refresh.server.ts
   - src/lib/forecast-engine/gates.ts
   - src/lib/forecast-engine/launch-conditions.ts
   - src/lib/track-record.ts
@@ -57,7 +58,7 @@ For every hour of the next {{forecastDays}} days, SoarCast takes:
 
 ### How fresh
 
-Weather services make new forecasts every one to six hours. SoarCast keeps a place's forecast for {{forecastRefreshHours}} hours. After that, it gets a new one the next time a page or alert needs it.
+Weather services make new forecasts every one to six hours. SoarCast keeps a place's forecast for {{forecastRefreshHours}} hours. Saved sites get a new one about every two hours, before their copy runs out, so their pages never wait for it. Any other place gets a new one the next time a page or alert needs it.
 
 ### What it can't tell you
 
