@@ -32,10 +32,24 @@ export interface PgSite {
   updated_at: number;
 }
 
+/**
+ * How long a pgsites answer is reused. Sites change at most daily and comps
+ * weekly, and a pgsites call can take a second when its Worker starts fresh.
+ */
+export const PGSITES_CACHE_SECONDS = 6 * 60 * 60;
+
+/** The Worker's cache in this data center; none in Node (scripts, tests). */
+function edgeCache(): Cache | null {
+  return typeof caches === 'undefined'
+    ? null
+    : ((caches as unknown as { default?: Cache }).default ?? null);
+}
+
 async function fetchApi<T>(
   apiKey: string,
   path: string,
   params?: Record<string, string | number>,
+  { fresh = false }: { fresh?: boolean } = {},
 ): Promise<T> {
   const url = new URL(path, BASE_URL);
   if (params) {
@@ -46,6 +60,12 @@ async function fetchApi<T>(
     }
   }
 
+  // Cached by URL alone: every caller uses SoarCast's one key
+  const cache = fresh ? null : edgeCache();
+  const cacheKey = new Request(url.toString());
+  const hit = await cache?.match(cacheKey).catch(() => undefined);
+  if (hit) return hit.json() as Promise<T>;
+
   const response = await fetch(url.toString(), {
     headers: { 'X-API-Key': apiKey },
   });
@@ -54,13 +74,24 @@ async function fetchApi<T>(
     throw new Error(`pgsites API error: ${response.status} ${response.statusText} for ${path}`);
   }
 
-  return response.json() as Promise<T>;
+  const body = await response.text();
+  if (cache) {
+    const copy = new Response(body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${PGSITES_CACHE_SECONDS}`,
+      },
+    });
+    await cache.put(cacheKey, copy).catch(() => undefined);
+  }
+  return JSON.parse(body) as T;
 }
 
 export async function searchSites(
   apiKey: string,
   query: string,
   limit?: number,
+  options?: { fresh?: boolean },
 ): Promise<PgSite[]> {
   const params: Record<string, string | number> = { q: query };
   if (limit !== undefined) params.limit = limit;
@@ -68,6 +99,7 @@ export async function searchSites(
     apiKey,
     '/api/sites/search',
     params,
+    options,
   );
   return result.sites;
 }
@@ -203,7 +235,7 @@ export function pgsitesSlug(name: string, id: string): string {
 export async function getSyncStatus(
   apiKey: string,
 ): Promise<{ last_modified_check: string | null; total_sites: number }> {
-  return fetchApi(apiKey, '/api/sync/status');
+  return fetchApi(apiKey, '/api/sync/status', undefined, { fresh: true });
 }
 
 /** Get the pgsites API key from the Cloudflare Worker environment. */

@@ -77,7 +77,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       return `${profile.hours.length} hours for North Bend`;
     }),
     check('pgsites', async () => {
-      const sites = await searchSites(apiKey, 'Tiger', 1);
+      const sites = await searchSites(apiKey, 'Tiger', 1, { fresh: true });
       if (sites.length === 0) throw new Error('searching "Tiger" found no sites');
       return `search ok (${sites[0].name})`;
     }),
