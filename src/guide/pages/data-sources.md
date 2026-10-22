@@ -110,7 +110,7 @@ A site page lists what the nearest weather stations measure right now. These are
 
 The readings come from [winds.mobi](https://winds.mobi), which gathers many station networks. Airports report through [aviationweather.gov](https://aviationweather.gov) about once an hour. Stations that pilots put at launches and landing fields, such as those on [OpenWindMap](https://www.openwindmap.org), report every few minutes. A reading older than {{windNowMaxAgeMinutes}} minutes is left out. Holfuy stations are left out too, since Holfuy shares its readings only on its own pages.
 
-The map's Wind now layer draws the same stations as arrows. An arrow points the way the wind blows, and its number is the average speed in km/h. The arrow turns amber from {{windAmberKmh}} km/h and red from {{windRedKmh}} km/h, counting gusts.
+The map's Wind now layer draws the same stations as arrows. An arrow points the way the wind blows, and its number is the average speed in km/h. The arrow turns amber from {{windAmberKmh}} km/h and red from {{windRedKmh}} km/h, counting gusts. A calm station shows as a ring.
 
 ### What wind now can't tell you
 
@@ -229,7 +229,7 @@ A pilot who adds a [private site](#private-sites) can share it with other pilots
 
 A pilot can add a private site that is missing from the list. Only that pilot can see it, unless they [share it](#launches-pilots-shared). To share a site, it needs at least one wind direction.
 
-When a pilot drops a pin, SoarCast looks up the height of the ground there. It also looks at the slopes around the pin to suggest which way the launch faces. The heights come from the European Union's Copernicus elevation map, which has a height every 90 m. SoarCast gets them through Open-Meteo.
+When a pilot drops a pin, SoarCast looks up the height of the ground there. It also looks at the slopes around the pin to suggest which way the launch faces. The heights come from the European Union's Copernicus elevation map, which has a height every 90 m. SoarCast gets them through Open-Meteo. With experiments on, site pages also read the same map at 30 m detail, straight from its open copy. [Experiments](/guide/experiments#terrain-around-the-launch) explains that card.
 
 The place search uses [OpenStreetMap](https://www.openstreetmap.org). SoarCast also lists the sites it knows near the pin, so a pilot can add one of those to Favorites instead.
 
@@ -284,3 +284,4 @@ A clear lightning or rain layer doesn't prove the air is safe. Storms can build 
 | Satellite pictures and lightning from EUMETSAT | Free to use. Credited on the map.                                     |
 | Lightning from NOAA                            | Public domain. Credited on the map.                                   |
 | Wind readings gathered by winds.mobi           | None stated. Credited on the card and the map.                        |
+| Heights from the Copernicus elevation model    | Free to use with credit. Credited on the card.                        |

@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card';
 import { ageText } from '@/lib/map-layers';
 import {
   heightText,
+  isCalm,
   readingText,
   WIND_ARROW_PATH,
   windColor,
@@ -11,7 +12,7 @@ import {
 
 const ARROW_COLORS = { green: '#16a34a', amber: '#d97706', red: '#dc2626' } as const;
 
-/** An arrow pointing the way the wind blows, coloured by its strength. */
+/** An arrow pointing the way the wind blows, coloured by its strength. A ring when calm. */
 export function WindArrow({
   station,
   size = 18,
@@ -19,6 +20,13 @@ export function WindArrow({
   station: Pick<WindStation, 'direction' | 'speed' | 'gust'>;
   size?: number;
 }) {
+  if (isCalm(station)) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+        <circle cx="12" cy="12" r="6" fill="none" stroke={ARROW_COLORS.green} strokeWidth="3" />
+      </svg>
+    );
+  }
   return (
     <svg
       width={size}

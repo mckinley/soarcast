@@ -55,6 +55,15 @@ import {
   WIND_NOW_RADIUS_KM,
   WIND_NOW_STATIONS,
 } from '@/lib/wind-now';
+import {
+  FACE_RADIUS_M,
+  FAR_RADIUS_M,
+  FITS_DEGREES,
+  FLAT_SLOPE_DEGREES,
+  HORIZON_FROM_M,
+  LEE_MIN_HEIGHT_M,
+  LEE_RATIO,
+} from '@/lib/terrain-study';
 import { AREA_RADIUS_KM } from '@/lib/destinations';
 import { AREA_JOIN_KM } from '@/lib/site-areas';
 import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
@@ -102,6 +111,15 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   windNowMaxAgeMinutes: WIND_NOW_MAX_AGE_MINUTES,
   windAmberKmh: WIND_COLOR_KMH.amber,
   windRedKmh: WIND_COLOR_KMH.red,
+
+  // Terrain around the launch
+  terrainFarKm: FAR_RADIUS_M / 1000,
+  faceRadiusM: FACE_RADIUS_M,
+  fitsDegrees: FITS_DEGREES,
+  flatSlopeDegrees: FLAT_SLOPE_DEGREES,
+  leeMinHeightM: LEE_MIN_HEIGHT_M,
+  leeRatio: LEE_RATIO,
+  horizonFromM: HORIZON_FROM_M,
   siteRefreshDays: SITE_REFRESH_DAYS,
   compRadiusKm: COMP_RADIUS_KM,
   nogaNearKm: NOGA_NEAR_KM,

@@ -10,6 +10,10 @@ covers:
   - src/components/flown-winds.tsx
   - app/lib/experiments.server.ts
   - src/lib/season-build/core.ts
+  - src/lib/terrain-study/index.ts
+  - src/lib/terrain-study/dem.ts
+  - app/lib/terrain-study.server.ts
+  - src/components/terrain-study.tsx
 ---
 
 Experiments are ideas SoarCast is still testing. Some look promising. Some didn't hold up in a test, but still show something worth seeing. None of them changes a day's rating.
@@ -66,3 +70,41 @@ The listed directions did well. Days the direction check holds back are flown ab
 - ERA5 has wind only near its ground and 100 m above it. At a launch high above its ground, the wind at launch height is a guess.
 - A flown day with wind from an unlisted direction may have been a short flight, or a launch from a spot nearby.
 - A direction with only a few days says little.
+
+## Terrain around the launch
+
+This card reads the ground round a launch from satellite heights. It shows which way the slope at the pin faces and the higher ground upwind for each wind direction. It also shows when the sun shines on the launch. SoarCast reads the heights once for each pin and keeps what it found.
+
+The heights come from the Copernicus elevation model, which has a height about every 30 m. Ground near the pin is read at that detail. Ground out to {{terrainFarKm}} km is read every 60 m.
+
+### The slope
+
+SoarCast fits a flat surface to the ground within {{faceRadiusM}} m of the pin. The way that surface tilts down is the way the slope faces. A slope suits wind blowing up it, so a slope facing southwest suits a southwest wind.
+
+The card says whether the slope fits the listed wind. It fits when it faces within {{fitsDegrees}}° of a listed direction. Where no wind is listed, the card names the directions the slope suits. Ground flatter than {{flatSlopeDegrees}}° says little about a launch, so then the card gives only its slope. When the ground at the pin is far from the listed height, the card says the pin may be off the launch.
+
+### Higher ground upwind
+
+For each of the eight compass directions, SoarCast looks upwind for ground higher than the launch. Air that crosses a ridge or a peak tumbles on its far side. This rough air is the lee, or rotor. It reaches about 5 to 10 times the ridge's height downwind, and farther in strong wind.
+
+The card lists ground at least {{leeMinHeightM}} m higher than the launch that lies closer than {{leeRatio}} times that height. "Listed" marks a direction the launch is listed for. The slope above a launch counts too: wind from behind comes over it.
+
+### Sun on the launch
+
+The card gives the hours the sun shines on the launch, today and on the 15th of each month. The sun counts once it stands above the skyline and shines onto the slope. Sun that only grazes the slope doesn't count. A slope in the sun warms first, so thermals there tend to start sooner.
+
+The skyline is read from {{horizonFromM}} m out. Nearer ground at a launch is often trees round the clearing.
+
+### What testing found
+
+A test compared the slope at the pin with the listed wind at 250 listed launches in 18 flying areas round the world. The slope faced within {{fitsDegrees}}° of a listed direction at 84% of them. A random direction would do so at about half of them. Where the slope is {{flatSlopeDegrees}}° or steeper, it fitted at 87% to 91% of launches. On flatter ground it fitted at only 59%.
+
+The higher ground upwind and the sun on the launch haven't been tested against flown days yet.
+
+### What it can't tell you
+
+- The heights are of the surface the satellite saw, trees and buildings included.
+- A pin a few hundred meters off the launch reads the wrong slope. Listed pins are often near a launch rather than on it.
+- A launch can face another way than the ground round it, like a cut in a ridge.
+- The lee rule is rough. How far rough air reaches depends on the wind's strength, the layers of the air and the ridge's shape.
+- The sun hours leave out clouds and haze.

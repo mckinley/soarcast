@@ -175,10 +175,15 @@ export function heightText(
   return diff > 0 ? `${diff} m above launch` : `${-diff} m below launch`;
 }
 
+/** A reading with no wind to speak of: it has no real direction. */
+export function isCalm(s: Pick<WindStation, 'speed' | 'gust'>): boolean {
+  return Math.round(s.speed) === 0 && !s.gust;
+}
+
 /** "NW 12 km/h, gusts 20": a reading in words. */
 export function readingText(s: Pick<WindStation, 'direction' | 'speed' | 'gust'>): string {
   const speed = Math.round(s.speed);
-  if (speed === 0 && !s.gust) return 'Calm';
+  if (isCalm(s)) return 'Calm';
   const gust = s.gust != null ? Math.round(s.gust) : null;
   return gust != null && gust > speed
     ? `${compassPoint(s.direction)} ${speed} km/h, gusts ${gust}`

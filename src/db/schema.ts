@@ -368,6 +368,19 @@ export const nogaTakeoffs = sqliteTable('noga_takeoffs', {
   fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
 });
 
+// The terrain round a launch, studied once from the Copernicus heights
+// (src/lib/terrain-study): the slope at the pin, the higher ground upwind
+// and the skyline. Kept for good: the ground doesn't change. A moved pin or
+// a new TERRAIN_VERSION makes a new study.
+export const siteTerrain = sqliteTable('site_terrain', {
+  // "<latitude>,<longitude>", each to 4 decimals (about 10 m)
+  key: text('key').primaryKey(),
+  version: integer('version').notNull(),
+  // JSON TerrainStudy
+  study: text('study').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 // Export types for use in application code
 export type LaunchSite = typeof launchSites.$inferSelect;
 export type NewLaunchSite = typeof launchSites.$inferInsert;

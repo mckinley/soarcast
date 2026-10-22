@@ -23,6 +23,7 @@ import {
 } from '@/components/data-credits';
 import {
   freshStations,
+  isCalm,
   readingText,
   WIND_ARROW_PATH,
   windColor,
@@ -535,9 +536,13 @@ function windIcon(s: WindStation): L.DivIcon {
     iconSize: [28, 36],
     iconAnchor: [14, 13],
     html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-      <svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${s.direction + 180}deg);filter:drop-shadow(0 0 1px #fff)">
+      ${
+        isCalm(s)
+          ? `<svg width="26" height="26" viewBox="0 0 24 24" style="filter:drop-shadow(0 0 1px #fff)"><circle cx="12" cy="12" r="6" fill="none" stroke="${WIND_COLORS.green}" stroke-width="3"/></svg>`
+          : `<svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${s.direction + 180}deg);filter:drop-shadow(0 0 1px #fff)">
         <path d="${WIND_ARROW_PATH}" fill="${WIND_COLORS[windColor(s)]}" stroke="#fff" stroke-width="1"/>
-      </svg>
+      </svg>`
+      }
       <span style="font:600 10px system-ui,sans-serif;line-height:12px;color:#111;background:rgba(255,255,255,.85);border-radius:3px;padding:0 2px">${speed}</span>
     </div>`,
   });

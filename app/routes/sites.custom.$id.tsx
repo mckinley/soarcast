@@ -24,9 +24,15 @@ import { UpNowCard } from '@/components/up-now';
 import { windNowAt } from '~/app/lib/wind-now.server';
 import { WindNowCard } from '@/components/wind-now';
 import { flownHere } from '~/lib/flown-days';
-import { howSureExperiment, showsExperiments, windsExperiment } from '~/app/lib/experiments.server';
+import {
+  howSureExperiment,
+  showsExperiments,
+  terrainExperiment,
+  windsExperiment,
+} from '~/app/lib/experiments.server';
 import { ExperimentsSection, FlownWindsCard } from '@/components/flown-winds';
 import { HowSureCard } from '@/components/how-sure';
+import { TerrainStudyCard } from '@/components/terrain-study';
 import { FlownHereCard } from '@/components/flown-here';
 import { flownByMonthToShow } from '~/lib/flown-days';
 import { nogaFlightsAt } from '~/app/lib/noga.server';
@@ -110,6 +116,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // Experiments, for pilots who switched them on in Settings
   const windsOnFlownDays = experiments ? windsExperiment(db, seasonRef, site, flownDays) : null;
   const howSure = experiments ? howSureExperiment(db, seasonRef, site) : null;
+  const terrain = experiments
+    ? terrainExperiment(db, { latitude: site.latitude, longitude: site.longitude }, today, timeZone)
+    : null;
   return {
     site,
     // Its listed copy, when its pilot shared it
@@ -128,6 +137,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     xc,
     windsOnFlownDays,
     howSure,
+    terrain,
   };
 }
 
@@ -147,6 +157,7 @@ export default function CustomSiteDetailPage() {
     xc,
     windsOnFlownDays,
     howSure,
+    terrain,
   } = useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -305,7 +316,7 @@ export default function CustomSiteDetailPage() {
         </div>
       </Card>
 
-      {(howSure || windsOnFlownDays) && (
+      {(howSure || windsOnFlownDays || terrain) && (
         <ExperimentsSection>
           {howSure && (
             <Suspense fallback={null}>
@@ -318,6 +329,20 @@ export default function CustomSiteDetailPage() {
             <Suspense fallback={null}>
               <Await resolve={windsOnFlownDays} errorElement={null}>
                 {(w) => <FlownWindsCard experiment={w} followed />}
+              </Await>
+            </Suspense>
+          )}
+          {terrain && (
+            <Suspense fallback={null}>
+              <Await resolve={terrain} errorElement={null}>
+                {(t) => (
+                  <TerrainStudyCard
+                    experiment={t}
+                    ideal={site.idealWindDirections}
+                    ok={site.okWindDirections ?? []}
+                    listedAltitude={null}
+                  />
+                )}
               </Await>
             </Suspense>
           )}

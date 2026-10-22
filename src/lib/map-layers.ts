@@ -6,6 +6,8 @@
 // (app/routes/api.airspace.$z.$x.$y.ts), as openAIP's key must stay secret.
 // None of these layers changes a verdict.
 
+import { sunPosition } from './sun-times';
+
 // --- kk7 thermal maps -------------------------------------------------------
 
 export const KK7_TILES = 'https://thermal.kk7.ch/tiles';
@@ -169,23 +171,9 @@ export function cloudSatelliteAt(lon: number): CloudSatellite {
   return CLOUD_SATELLITES.find((s) => x >= s.west && x < s.east) ?? CLOUD_SATELLITES[0];
 }
 
-const RAD = Math.PI / 180;
-
 /** The sun's height above the horizon (degrees) at a place and time. */
 export function sunElevation(lat: number, lon: number, ms: number): number {
-  const days = ms / 864e5 - 10957.5; // days since 2000-01-01 12:00 UTC
-  const meanLon = (280.46 + 0.9856474 * days) % 360;
-  const anomaly = ((357.528 + 0.9856003 * days) % 360) * RAD;
-  const eclipticLon = (meanLon + 1.915 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly)) * RAD;
-  const obliquity = (23.439 - 0.0000004 * days) * RAD;
-  const decl = Math.asin(Math.sin(obliquity) * Math.sin(eclipticLon));
-  const ra = Math.atan2(Math.cos(obliquity) * Math.sin(eclipticLon), Math.cos(eclipticLon));
-  const sidereal = (280.46061837 + 360.98564736629 * days + lon) * RAD;
-  const hourAngle = sidereal - ra;
-  const sinAlt =
-    Math.sin(lat * RAD) * Math.sin(decl) +
-    Math.cos(lat * RAD) * Math.cos(decl) * Math.cos(hourAngle);
-  return Math.asin(Math.max(-1, Math.min(1, sinAlt))) / RAD;
+  return sunPosition(lat, lon, ms).elevation;
 }
 
 /** Visible light needs the sun well up; below this the infrared picture shows. */

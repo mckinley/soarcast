@@ -8,6 +8,8 @@ import type { EnsembleDay, HowSureExperiment } from '~/lib/ensembles';
 import { launchProfileFromSite } from '~/lib/forecast-engine';
 import { launchProfileKey } from '~/lib/seasons';
 import type { Site } from '~/types';
+import { terrainStudyAt } from '~/app/lib/terrain-study.server';
+import { terrainView, type TerrainExperiment } from '~/lib/terrain-study';
 
 // Experiments: ideas shown on site pages only to pilots who switch them on
 // in Settings. The Guide's Experiments page says what each one is and how it
@@ -78,5 +80,24 @@ export async function howSureExperiment(
   } catch (error) {
     console.error('How sure failed:', error);
     return { days: null, fetchedAt: null, why: 'failed' };
+  }
+}
+
+/**
+ * Terrain around the launch: the study of the ground round the pin, and
+ * the sun on the launch in the site's time zone. Never fails a page.
+ */
+export async function terrainExperiment(
+  db: Db,
+  place: { latitude: number; longitude: number },
+  today: string | null,
+  timeZone: string | null,
+): Promise<TerrainExperiment> {
+  try {
+    const study = await terrainStudyAt(db, place);
+    return { view: terrainView(study, today, timeZone), why: null };
+  } catch (error) {
+    console.error('Terrain study failed:', error);
+    return { view: null, why: 'failed' };
   }
 }

@@ -69,3 +69,39 @@ export function localSunTimes(
   }
   return { sunrise, sunset };
 }
+
+/**
+ * Where the sun stands at a place and instant: its height above the
+ * horizon and its compass bearing, degrees (a short solar formula, good to
+ * a few tenths of a degree).
+ */
+export function sunPosition(
+  lat: number,
+  lon: number,
+  ms: number,
+): { elevation: number; azimuth: number } {
+  const days = ms / 864e5 - 10957.5; // days since 2000-01-01 12:00 UTC
+  const meanLon = (280.46 + 0.9856474 * days) % 360;
+  const anomaly = ((357.528 + 0.9856003 * days) % 360) * RAD;
+  const eclipticLon = (meanLon + 1.915 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly)) * RAD;
+  const obliquity = (23.439 - 0.0000004 * days) * RAD;
+  const decl = Math.asin(Math.sin(obliquity) * Math.sin(eclipticLon));
+  const ra = Math.atan2(Math.cos(obliquity) * Math.sin(eclipticLon), Math.cos(eclipticLon));
+  const sidereal = (280.46061837 + 360.98564736629 * days + lon) * RAD;
+  const hourAngle = sidereal - ra;
+  const phi = lat * RAD;
+  const sinAlt =
+    Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(hourAngle);
+  const elevation = Math.asin(Math.max(-1, Math.min(1, sinAlt))) / RAD;
+  // Bearing from north, clockwise
+  const azimuth =
+    (Math.atan2(
+      Math.sin(hourAngle),
+      Math.cos(hourAngle) * Math.sin(phi) - Math.tan(decl) * Math.cos(phi),
+    ) /
+      RAD +
+      180 +
+      360) %
+    360;
+  return { elevation, azimuth };
+}
