@@ -138,13 +138,19 @@ export function nearQuery(latitude: number, longitude: number): string {
   return `${WINDS_MOBI_API}?${p}`;
 }
 
-/** The winds.mobi query for stations inside a map's view. */
+/**
+ * The winds.mobi query for stations inside a map's view. The first corner is
+ * the south-west one: with the north-west one first, winds.mobi answers
+ * stations from anywhere in the world. Longitudes past the date line are cut
+ * back to it, as winds.mobi refuses them.
+ */
 export function withinQuery(south: number, west: number, north: number, east: number): string {
+  const clamp = (x: number, limit: number) => Math.max(-limit, Math.min(limit, x));
   const p = new URLSearchParams({
-    'within-pt1-lat': north.toFixed(3),
-    'within-pt1-lon': west.toFixed(3),
-    'within-pt2-lat': south.toFixed(3),
-    'within-pt2-lon': east.toFixed(3),
+    'within-pt1-lat': clamp(south, 90).toFixed(3),
+    'within-pt1-lon': clamp(west, 180).toFixed(3),
+    'within-pt2-lat': clamp(north, 90).toFixed(3),
+    'within-pt2-lon': clamp(east, 180).toFixed(3),
     limit: '200',
     'last-measure': String(WIND_NOW_MAX_AGE_MINUTES * 60),
     'is-highest-duplicates-rating': 'true',
@@ -178,6 +184,9 @@ export function readingText(s: Pick<WindStation, 'direction' | 'speed' | 'gust'>
     ? `${compassPoint(s.direction)} ${speed} km/h, gusts ${gust}`
     : `${compassPoint(s.direction)} ${speed} km/h`;
 }
+
+/** An arrow with a shaft, pointing up in a 24 by 24 box: turned to show the way the wind blows. */
+export const WIND_ARROW_PATH = 'M12 1 L19.5 10 H14.5 V23 H9.5 V10 H4.5 Z';
 
 /** Wind speeds (km/h) where the map's arrows turn from green to amber, and amber to red. */
 export const WIND_COLOR_KMH = { amber: 15, red: 25 } as const;

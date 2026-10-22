@@ -94,9 +94,18 @@ describe('queries', () => {
 
   it('asks for the stations in a map view', () => {
     const url = new URL(withinQuery(45.5, 11, 46.2, 12.5));
-    expect(url.searchParams.get('within-pt1-lat')).toBe('46.200');
+    // South-west corner first, north-east second
+    expect(url.searchParams.get('within-pt1-lat')).toBe('45.500');
+    expect(url.searchParams.get('within-pt1-lon')).toBe('11.000');
+    expect(url.searchParams.get('within-pt2-lat')).toBe('46.200');
     expect(url.searchParams.get('within-pt2-lon')).toBe('12.500');
     expect(url.searchParams.get('is-highest-duplicates-rating')).toBe('true');
+  });
+
+  it('keeps a view that runs past the date line inside the world', () => {
+    const url = new URL(withinQuery(-50, 170, -30, 190));
+    expect(url.searchParams.get('within-pt1-lon')).toBe('170.000');
+    expect(url.searchParams.get('within-pt2-lon')).toBe('180.000');
   });
 });
 

@@ -3,6 +3,7 @@ import { ageText } from '@/lib/map-layers';
 import {
   heightText,
   readingText,
+  WIND_ARROW_PATH,
   windColor,
   type NearStation,
   type WindStation,
@@ -26,7 +27,7 @@ export function WindArrow({
       aria-hidden
       style={{ transform: `rotate(${station.direction + 180}deg)` }}
     >
-      <path d="M12 2 L19 20 L12 16 L5 20 Z" fill={ARROW_COLORS[windColor(station)]} />
+      <path d={WIND_ARROW_PATH} fill={ARROW_COLORS[windColor(station)]} />
     </svg>
   );
 }
