@@ -47,6 +47,7 @@ import {
 } from '@/lib/track-record';
 import { SEASON_MONTHS, SEASON_YEARS } from '@/lib/seasons';
 import { FLOWN_RADIUS_KM, FLOWN_REFRESH_HOURS } from '@/lib/flown-days';
+import { UP_NOW_AIR_KM } from '@/lib/up-now';
 import { AREA_RADIUS_KM } from '@/lib/destinations';
 import { AREA_JOIN_KM } from '@/lib/site-areas';
 import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
@@ -85,6 +86,7 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   ensembleDays: ENSEMBLE_DAYS,
   ensembleGridKm: ENSEMBLE_GRID_KM,
   flownRefreshHours: FLOWN_REFRESH_HOURS,
+  upNowAirKm: UP_NOW_AIR_KM,
   siteRefreshDays: SITE_REFRESH_DAYS,
   compRadiusKm: COMP_RADIUS_KM,
   nogaNearKm: NOGA_NEAR_KM,

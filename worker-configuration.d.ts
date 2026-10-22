@@ -20,5 +20,6 @@ interface Env {
     flownDays(
       query: import('./src/lib/flown-days').FlownDaysQuery,
     ): Promise<import('./src/lib/flown-days').FlownDaysResult>;
+    upNow(query: import('./src/lib/up-now').UpNowQuery): Promise<import('./src/lib/up-now').UpNowResult>;
   };
 }

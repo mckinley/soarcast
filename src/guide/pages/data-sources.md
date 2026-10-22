@@ -14,6 +14,9 @@ covers:
   - src/lib/flown-days.ts
   - app/lib/flown-days.server.ts
   - src/components/flown-here.tsx
+  - src/lib/up-now.ts
+  - app/lib/up-now.server.ts
+  - src/components/up-now.tsx
   - src/lib/noga.ts
   - app/lib/noga.server.ts
   - jobs/noga-sync.ts
@@ -135,6 +138,12 @@ SoarCast checks Syncing Pilots again every {{flownRefreshHours}} hours. Flown da
 - Busy sites have many tracked pilots. Quiet sites may have few or none, so their numbers say little.
 - A pilot who drives down from a launch can now and then look like a glide down.
 - Two launches less than {{flownRadiusKm}} km apart show the same flights.
+
+### Up now
+
+When tracked pilots are flying near a launch, its site page says so at the top. The "Up now" card counts the pilots in the air within {{upNowAirKm}} km right now and says how high the highest one is above launch. It also counts pilots standing on launch, and how many launched there today. When nobody is up but someone flew today, the card reads "Flown today" and says when the last pilot landed.
+
+SoarCast asks Syncing Pilots each time the page opens. It gets counts only, as with flown days. A pilot counts as in the air while the tracker sent a position in the last half hour or so, high enough above the ground. Pilots in the air near the launch may have taken off somewhere else.
 
 ## Cross-country flights
 

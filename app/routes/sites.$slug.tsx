@@ -37,6 +37,8 @@ import { compsAtSite } from '~/app/lib/comps.server';
 import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
+import { upNowAt } from '~/app/lib/up-now.server';
+import { UpNowCard } from '@/components/up-now';
 import { flownHere } from '~/lib/flown-days';
 import {
   howSureExperiment,
@@ -351,6 +353,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const flown = flownDays.then((f) =>
     f ? flownHere(f, seasonFull?.days ?? null, engineSite.goal ?? 'soar') : null,
   );
+  // Pilots up here now (Syncing Pilots): streamed in after the page
+  const upNow = timeZone
+    ? upNowAt(env, { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude }, timeZone)
+    : Promise.resolve(null);
   // Experiments, for pilots who switched them on in Settings
   const windsOnFlownDays = experiments
     ? windsExperiment(db, seasonRef, engineSite, flownDays)
@@ -375,6 +381,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     compsToday,
     season: seasonFull?.summary ?? null,
     flown,
+    upNow,
     xc,
     windsOnFlownDays,
     howSure,
@@ -537,6 +544,7 @@ export default function SiteDetailPage() {
     compsToday,
     season,
     flown,
+    upNow,
     xc,
     windsOnFlownDays,
     howSure,
@@ -581,6 +589,12 @@ export default function SiteDetailPage() {
           </p>
         )}
       </div>
+
+      <Suspense fallback={null}>
+        <Await resolve={upNow} errorElement={null}>
+          {(u) => (u ? <UpNowCard up={u} launchAltitude={site.altitude ?? null} /> : null)}
+        </Await>
+      </Suspense>
 
       {/* Forecast section with windgram and scoring */}
       {forecastError || !scores || !today ? (
