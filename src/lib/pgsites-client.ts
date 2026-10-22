@@ -1,11 +1,11 @@
 const BASE_URL = 'https://pgsites.mckinleyaviation.com';
 
-/** Where pgsites got a site (PgSite.source). */
-export type SiteOrigin = 'pge' | 'flown' | 'osm';
+/** Where pgsites got a site (PgSite.source). 'pilot': a private site its pilot shared. */
+export type SiteOrigin = 'pge' | 'flown' | 'osm' | 'pilot';
 
 /** A site's origin, reading anything unknown (or an older answer) as Paragliding Earth. */
 export function siteOrigin(source: string | null | undefined): SiteOrigin {
-  return source === 'flown' || source === 'osm' ? source : 'pge';
+  return source === 'flown' || source === 'osm' || source === 'pilot' ? source : 'pge';
 }
 
 export interface PgSite {
@@ -187,6 +187,53 @@ export async function getSiteById(apiKey: string, id: string): Promise<PgSite | 
     }
     throw error;
   }
+}
+
+/** A private site as pgsites takes it to share: wind is N..NW, 2 good, 1 cross, 0 no. */
+export interface SharedSiteBody {
+  name: string;
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  wind: number[];
+  kind: 'thermal' | 'ridge' | 'both' | 'sled' | null;
+}
+
+export type ShareResult =
+  | { ok: true; id: string }
+  /** A listed site already covers the launch */
+  | { ok: false; listed: { id: string; name: string } };
+
+/**
+ * Shares a private site through pgsites, or changes the shared copy. `ref`
+ * ("soarcast:<custom site id>") names it there. Throws when pgsites fails.
+ */
+export async function shareSite(
+  apiKey: string,
+  ref: string,
+  site: SharedSiteBody,
+): Promise<ShareResult> {
+  const response = await fetch(new URL(`/api/shared-sites/${ref}`, BASE_URL), {
+    method: 'PUT',
+    headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(site),
+  });
+  if (response.status === 409) {
+    const body = (await response.json()) as { site: { id: string; name: string } };
+    return { ok: false, listed: { id: body.site.id, name: body.site.name } };
+  }
+  if (!response.ok) throw new Error(`pgsites share: ${response.status} ${await response.text()}`);
+  const body = (await response.json()) as { id: string };
+  return { ok: true, id: body.id };
+}
+
+/** Takes a shared site back. Throws when pgsites fails. */
+export async function unshareSite(apiKey: string, ref: string): Promise<void> {
+  const response = await fetch(new URL(`/api/shared-sites/${ref}`, BASE_URL), {
+    method: 'DELETE',
+    headers: { 'X-API-Key': apiKey },
+  });
+  if (!response.ok) throw new Error(`pgsites unshare: ${response.status}`);
 }
 
 export async function nearbySites(

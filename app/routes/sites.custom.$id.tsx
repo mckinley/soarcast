@@ -5,6 +5,7 @@ import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
 import { findOwnedCustomSite } from '~/app/lib/custom-sites.server';
 import { customSiteToSite } from '~/lib/custom-sites';
+import { pgsitesSlug } from '~/lib/pgsites-client';
 import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
@@ -84,6 +85,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       : Promise.resolve(null);
   return {
     site,
+    // Its listed copy, when its pilot shared it
+    sharedSlug: customSite.sharedSiteId
+      ? pgsitesSlug(customSite.name, customSite.sharedSiteId)
+      : null,
     scores,
     today,
     forecastError,
@@ -95,7 +100,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, scores, today, forecastError, comps, compsToday, season, flown } =
+  const { site, sharedSlug, scores, today, forecastError, comps, compsToday, season, flown } =
     useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -133,7 +138,17 @@ export default function CustomSiteDetailPage() {
         <h1 className="text-3xl font-bold">{site.name}</h1>
         <p className="text-muted-foreground mt-1 inline-flex items-center gap-1.5">
           <Lock className="h-4 w-4" />
-          Private site. Only you can see it.
+          {sharedSlug ? (
+            <span>
+              Private site. Other pilots can find it as a{' '}
+              <Link to={`/sites/${sharedSlug}`} className="underline underline-offset-2">
+                shared launch
+              </Link>
+              . Notes, the wind limit and the goal stay private.
+            </span>
+          ) : (
+            'Private site. Only you can see it.'
+          )}
         </p>
       </div>
 

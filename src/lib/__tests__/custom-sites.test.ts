@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { customSiteToSite, directionRatings, parseCustomSiteForm } from '../custom-sites';
+import {
+  customSiteToSite,
+  directionRatings,
+  parseCustomSiteForm,
+  sharedSiteBody,
+  sharedSiteRef,
+} from '../custom-sites';
 import { launchProfileFromSite } from '../forecast-engine';
 import type { CustomSite } from '@/db/schema';
 
@@ -37,7 +43,26 @@ describe('parseCustomSiteForm', () => {
       kind: 'thermal',
       goal: 'launch',
       notes: 'Launch is the open slope below Haystack.',
+      share: false,
     });
+  });
+
+  it('shares only a site with a wind direction, and never its notes, limit or goal', () => {
+    const { input, errors } = parseCustomSiteForm(form({ ...valid, share: 'on' }));
+    expect(errors).toEqual({});
+    expect(input.share).toBe(true);
+    expect(sharedSiteBody(input, 1260)).toEqual({
+      name: 'Mount Si',
+      latitude: 47.4881,
+      longitude: -121.7235,
+      altitude: 1260,
+      wind: [0, 0, 0, 0, 0, 1, 2, 2], // N..NW
+      kind: 'thermal',
+    });
+    expect(sharedSiteRef('abc')).toBe('soarcast:abc');
+    expect(
+      parseCustomSiteForm(form({ ...valid, share: 'on', good: '', ok: '' })).errors,
+    ).toHaveProperty('share');
   });
 
   it('leaves an unknown site kind or goal unset', () => {
@@ -92,6 +117,7 @@ describe('customSiteToSite', () => {
       longitude: '-121.7235',
       elevation: 1260,
       maxWindSpeed: 22,
+      sharedSiteId: null,
       idealWindDirections: [270],
       okWindDirections: [225, 315],
       siteKind: null,

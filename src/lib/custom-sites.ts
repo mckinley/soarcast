@@ -1,9 +1,11 @@
 // Sites a pilot pins themselves: unlisted hike-and-fly peaks and private
 // launches. Only their owner sees them, and they're rated and alerted on
-// like listed sites.
+// like listed sites. The owner can share one: pgsites then lists a copy
+// (place, height, directions and what it gives) that any pilot can follow.
 
 import type { CustomSite } from '@/db/schema';
 import type { Site, SiteGoal, SiteKind } from '@/types';
+import type { SharedSiteBody } from '@/lib/pgsites-client';
 import { COMPASS_POINTS } from '@/lib/site-utils';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { defaultGoal, isSiteGoal, isSiteKind } from '@/lib/site-goals';
@@ -57,9 +59,17 @@ export interface CustomSiteInput {
   /** What makes a day worth going; null uses the default */
   goal: SiteGoal | null;
   notes: string | null;
+  /** Listed for other pilots through pgsites */
+  share: boolean;
 }
 
-export type CustomSiteField = 'name' | 'location' | 'elevation' | 'maxWindSpeed' | 'notes';
+export type CustomSiteField =
+  | 'name'
+  | 'location'
+  | 'elevation'
+  | 'maxWindSpeed'
+  | 'notes'
+  | 'share';
 export type CustomSiteErrors = Partial<Record<CustomSiteField, string>>;
 
 function text(form: FormData, key: string): string {
@@ -120,6 +130,11 @@ export function parseCustomSiteForm(form: FormData): {
 
   const goodDirections = directions(form, 'good');
   const okDirections = directions(form, 'ok').filter((d) => !goodDirections.includes(d));
+  const share = text(form, 'share') === 'on';
+  // Other pilots can't tell when a launch works without its directions
+  if (share && goodDirections.length + okDirections.length === 0) {
+    errors.share = 'To share the site, mark at least one wind direction.';
+  }
 
   return {
     input: {
@@ -133,7 +148,25 @@ export function parseCustomSiteForm(form: FormData): {
       kind: isSiteKind(text(form, 'kind')) ? (text(form, 'kind') as SiteKind) : null,
       goal: isSiteGoal(text(form, 'goal')) ? (text(form, 'goal') as SiteGoal) : null,
       notes: notes || null,
+      share,
     },
     errors,
   };
 }
+
+/** What sharing a site sends: never the notes, wind limit or goal. */
+export function sharedSiteBody(input: CustomSiteInput, elevation: number): SharedSiteBody {
+  return {
+    name: input.name,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    altitude: elevation,
+    wind: COMPASS_POINTS.map(({ degrees }) =>
+      input.goodDirections.includes(degrees) ? 2 : input.okDirections.includes(degrees) ? 1 : 0,
+    ),
+    kind: input.kind,
+  };
+}
+
+/** pgsites' name for a shared custom site. */
+export const sharedSiteRef = (customSiteId: string) => `soarcast:${customSiteId}`;

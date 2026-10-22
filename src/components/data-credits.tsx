@@ -58,6 +58,17 @@ export function SiteSourceCredit({
   sourceUrl?: string | null;
   className?: string;
 }) {
+  if (origin === 'pilot') {
+    return (
+      <p className={`text-xs text-muted-foreground ${className}`}>
+        No site guide lists this launch. A pilot shared it. Ask local pilots about the site&apos;s
+        rules and landing before flying.{' '}
+        <Link to="/guide/data-sources#launches-pilots-shared" className={link}>
+          More
+        </Link>
+      </p>
+    );
+  }
   if (origin === 'osm') {
     return (
       <p className={`text-xs text-muted-foreground ${className}`}>

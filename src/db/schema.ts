@@ -135,6 +135,9 @@ export const customSites = sqliteTable('custom_sites', {
   siteKind: text('site_kind').$type<SiteKind>(), // null: not said
   goal: text('goal').$type<SiteGoal>(), // null: safe launch is enough
   notes: text('notes'),
+  // The pgsites site its pilot shared it as (app/lib/custom-sites.server.ts
+  // syncSharing); null: private only
+  sharedSiteId: text('shared_site_id'),
   areaId: text('area_id').references(() => siteAreas.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()

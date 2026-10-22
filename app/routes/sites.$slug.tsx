@@ -80,6 +80,13 @@ interface DetailSite {
   updatedAt: string;
 }
 
+/** Where an unlisted launch's wind directions come from */
+const WIND_SOURCE: Record<Exclude<SiteOrigin, 'pge'>, string> = {
+  flown: 'These are the directions tracked pilots took off in.',
+  osm: 'These are the directions mapped in OpenStreetMap.',
+  pilot: 'These are the directions set by the pilot who shared it.',
+};
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Extract the pgsites UUID from a slug. Supports both formats:
@@ -631,10 +638,7 @@ export default function SiteDetailPage() {
                   <WindDirectionBadges directions={idealDirs} />
                   {site.origin !== 'pge' && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      {site.origin === 'flown'
-                        ? 'These are the directions tracked pilots took off in.'
-                        : 'These are the directions mapped in OpenStreetMap.'}{' '}
-                      Check them with local pilots.
+                      {WIND_SOURCE[site.origin]} Check them with local pilots.
                     </p>
                   )}
                 </div>
