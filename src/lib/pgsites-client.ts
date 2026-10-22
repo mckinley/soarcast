@@ -30,6 +30,25 @@ export interface PgSite {
   pge_link: string;
   created_at: number;
   updated_at: number;
+  /**
+   * Pilots Syncing Pilots tracked taking off within 2 km in the last year,
+   * the days they flew and the last of them (YYYY-MM-DD). Null when none.
+   * Search, near and the minimal list return these.
+   */
+  flown_pilots?: number | null;
+  flown_days?: number | null;
+  flown_last?: string | null;
+}
+
+/** A place pgsites' search found by name ("Cali"), with the listed sites near it, busiest first. */
+export interface PgPlace {
+  name: string;
+  /** State or province */
+  region: string | null;
+  country_code: string;
+  latitude: number;
+  longitude: number;
+  sites: Array<PgSite & { distance_km: number }>;
 }
 
 /**
@@ -102,6 +121,26 @@ export async function searchSites(
     options,
   );
   return result.sites;
+}
+
+/**
+ * Sites whose name matches, plus the places the query names (a town such as
+ * "Cali") with the sites near each. Name matches come first, then the
+ * busiest sites.
+ */
+export async function searchSitesAndPlaces(
+  apiKey: string,
+  query: string,
+  limit?: number,
+): Promise<{ sites: PgSite[]; places: PgPlace[] }> {
+  const params: Record<string, string | number> = { q: query, places: 1 };
+  if (limit !== undefined) params.limit = limit;
+  const result = await fetchApi<{ sites: PgSite[]; places?: PgPlace[] }>(
+    apiKey,
+    '/api/sites/search',
+    params,
+  );
+  return { sites: result.sites, places: result.places ?? [] };
 }
 
 export async function getSitesByCountry(

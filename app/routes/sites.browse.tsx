@@ -7,7 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import { SitesBrowseClient, type BrowseSite } from '@/components/sites-browse-client';
 import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
 import {
-  searchSites,
+  searchSitesAndPlaces,
   nearbySites,
   getPgsitesApiKey,
   getSiteById,
@@ -52,6 +52,7 @@ function pgSiteToBrowseSite(site: PgSite): BrowseSite {
     isParagliding: !!site.is_paragliding,
     isHanggliding: !!site.is_hanggliding,
     createdAt: site.created_at ? new Date(site.created_at * 1000).toISOString() : null,
+    flownPilots: site.flown_pilots ?? null,
   };
 }
 
@@ -68,10 +69,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // so the user sees sites immediately without waiting for client-side JS.
   let sites: BrowseSite[] = [];
   let sitesMode: 'search' | 'preloaded' | 'empty' = 'empty';
+  let places: string[] = [];
 
   if (search) {
-    const pgSites = await searchSites(apiKey, search, 200);
-    sites = pgSites.map(pgSiteToBrowseSite);
+    // Name matches first, then the launches near any place the search names
+    // ("Cali"), the ones most pilots fly first
+    const found = await searchSitesAndPlaces(apiKey, search, 200);
+    const seen = new Set(found.sites.map((s) => s.id));
+    const nearPlaces = found.places
+      .flatMap((p) => p.sites)
+      .filter((s) => !seen.has(s.id) && seen.add(s.id));
+    sites = [...found.sites, ...nearPlaces].map(pgSiteToBrowseSite);
+    places = found.places.map((p) => [p.name, p.region, p.country_code].filter(Boolean).join(', '));
     sitesMode = 'search';
   } else {
     try {
@@ -101,6 +110,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     sites,
     sitesMode,
+    places,
     favoritePgsitesIds,
     searchParams: { search },
   };
@@ -185,13 +195,15 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function BrowseSitesPage() {
-  const { sites, sitesMode, favoritePgsitesIds, searchParams } = useLoaderData<typeof loader>();
+  const { sites, sitesMode, places, favoritePgsitesIds, searchParams } =
+    useLoaderData<typeof loader>();
 
   return (
     <SitesBrowseClient
       initialSites={sites}
       sitesMode={sitesMode}
       searchParams={searchParams}
+      places={places}
       initialFavoriteIds={favoritePgsitesIds}
     />
   );

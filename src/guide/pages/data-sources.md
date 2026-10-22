@@ -19,6 +19,8 @@ covers:
   - .github/workflows/season-build.yml
   - src/lib/destinations.ts
   - src/lib/pgsites-client.ts
+  - src/components/sites-browse-client.tsx
+  - app/routes/sites.browse.tsx
   - src/lib/launch-sites.ts
   - app/lib/launch-sites.server.ts
   - src/lib/terrain.ts
@@ -118,7 +120,13 @@ Listed sites come from [Paragliding Earth](https://www.paraglidingearth.com), a 
 
 SoarCast uses each site's name and place, its launch and landing heights, and the wind directions its launch works in. It also uses the site's description and its tags for thermals, ridge soaring and cross-country flying.
 
-SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days.
+SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. It also copies each country's full list again every month. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days.
+
+### Finding a site
+
+Browse Sites finds a site by its name or by another name pilots use for it. Accents, dashes and spaces don't matter, so "penon" finds "El Peñón". A search for a town also lists the sites near it. Town names come from [GeoNames](https://www.geonames.org), through Open-Meteo's place search.
+
+The sites most pilots fly come first. Browse Sites shows how many pilots [Syncing Pilots](https://syncingpilots.com) tracked flying from each site in the last year. Like [flown days](#flown-days), this only counts pilots who share a live tracker.
 
 Pilots write these pages, so details can be missing, old or wrong. Check the site's rules and ask the local club before flying. To fix a site, edit it on Paragliding Earth. SoarCast picks up the change within a day, or within {{siteRefreshDays}} days for a site in Favorites.
 
@@ -155,5 +163,6 @@ The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://the
 | ---------------------------- | --------------------------------------------------------------------- |
 | Forecasts from Open-Meteo    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
 | Sites from Paragliding Earth | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
+| Place names from GeoNames    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
 | Thermal maps from kk7        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
 | Map data from OpenStreetMap  | [ODbL](https://www.openstreetmap.org/copyright)                       |

@@ -41,6 +41,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     isParagliding: !!s.is_paragliding,
     isHanggliding: !!s.is_hanggliding,
     createdAt: s.created_at ? new Date(s.created_at * 1000).toISOString() : null,
+    flownPilots: s.flown_pilots ?? null,
   }));
 
   return new Response(JSON.stringify({ sites }), {
