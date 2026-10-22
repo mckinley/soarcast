@@ -37,6 +37,7 @@ import {
   SOARCAST_DB,
   d1,
   destinationJobs,
+  errorText,
   jobFor,
   recordRange,
   seasonRange,
@@ -163,9 +164,12 @@ async function main() {
   const toMs = Date.parse(`${range.to}T23:00:00Z`) + 14 * HOUR_MS;
   let series = null as { cell: string; data: Era5Series } | null;
   let done = 0;
-  for (const [i, job] of due.entries()) {
+  // A site that fails is tried once more at the end
+  const queue = due.map((job) => ({ job, retry: false }));
+  for (let i = 0; i < queue.length; i++) {
+    const { job, retry } = queue[i];
     if (done >= LIMIT || Date.now() - started > MINUTES * 60_000) {
-      console.log(`Stopping with ${due.length - i} sites left for the next run`);
+      console.log(`Stopping with ${queue.length - i} sites left for the next run`);
       break;
     }
     const tag = job.destination ? job.label : `${job.label} ${job.key.split('|')[1]}`;
@@ -220,7 +224,9 @@ async function main() {
       }
       done++;
     } catch (error) {
-      console.log(`${tag}: failed, ${error instanceof Error ? error.message : error}`);
+      console.log(`${tag}: failed${retry ? ' again' : ''}, ${errorText(error)}`);
+      if (!retry) queue.push({ job, retry: true });
+      series = null;
     }
   }
   if (missing.size > 0) console.log(`ERA5 files missing from the bucket: ${[...missing].join(', ')}`);

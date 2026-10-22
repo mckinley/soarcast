@@ -6,6 +6,7 @@
 // none from January to mid-June 2024): those hours are simply missing.
 
 import { OmDataType, OmFileReader, OmHttpBackend } from '@openmeteo/file-reader';
+import { fetchRetrying } from './lib';
 
 const BUCKET = 'https://openmeteo.s3.amazonaws.com/data/copernicus_era5';
 const CHUNK_HOURS = 504;
@@ -60,7 +61,7 @@ function listFiles(variable: string): Promise<FileSpan[]> {
     listed.set(
       variable,
       (async () => {
-        const res = await fetch(
+        const res = await fetchRetrying(
           `${BUCKET.replace('/data/', '/?list-type=2&max-keys=1000&prefix=data/')}/${variable}/`,
         );
         if (!res.ok) throw new Error(`ERA5 listing ${variable}: ${res.status}`);
@@ -108,8 +109,8 @@ async function readPoint(path: string, y: number, x: number): Promise<Float32Arr
         missing.add(path);
         return null;
       }
-      if (attempt >= 2) throw error;
-      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+      if (attempt >= 4) throw new Error(`ERA5 ${path}`, { cause: error });
+      await new Promise((r) => setTimeout(r, 3000 * 2 ** attempt));
     }
   }
 }

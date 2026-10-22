@@ -77,7 +77,7 @@ export async function timeZoneAt(lat: number, lng: number): Promise<string> {
     timezone: 'auto',
   });
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+    const res = await fetchRetrying(`https://api.open-meteo.com/v1/forecast?${params}`);
     if (res.ok) {
       const { timezone } = (await res.json()) as { timezone: string };
       timeZones.set(key, timezone);
@@ -115,13 +115,32 @@ export function callWeight(range: DayRange): number {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** fetch, tried again a few times when the connection fails (not on an HTTP error). */
+export async function fetchRetrying(url: string, init?: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      await sleep(3000 * 2 ** attempt);
+    }
+  }
+}
+
+/** An error in a line, with the network cause fetch hides behind "fetch failed". */
+export function errorText(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause as { code?: string; message?: string } | undefined;
+  return cause ? `${error.message} (${cause.code ?? cause.message})` : error.message;
+}
+
 export async function d1(
   databaseId: string,
   path: 'query' | 'raw',
   sql: string,
   params: unknown[],
 ) {
-  const res = await fetch(
+  const res = await fetchRetrying(
     `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database/${databaseId}/${path}`,
     {
       method: 'POST',
