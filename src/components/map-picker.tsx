@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import { VectorBasemap } from '@/components/vector-basemap';
-import { ThermalOverlays } from '@/components/thermal-overlays';
+import { MapLayers } from '@/components/map-layers';
 import { Icon } from 'leaflet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -187,7 +187,7 @@ export function MapPicker({ latitude, longitude, onLocationSelect, focus }: MapP
           className="h-full w-full"
         >
           <VectorBasemap />
-          <ThermalOverlays />
+          <MapLayers />
           <ClickToPlace onPick={onLocationSelect} />
           <FlyTo focus={flyTo} />
           {pinned && (

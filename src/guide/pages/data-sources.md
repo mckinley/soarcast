@@ -37,7 +37,9 @@ covers:
   - src/components/map-picker.tsx
   - src/lib/comps.ts
   - app/lib/comps.server.ts
-  - src/components/thermal-overlays.tsx
+  - src/components/map-layers.tsx
+  - src/lib/map-layers.ts
+  - app/routes/api.airspace.$z.$x.$y.tsx
   - src/components/vector-basemap.tsx
   - src/lib/basemap.ts
   - src/components/data-credits.tsx
@@ -233,16 +235,36 @@ A comp's spot on the map comes from its place name, so it can be a little off. A
 
 The base map uses [OpenStreetMap](https://www.openstreetmap.org) data, drawn with [Protomaps](https://protomaps.com).
 
+The Map layers button at the top right of a map turns layers on and off. SoarCast remembers the choice in this browser. No layer changes how a day is rated.
+
+### Thermals
+
 The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://thermal.kk7.ch). kk7 builds them from millions of flight tracks that pilots uploaded. Thermal hotspots shows where pilots often found thermals. Skyways shows the lines pilots often fly between them. Both show where thermals have been in past seasons, not where they are today.
+
+With either layer on, two menus narrow them down. The first picks a time of year, such as Dec to Feb, or All year. The second picks a time of day, counted from sunrise. Morning is the first {{kk7MorningHours}} hours after sunrise. Midday runs to {{kk7LateHours}} hours after sunrise, and Late is after that. A narrow choice has fewer flights behind it, so it shows less.
+
+### Rain, clouds and lightning now
+
+These three layers show the weather as it is now, not a forecast. Each one says how old its picture is. While a layer is on, it looks for a newer picture every {{mapRefreshMinutes}} minutes.
+
+- **Rain now** shows weather radar from [RainViewer](https://www.rainviewer.com). It covers places with weather radar: most of North America, Europe, Japan and Australia, and parts of South America and Asia. Where there is no radar it shows nothing, even when it rains. Radar pictures get coarse when you zoom in close.
+- **Clouds now** shows the newest picture from the weather satellite that sees the middle of the map best. That is GOES-West, GOES-East, Meteosat or Himawari. By day the picture is in visible light, so clouds look white over darker ground. At night it shows how warm the cloud tops are instead, which works in the dark. The GOES and Himawari pictures come through [NASA GIBS](https://nasa-gibs.github.io/gibs-api-docs/) and are about an hour old. The Meteosat pictures come from [EUMETSAT](https://view.eumetsat.int) and are about 20 minutes old.
+- **Lightning now** shows where lightning struck in the last few minutes. Over the Americas, the Pacific and East Asia, the lightning comes from sensors on the ground, mapped by [NOAA](https://nowcoast.noaa.gov) every 15 minutes. Over Europe, Africa and the Atlantic, it comes from a lightning camera on a Meteosat satellite, mapped by [EUMETSAT](https://view.eumetsat.int) every 5 minutes. India, central Asia, Chile, New Zealand and southern Australia have no lightning layer.
+
+A clear lightning or rain layer doesn't prove the air is safe. Storms can build fast. Check the forecast and the sky too.
 
 ## Credits
 
-| Data                                         | Licence                                                               |
-| -------------------------------------------- | --------------------------------------------------------------------- |
-| Forecasts from Open-Meteo                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Past weather: ERA5 from Copernicus           | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Sites from Paragliding Earth                 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
-| Place names from GeoNames                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Thermal maps from kk7                        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
-| Cross-country flights from NOGA and XContest | None stated. Credited and linked on every card.                       |
-| Map data and launch names from OpenStreetMap | [ODbL](https://www.openstreetmap.org/copyright)                       |
+| Data                                           | Licence                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| Forecasts from Open-Meteo                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Past weather: ERA5 from Copernicus             | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Sites from Paragliding Earth                   | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
+| Place names from GeoNames                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Thermal maps from kk7                          | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Cross-country flights from NOGA and XContest   | None stated. Credited and linked on every card.                       |
+| Map data and launch names from OpenStreetMap   | [ODbL](https://www.openstreetmap.org/copyright)                       |
+| Rain radar from RainViewer                     | Free for personal and community use. Credited on the map.             |
+| Satellite pictures from NASA GIBS              | Free to use. Credited on the map.                                     |
+| Satellite pictures and lightning from EUMETSAT | Free to use. Credited on the map.                                     |
+| Lightning from NOAA                            | Public domain. Credited on the map.                                   |

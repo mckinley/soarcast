@@ -21,6 +21,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const session = await getSession(request, env);
   return {
     user: session?.user ?? null,
+    // The map's Airspace layer shows only once openAIP's key is set
+    airspace: Boolean(env.OPENAIP_API_KEY),
   };
 }
 

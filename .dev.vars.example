@@ -23,3 +23,6 @@ PGSITES_API_KEY=
 
 # Optional: where the hourly health check emails failures and recoveries
 HEALTH_ALERT_TO=
+
+# Optional: openAIP API key for the map's Airspace layer (openaip.net, API Clients)
+OPENAIP_API_KEY=

@@ -13,6 +13,8 @@ interface Env {
   PGSITES_API_KEY: string;
   /** Where health-check failures are emailed (worker.ts); optional. */
   HEALTH_ALERT_TO?: string;
+  /** openAIP's API key for the map's Airspace layer (app/routes/api.airspace.$z.$x.$y.tsx); optional. */
+  OPENAIP_API_KEY?: string;
   /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it. */
   EMAIL: SendEmail;
   /** Syncing Pilots' FlownDaysApi (`[[services]]` in wrangler.toml); missing in local dev. */
@@ -20,6 +22,8 @@ interface Env {
     flownDays(
       query: import('./src/lib/flown-days').FlownDaysQuery,
     ): Promise<import('./src/lib/flown-days').FlownDaysResult>;
-    upNow(query: import('./src/lib/up-now').UpNowQuery): Promise<import('./src/lib/up-now').UpNowResult>;
+    upNow(
+      query: import('./src/lib/up-now').UpNowQuery,
+    ): Promise<import('./src/lib/up-now').UpNowResult>;
   };
 }
