@@ -87,9 +87,11 @@ function SuggestedSites({ sites }: { sites: SuggestedSite[] }) {
 
 /** One chip per area, and All areas: the dashboard shows one at a time. */
 function AreaChips({ areas, shown }: { areas: DashboardArea[]; shown: ShownArea }) {
+  // One area still shows, so the pilot sees where areas live and can split it
+  const several = areas.length > 1;
   const chips = [
     ...areas.map((a) => ({ key: a.id, label: a.name })),
-    { key: 'all', label: 'All areas' },
+    ...(several ? [{ key: 'all', label: 'All areas' }] : []),
   ];
   return (
     <nav aria-label="Areas" className="flex flex-wrap items-center gap-1.5">
@@ -111,7 +113,7 @@ function AreaChips({ areas, shown }: { areas: DashboardArea[]; shown: ShownArea 
           </Link>
         );
       })}
-      {shown.chosenBy === 'location' && (
+      {several && shown.chosenBy === 'location' && (
         <span className="text-xs text-muted-foreground">Nearest to you</span>
       )}
       <Link
@@ -350,7 +352,7 @@ export function DashboardClient({
         </Button>
       </div>
 
-      {areas.length > 1 && <AreaChips areas={areas} shown={shown} />}
+      {areas.length > 0 && <AreaChips areas={areas} shown={shown} />}
 
       {nearYou && (
         <div className="max-w-md space-y-2 rounded-lg border p-4">
