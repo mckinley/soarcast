@@ -17,6 +17,8 @@ covers:
   - src/lib/up-now.ts
   - app/lib/up-now.server.ts
   - src/components/up-now.tsx
+  - src/lib/ogn.ts
+  - app/lib/ogn.server.ts
   - src/lib/wind-now.ts
   - app/lib/wind-now.server.ts
   - src/components/wind-now.tsx
@@ -162,6 +164,8 @@ When tracked pilots are flying near a launch, its site page says so at the top. 
 
 SoarCast asks Syncing Pilots each time the page opens. It gets counts only, as with flown days. A pilot counts as in the air while the tracker sent a position in the last half hour or so, high enough above the ground. Pilots in the air near the launch may have taken off somewhere else.
 
+The card also counts the paragliders, hang gliders and gliders that the [Open Glider Network](https://www.glidernet.org) (OGN) sees in the air within {{upNowAirKm}} km. OGN's receivers on the ground pick up the FLARM and OGN trackers many aircraft carry. Its coverage is best in Europe and thin in most other places. An aircraft counts while it sent a position in the last {{ognMaxAgeMinutes}} minutes and moves at {{ognMinSpeedKmh}} km/h or more, or climbs or sinks. A pilot seen by both Syncing Pilots and OGN counts in both. SoarCast never shows who is flying, and OGN leaves out aircraft whose owners asked not to be tracked.
+
 ## Cross-country flights
 
 The "Cross-country flights" card on a site page shows how many long flights pilots made from the site in each month. The Planning page shows the same for each launch, area and country, and can rank places by it.
@@ -252,6 +256,8 @@ The base map uses [OpenStreetMap](https://www.openstreetmap.org) data, drawn wit
 
 The Map layers button at the top right of a map turns layers on and off. SoarCast remembers the choice in this browser. No layer changes how a day is rated. The Wind now layer is explained under [Wind now](#wind-now).
 
+The Flying now layer draws the paragliders, hang gliders and gliders OGN sees in the air in view, as arrows pointing the way each flies. Paragliders are purple, hang gliders teal and gliders blue. A green number under an arrow is a climb in m/s, which often marks a thermal. The layer looks again every {{flyingRefreshSeconds}} seconds. It shows only aircraft OGN picks up, as described under [Up now](#up-now).
+
 ### Thermals
 
 The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://thermal.kk7.ch). kk7 builds them from millions of flight tracks that pilots uploaded. Thermal hotspots shows where pilots often found thermals. Skyways shows the lines pilots often fly between them. Both show where thermals have been in past seasons, not where they are today.
@@ -270,18 +276,19 @@ A clear lightning or rain layer doesn't prove the air is safe. Storms can build 
 
 ## Credits
 
-| Data                                           | Licence                                                               |
-| ---------------------------------------------- | --------------------------------------------------------------------- |
-| Forecasts from Open-Meteo                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Past weather: ERA5 from Copernicus             | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Sites from Paragliding Earth                   | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
-| Place names from GeoNames                      | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Thermal maps from kk7                          | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
-| Cross-country flights from NOGA and XContest   | None stated. Credited and linked on every card.                       |
-| Map data and launch names from OpenStreetMap   | [ODbL](https://www.openstreetmap.org/copyright)                       |
-| Rain radar from RainViewer                     | Free for personal and community use. Credited on the map.             |
-| Satellite pictures from NASA GIBS              | Free to use. Credited on the map.                                     |
-| Satellite pictures and lightning from EUMETSAT | Free to use. Credited on the map.                                     |
-| Lightning from NOAA                            | Public domain. Credited on the map.                                   |
-| Wind readings gathered by winds.mobi           | None stated. Credited on the card and the map.                        |
-| Heights from the Copernicus elevation model    | Free to use with credit. Credited on the card.                        |
+| Data                                             | Licence                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
+| Forecasts from Open-Meteo                        | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Past weather: ERA5 from Copernicus               | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Sites from Paragliding Earth                     | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
+| Place names from GeoNames                        | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Thermal maps from kk7                            | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Cross-country flights from NOGA and XContest     | None stated. Credited and linked on every card.                       |
+| Map data and launch names from OpenStreetMap     | [ODbL](https://www.openstreetmap.org/copyright)                       |
+| Rain radar from RainViewer                       | Free for personal and community use. Credited on the map.             |
+| Satellite pictures from NASA GIBS                | Free to use. Credited on the map.                                     |
+| Satellite pictures and lightning from EUMETSAT   | Free to use. Credited on the map.                                     |
+| Lightning from NOAA                              | Public domain. Credited on the map.                                   |
+| Wind readings gathered by winds.mobi             | None stated. Credited on the card and the map.                        |
+| Heights from the Copernicus elevation model      | Free to use with credit. Credited on the card.                        |
+| Aircraft flying now from the Open Glider Network | [ODbL](https://opendatacommons.org/licenses/odbl/)                    |

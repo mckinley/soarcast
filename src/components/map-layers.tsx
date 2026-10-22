@@ -19,8 +19,10 @@ import {
   NASA_GIBS_ATTRIBUTION,
   NOAA_LIGHTNING_ATTRIBUTION,
   RAINVIEWER_ATTRIBUTION,
+  OGN_ATTRIBUTION,
   WINDS_MOBI_ATTRIBUTION,
 } from '@/components/data-credits';
+import { FLYING_NOW_REFRESH_SECONDS, ognQuery, parseOgnMarkers, type OgnAircraft } from '@/lib/ogn';
 import {
   freshStations,
   isCalm,
@@ -55,16 +57,26 @@ import {
 } from '@/lib/map-layers';
 
 // The map's layer panel: kk7's thermal maps (by time of year and of day),
-// rain, clouds and lightning now, and airspace once openAIP's key is set.
+// wind, rain, clouds and lightning now, gliders and paragliders flying now
+// (OGN), and airspace once openAIP's key is set.
 // Sources and rules are in src/lib/map-layers.ts. A pilot's choices are kept
 // in this browser.
 
-type LayerId = 'thermals' | 'skyways' | 'wind' | 'rain' | 'clouds' | 'lightning' | 'airspace';
+type LayerId =
+  | 'thermals'
+  | 'skyways'
+  | 'wind'
+  | 'flying'
+  | 'rain'
+  | 'clouds'
+  | 'lightning'
+  | 'airspace';
 
 const LAYER_IDS: LayerId[] = [
   'thermals',
   'skyways',
   'wind',
+  'flying',
   'rain',
   'clouds',
   'lightning',
@@ -72,6 +84,8 @@ const LAYER_IDS: LayerId[] = [
 ];
 const STORAGE_KEY = 'soarcast.map-layers';
 const REFRESH_MS = MAP_NOW_REFRESH_MINUTES * 60 * 1000;
+/** Aircraft move fast: their positions are fetched again this often (ms). */
+const FLYING_REFRESH_MS = FLYING_NOW_REFRESH_SECONDS * 1000;
 
 interface Choices {
   on: LayerId[];
@@ -124,7 +138,12 @@ function MapControl({ position, children }: { position: ControlPosition; childre
 }
 
 /** A value fetched while `on`, again every few minutes. */
-function usePolled<T>(on: boolean, key: string, load: () => Promise<T | null>): T | null {
+function usePolled<T>(
+  on: boolean,
+  key: string,
+  load: () => Promise<T | null>,
+  every = REFRESH_MS,
+): T | null {
   const [value, setValue] = useState<{ key: string; value: T | null } | null>(null);
   useEffect(() => {
     if (!on) return;
@@ -136,7 +155,7 @@ function usePolled<T>(on: boolean, key: string, load: () => Promise<T | null>): 
           if (live) setValue({ key, value: v });
         });
     run();
-    const timer = setInterval(run, REFRESH_MS);
+    const timer = setInterval(run, every);
     return () => {
       live = false;
       clearInterval(timer);
@@ -211,6 +230,7 @@ export function MapLayers({ hotspotsOn = false }: { hotspotsOn?: boolean }) {
   );
   const center = useCenter();
   const [windNote, setWindNote] = useState<string | null>('Loading');
+  const [flyingNote, setFlyingNote] = useState<string | null>('Loading');
   const src = typeof window === 'undefined' ? 'soarcast' : window.location.hostname;
 
   const update = (next: Partial<Choices>) => {
@@ -334,6 +354,12 @@ export function MapLayers({ hotspotsOn = false }: { hotspotsOn?: boolean }) {
               note={isOn('wind') ? windNote : null}
             />
             <Check
+              label="Flying now"
+              checked={isOn('flying')}
+              onChange={(v) => toggle('flying', v)}
+              note={isOn('flying') ? flyingNote : null}
+            />
+            <Check
               label="Rain now"
               checked={isOn('rain')}
               onChange={(v) => toggle('rain', v)}
@@ -426,6 +452,7 @@ export function MapLayers({ hotspotsOn = false }: { hotspotsOn?: boolean }) {
         />
       )}
       {isOn('wind') && <WindStationsLayer onNote={setWindNote} />}
+      {isOn('flying') && <FlyingNowLayer onNote={setFlyingNote} />}
       {isOn('lightning') &&
         lightningHere.map((s) => {
           const at = lightningTimes?.[s.id];
@@ -591,6 +618,79 @@ function WindStationsLayer({ onNote }: { onNote: (note: string | null) => void }
               </p>
               <p className="text-muted-foreground">
                 {s.altitude != null ? `${s.altitude} m, ` : ''}from {s.provider}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </LayerGroup>
+  );
+}
+
+const FLYING_COLORS: Record<OgnAircraft['kind'], string> = {
+  paraglider: '#7c3aed',
+  'hang glider': '#0891b2',
+  glider: '#2563eb',
+};
+
+function aircraftIcon(a: OgnAircraft): L.DivIcon {
+  const climb = a.climb >= 0.5 ? `+${a.climb.toFixed(1)}` : null;
+  return L.divIcon({
+    className: '',
+    iconSize: [28, 34],
+    iconAnchor: [14, 11],
+    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+      <svg width="22" height="22" viewBox="0 0 24 24" style="transform:rotate(${a.track}deg);filter:drop-shadow(0 0 1px #fff)">
+        <path d="M12 2 L20 21 L12 17 L4 21 Z" fill="${FLYING_COLORS[a.kind]}" stroke="#fff" stroke-width="1"/>
+      </svg>
+      ${climb ? `<span style="font:600 10px system-ui,sans-serif;line-height:12px;color:#15803d;background:rgba(255,255,255,.85);border-radius:3px;padding:0 2px">${climb}</span>` : ''}
+    </div>`,
+  });
+}
+
+/** "Paraglider", "Hang glider", "Glider". */
+const kindName = (kind: OgnAircraft['kind']) => kind[0].toUpperCase() + kind.slice(1);
+
+/** Gliders, hang gliders and paragliders in the map's view now (OGN), again every few seconds. */
+function FlyingNowLayer({ onNote }: { onNote: (note: string | null) => void }) {
+  const map = useMap();
+  const [view, setView] = useState(() => map.getBounds());
+  useMapEvents({ moveend: () => setView(map.getBounds()) });
+  const round = (x: number) => Math.round(x * 20) / 20;
+  const box = [view.getSouth(), view.getWest(), view.getNorth(), view.getEast()].map(round);
+  const aircraft = usePolled(
+    true,
+    `flying:${box.join(',')}`,
+    async () => parseOgnMarkers(await fetchText(ognQuery(box[0], box[1], box[2], box[3]))),
+    FLYING_REFRESH_MS,
+  );
+  useEffect(() => {
+    onNote(
+      aircraft == null
+        ? 'Loading'
+        : aircraft.length === 0
+          ? 'No glider or paraglider in view'
+          : `${aircraft.length} in the air in view`,
+    );
+  }, [aircraft, onNote]);
+  return (
+    <LayerGroup attribution={OGN_ATTRIBUTION}>
+      {(aircraft ?? []).map((a) => (
+        <Marker key={a.key} position={[a.latitude, a.longitude]} icon={aircraftIcon(a)}>
+          <Popup>
+            <div className="space-y-0.5 text-xs">
+              <p className="font-semibold">{kindName(a.kind)}</p>
+              <p>
+                {a.altitude.toLocaleString('en-US')} m,{' '}
+                {a.climb >= 0.5
+                  ? `climbing ${a.climb.toFixed(1)} m/s`
+                  : a.climb <= -0.5
+                    ? `sinking ${(-a.climb).toFixed(1)} m/s`
+                    : 'level'}
+                , {Math.round(a.speed)} km/h
+              </p>
+              <p className="text-muted-foreground">
+                {a.age < 60 ? 'Just now' : `${Math.round(a.age / 60)} min ago`}, from OGN
               </p>
             </div>
           </Popup>

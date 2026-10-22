@@ -55,6 +55,7 @@ import {
   WIND_NOW_RADIUS_KM,
   WIND_NOW_STATIONS,
 } from '@/lib/wind-now';
+import { FLYING_NOW_REFRESH_SECONDS, OGN_MAX_AGE_SECONDS, OGN_MIN_SPEED_KMH } from '@/lib/ogn';
 import {
   FACE_RADIUS_M,
   FAR_RADIUS_M,
@@ -111,6 +112,11 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   windNowMaxAgeMinutes: WIND_NOW_MAX_AGE_MINUTES,
   windAmberKmh: WIND_COLOR_KMH.amber,
   windRedKmh: WIND_COLOR_KMH.red,
+
+  // Flying now (OGN)
+  ognMaxAgeMinutes: OGN_MAX_AGE_SECONDS / 60,
+  ognMinSpeedKmh: OGN_MIN_SPEED_KMH,
+  flyingRefreshSeconds: FLYING_NOW_REFRESH_SECONDS,
 
   // Terrain around the launch
   terrainFarKm: FAR_RADIUS_M / 1000,

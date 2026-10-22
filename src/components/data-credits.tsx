@@ -25,6 +25,9 @@ export const KK7_ATTRIBUTION =
 
 export const WINDS_MOBI_ATTRIBUTION = 'Wind: <a href="https://winds.mobi">winds.mobi</a>';
 
+export const OGN_ATTRIBUTION =
+  'Aircraft: <a href="https://www.glidernet.org">Open Glider Network</a> (<a href="https://opendatacommons.org/licenses/odbl/">ODbL</a>)';
+
 export const RAINVIEWER_ATTRIBUTION = 'Rain: <a href="https://www.rainviewer.com">RainViewer</a>';
 
 export const NASA_GIBS_ATTRIBUTION =

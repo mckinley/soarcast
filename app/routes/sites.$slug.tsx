@@ -38,6 +38,7 @@ import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
 import { upNowAt } from '~/app/lib/up-now.server';
+import { ognNowAt } from '~/app/lib/ogn.server';
 import { UpNowCard } from '@/components/up-now';
 import { windNowAt } from '~/app/lib/wind-now.server';
 import { WindNowCard } from '@/components/wind-now';
@@ -358,13 +359,18 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     f ? flownHere(f, seasonFull?.days ?? null, engineSite.goal ?? 'soar') : null,
   );
   // Pilots up here now (Syncing Pilots): streamed in after the page
-  const upNow = timeZone
+  const upNowSp = timeZone
     ? upNowAt(
         env,
         { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude },
         timeZone,
       )
     : Promise.resolve(null);
+  // Gliders and paragliders up here now (OGN), in the same card
+  const upNow = Promise.all([
+    upNowSp,
+    ognNowAt({ latitude: site.latitude, longitude: site.longitude }),
+  ]).then(([sp, ogn]) => ({ sp, ogn, timeZone }));
   // Wind at the nearest weather stations now (winds.mobi): streamed in too
   const windNow = windNowAt({ latitude: site.latitude, longitude: site.longitude });
   // Experiments, for pilots who switched them on in Settings
@@ -609,7 +615,14 @@ export default function SiteDetailPage() {
 
       <Suspense fallback={null}>
         <Await resolve={upNow} errorElement={null}>
-          {(u) => (u ? <UpNowCard up={u} launchAltitude={site.altitude ?? null} /> : null)}
+          {(u) => (
+            <UpNowCard
+              up={u.sp}
+              ogn={u.ogn}
+              launchAltitude={site.altitude ?? null}
+              timeZone={u.timeZone}
+            />
+          )}
         </Await>
       </Suspense>
 
