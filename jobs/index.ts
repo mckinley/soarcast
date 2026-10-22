@@ -6,6 +6,7 @@ import type { JobsEnv } from './env';
 
 export { SeasonBuild } from './season-build';
 export { NogaSync } from './noga-sync';
+export { EnsembleRefresh } from './ensembles';
 
 const RUNNING = new Set(['queued', 'running', 'waiting', 'paused', 'waitingForPause']);
 
@@ -17,6 +18,7 @@ const JOBS: Record<string, { name: string; key: string; workflow: (env: JobsEnv)
     workflow: (env) => env.SEASON_BUILD,
   },
   '41 4 * * 1': { name: 'NOGA copy', key: 'noga_sync_instance', workflow: (env) => env.NOGA_SYNC },
+  '10 8 * * *': { name: 'Ensembles', key: 'ensembles_instance', workflow: (env) => env.ENSEMBLES },
 };
 
 async function startJob(env: JobsEnv, job: (typeof JOBS)[string]) {

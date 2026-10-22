@@ -1,9 +1,12 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '~/app/lib/db.server';
-import { settings } from '~/db/schema';
+import { settings, siteEnsembles } from '~/db/schema';
 import type { FlownDaysAt } from '~/app/lib/flown-days.server';
 import { seasonWinds } from '~/app/lib/seasons.server';
 import { flownWinds, type WindsExperiment } from '~/lib/flown-winds';
+import type { EnsembleDay, HowSureExperiment } from '~/lib/ensembles';
+import { launchProfileFromSite } from '~/lib/forecast-engine';
+import { launchProfileKey } from '~/lib/seasons';
 import type { Site } from '~/types';
 
 // Experiments: ideas shown on site pages only to pilots who switch them on
@@ -44,5 +47,36 @@ export async function windsExperiment(
   } catch (error) {
     console.error('Wind on flown days failed:', error);
     return { winds: null, why: 'failed' };
+  }
+}
+
+/** Today's date (YYYY-MM-DD) in a time zone. */
+function todayIn(timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+}
+
+/**
+ * How sure: ECMWF's runs at a site from today on, as the morning's ensembles
+ * job rated them (jobs/ensembles.ts), or why there's nothing to show. The
+ * row rated with the site's settings, else the newest one. Never fails a page.
+ */
+export async function howSureExperiment(
+  db: Db,
+  siteRef: string,
+  site: Site,
+): Promise<HowSureExperiment> {
+  try {
+    const rows = await db.select().from(siteEnsembles).where(eq(siteEnsembles.siteRef, siteRef));
+    const key = launchProfileKey(launchProfileFromSite(site));
+    const row =
+      rows.find((r) => r.key.endsWith(`|${key}`)) ??
+      [...rows].sort((a, b) => b.fetchedAt.getTime() - a.fetchedAt.getTime())[0];
+    if (!row) return { days: null, fetchedAt: null, why: 'not-kept' };
+    const today = todayIn(row.timeZone);
+    const days = (JSON.parse(row.days) as EnsembleDay[]).filter((d) => d.date >= today);
+    return { days, fetchedAt: row.fetchedAt.toISOString(), why: null };
+  } catch (error) {
+    console.error('How sure failed:', error);
+    return { days: null, fetchedAt: null, why: 'failed' };
   }
 }

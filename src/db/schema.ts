@@ -1,5 +1,5 @@
 import { sql, relations } from 'drizzle-orm';
-import { text, integer, real, sqliteTable, unique } from 'drizzle-orm/sqlite-core';
+import { text, integer, real, sqliteTable, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 import type { SiteGoal, SiteKind } from '../types';
 import type { TrackRecord } from '../lib/track-record';
@@ -308,6 +308,40 @@ export const siteSeasons = sqliteTable('site_seasons', {
   winds: text('winds'),
 });
 
+// How sure: ECMWF's 51-run ensemble rated at each followed and private site
+// once a day (jobs/ensembles.ts, src/lib/ensembles.ts). Keyed like
+// site_seasons: one row per launch and the way it's rated.
+export const siteEnsembles = sqliteTable('site_ensembles', {
+  // "<siteRef>|<launchProfileKey>"
+  key: text('key').primaryKey(),
+  siteRef: text('site_ref').notNull(),
+  // The site's own time zone: its days are local days
+  timeZone: text('time_zone').notNull(),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+  // JSON EnsembleDay[], from the site's today on
+  days: text('days').notNull(),
+});
+
+// Each day's ensemble counts as they stood when fetched, by how many days
+// ahead, so "How sure" can be scored against flown days as they pile up.
+export const ensembleHistory = sqliteTable(
+  'ensemble_history',
+  {
+    // site_ensembles.key
+    key: text('key').notNull(),
+    // The local day rated
+    date: text('date').notNull(),
+    // Days between the fetch (the site's today) and `date`
+    leadDays: integer('lead_days').notNull(),
+    runs: integer('runs').notNull(),
+    go: integer('go').notNull(),
+    marginal: integer('marginal').notNull(),
+    no: integer('no').notNull(),
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.key, t.date, t.leadDays] })],
+);
+
 // A copy of NOGA's map of cross-country takeoffs (noga.es/paragliding/map):
 // where XContest flights of 100 points or more started, 2015 to 2025, as
 // counts only. Takeoffs group into NOGA's sites, and sites into regions. The
@@ -355,6 +389,7 @@ export type NewSettings = typeof settings.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 
+export type SiteEnsemble = typeof siteEnsembles.$inferSelect;
 export type SiteSeason = typeof siteSeasons.$inferSelect;
 
 export type AtmosphericProfileCache = typeof atmosphericProfilesCache.$inferSelect;

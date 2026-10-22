@@ -3,6 +3,9 @@ title: Experiments
 summary: Ideas SoarCast is still testing, what each one shows, and what testing has found.
 order: 5
 covers:
+  - src/lib/ensembles.ts
+  - src/components/how-sure.tsx
+  - jobs/ensembles.ts
   - src/lib/flown-winds.ts
   - src/components/flown-winds.tsx
   - app/lib/experiments.server.ts
@@ -14,6 +17,27 @@ Experiments are ideas SoarCast is still testing. Some look promising. Some didn'
 ## Turning them on
 
 Experiments are off until you turn them on. Sign in, open [Settings](/settings#experiments) and switch on Show experiments. They then show under Experiments at the foot of each site page.
+
+## How sure
+
+This card shows how sure the next {{ensembleDays}} days are at the launch. ECMWF, the European weather centre, runs its forecast {{ensembleRuns}} times at once. Each run starts from slightly different weather, since small errors in the starting weather grow over the days. When most runs agree, the day is easier to call. When they split, the forecast can still change a lot.
+
+SoarCast rates each run at the launch the way it rates the main forecast. A bar shows how many runs give a flyable window that day. Green is a window, amber is marginal and grey is none. Beside each day is the main forecast's word for it, for the {{forecastDays}} days it covers. On a day where fewer than half the runs give a window, the card names what holds most of the others back.
+
+The card also counts the days where the runs and the main forecast agree. They agree when the main forecast says Go or Flyable and at least half the runs give a window. They also agree when it says Marginal or Not flyable and fewer than half do.
+
+SoarCast fetches the runs each morning for Favorites and private sites. A site added to Favorites shows the card the next day.
+
+### What it can't tell you
+
+- The runs describe squares about {{ensembleGridKm}} km across, coarser than the main forecast. Peaks, valleys and local winds get smoothed out.
+- The runs have wind, gusts, rain and storm energy, but no thermal height. So they say whether the launch is flyable, not how good the soaring is.
+- Their wind is known near the ground, 100 m above it and about 1,500 m above sea level. At a launch high above the square's ground, the wind at launch height is read between those.
+- Runs that agree can still all be wrong together. They share the same model and its blind spots.
+
+### What testing found
+
+It hasn't been tested yet. SoarCast keeps what the runs said each day. Once enough flown days pile up, they will show whether days the runs agreed on were flown more often.
 
 ## Wind on flown days
 

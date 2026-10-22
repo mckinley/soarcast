@@ -14,13 +14,14 @@ on:
         options:
           - season-build
           - noga-sync
+          - ensembles
         default: season-build
       dry_run:
         description: 'Season build: rate a few destinations and write nothing'
         type: boolean
         default: false
       limit:
-        description: 'Season build: build at most this many sites (empty: every site due)'
+        description: 'Season build: at most this many sites (empty: every site due). Ensembles: at most this many squares'
         default: ''
 
 jobs:
@@ -42,6 +43,9 @@ jobs:
           if [ "$JOB" = season-build ]; then
             params=$(jq -nc --arg dry "$DRY_RUN" --arg limit "$LIMIT" \
               '{dryRun: ($dry == "true")} + (if $limit == "" then {} else {limit: ($limit | tonumber)} end)')
+          elif [ "$JOB" = ensembles ]; then
+            params=$(jq -nc --arg limit "$LIMIT" \
+              'if $limit == "" then {} else {limit: ($limit | tonumber)} end')
           else
             params='{}'
           fi

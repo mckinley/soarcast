@@ -16,12 +16,10 @@
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import * as schema from '../src/db/schema';
-import { customSites, launchSites, siteSeasons, userFavoriteSites } from '../src/db/schema';
+import { siteSeasons } from '../src/db/schema';
 import { ENGINE_VERSION } from '../src/lib/forecast-engine';
-import { launchSiteToSite } from '../src/lib/launch-sites';
-import { customSiteToSite } from '../src/lib/custom-sites';
 import { DESTINATIONS } from '../src/lib/destinations';
 import {
   bestMonths,
@@ -38,7 +36,6 @@ import {
   destinationJob,
   errorText,
   findDestinationSite,
-  jobFor,
   jobTag,
   launchWinds,
   rateSite,
@@ -54,6 +51,7 @@ import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '../src/lib/season-b
 import { era5Cell, era5Series, HOUR_MS, missing } from '../src/lib/season-build/era5';
 import { encodeDayWinds } from '../src/lib/flown-winds';
 import type { JobsEnv } from './env';
+import { ownJobs } from './own-sites';
 
 const SOURCE = 'era5';
 /** A site's season is rebuilt once its last month is this many months old. */
@@ -99,36 +97,6 @@ interface BlockResult {
   lines: string[];
   days: Record<string, string>;
   winds: Record<string, string>;
-}
-
-async function ownJobs(env: JobsEnv): Promise<Job[]> {
-  const db = drizzle(env.DB, { schema });
-  const [followed, customs] = await Promise.all([
-    db
-      .select({ favorite: userFavoriteSites, site: launchSites })
-      .from(userFavoriteSites)
-      .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId)),
-    db.select().from(customSites),
-  ]);
-  const jobs = [
-    ...followed.map((f) =>
-      jobFor(`pg:${f.site.pgsitesId}`, launchSiteToSite(f.site, f.favorite), {
-        label: 'followed site',
-        name: f.site.name,
-        countryCode: f.site.countryCode?.toLowerCase() ?? null,
-        destination: null,
-      }),
-    ),
-    ...customs.map((c) =>
-      jobFor(`custom:${c.id}`, customSiteToSite(c), {
-        label: 'your own site',
-        name: null,
-        countryCode: null,
-        destination: null,
-      }),
-    ),
-  ];
-  return [...new Map(jobs.map((j) => [j.key, j])).values()];
 }
 
 async function destinationJobs(env: JobsEnv): Promise<Job[]> {

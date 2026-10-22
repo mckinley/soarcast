@@ -38,8 +38,13 @@ import { seasonSiteRef, seasonWithDays } from '~/app/lib/seasons.server';
 import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
 import { flownHere } from '~/lib/flown-days';
-import { showsExperiments, windsExperiment } from '~/app/lib/experiments.server';
+import {
+  howSureExperiment,
+  showsExperiments,
+  windsExperiment,
+} from '~/app/lib/experiments.server';
 import { ExperimentsSection, FlownWindsCard } from '@/components/flown-winds';
+import { HowSureCard } from '@/components/how-sure';
 import { FlownHereCard } from '@/components/flown-here';
 import { flownByMonthToShow } from '~/lib/flown-days';
 import { nogaFlightsAt } from '~/app/lib/noga.server';
@@ -350,6 +355,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const windsOnFlownDays = experiments
     ? windsExperiment(db, seasonRef, engineSite, flownDays)
     : null;
+  const howSure = experiments ? howSureExperiment(db, seasonRef, engineSite) : null;
 
   return {
     site,
@@ -371,6 +377,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     flown,
     xc,
     windsOnFlownDays,
+    howSure,
   };
 }
 
@@ -532,6 +539,7 @@ export default function SiteDetailPage() {
     flown,
     xc,
     windsOnFlownDays,
+    howSure,
   } = useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -714,13 +722,22 @@ export default function SiteDetailPage() {
         </div>
       </Card>
 
-      {windsOnFlownDays && (
+      {(howSure || windsOnFlownDays) && (
         <ExperimentsSection>
-          <Suspense fallback={null}>
-            <Await resolve={windsOnFlownDays} errorElement={null}>
-              {(w) => <FlownWindsCard experiment={w} followed={isFavorited} />}
-            </Await>
-          </Suspense>
+          {howSure && (
+            <Suspense fallback={null}>
+              <Await resolve={howSure} errorElement={null}>
+                {(h) => <HowSureCard experiment={h} scores={scores} followed={isFavorited} />}
+              </Await>
+            </Suspense>
+          )}
+          {windsOnFlownDays && (
+            <Suspense fallback={null}>
+              <Await resolve={windsOnFlownDays} errorElement={null}>
+                {(w) => <FlownWindsCard experiment={w} followed={isFavorited} />}
+              </Await>
+            </Suspense>
+          )}
         </ExperimentsSection>
       )}
     </div>

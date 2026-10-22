@@ -1,4 +1,5 @@
 import type { SeasonBuildParams } from './season-build';
+import type { EnsembleParams } from './ensembles';
 
 /** The jobs Worker's bindings (jobs/wrangler.toml). */
 export interface JobsEnv {
@@ -8,4 +9,5 @@ export interface JobsEnv {
   PGSITES: D1Database;
   SEASON_BUILD: Workflow<SeasonBuildParams>;
   NOGA_SYNC: Workflow;
+  ENSEMBLES: Workflow<EnsembleParams>;
 }

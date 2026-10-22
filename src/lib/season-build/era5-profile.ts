@@ -10,6 +10,9 @@ import {
   type OpenMeteoProfileResponse,
 } from '../weather-profile';
 import { era5At, HOUR_MS, windFromUV, type Era5Series, type Era5Variable } from './era5';
+import { localIso, localSunTimes, zoneFormat, zoneOffset } from '../sun-times';
+
+export { sunTimes, zoneOffset } from '../sun-times';
 
 /** Hours missing what the engine can't do without are dropped, then days left short. */
 export function cleanProfile(profile: AtmosphericProfile): AtmosphericProfile {
@@ -28,50 +31,6 @@ export function cleanProfile(profile: AtmosphericProfile): AtmosphericProfile {
     ...profile,
     hours: complete.filter((h) => (perDay.get(h.time.slice(0, 10)) ?? 0) >= 20),
   };
-}
-
-const RAD = Math.PI / 180;
-
-/** Sunrise and sunset (UTC ms) on a date, by the sunrise equation. Null in polar day or night. */
-export function sunTimes(date: string, lat: number, lon: number): [number, number] | null {
-  const jd = Date.parse(`${date}T12:00:00Z`) / 864e5 + 2440587.5;
-  const n = Math.round(jd - 2451545.0 + 0.0008);
-  const jStar = n - lon / 360;
-  const m = (357.5291 + 0.98560028 * jStar) % 360;
-  const c =
-    1.9148 * Math.sin(m * RAD) + 0.02 * Math.sin(2 * m * RAD) + 0.0003 * Math.sin(3 * m * RAD);
-  const lambda = (m + c + 180 + 102.9372) % 360;
-  const transit =
-    2451545.0 + jStar + 0.0053 * Math.sin(m * RAD) - 0.0069 * Math.sin(2 * lambda * RAD);
-  const decl = Math.asin(Math.sin(lambda * RAD) * Math.sin(23.4397 * RAD));
-  const cosW =
-    (Math.sin(-0.833 * RAD) - Math.sin(lat * RAD) * Math.sin(decl)) /
-    (Math.cos(lat * RAD) * Math.cos(decl));
-  if (cosW < -1 || cosW > 1) return null;
-  const w = Math.acos(cosW) / RAD / 360;
-  const ms = (j: number) => (j - 2440587.5) * 864e5;
-  return [ms(transit - w), ms(transit + w)];
-}
-
-/** Local wall-clock offset (ms) in a time zone at an instant. */
-export function zoneOffset(fmt: Intl.DateTimeFormat, t: number): number {
-  const p = Object.fromEntries(fmt.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
-  const local = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute);
-  return local - Math.floor(t / 60000) * 60000;
-}
-
-const localIso = (t: number) => new Date(t).toISOString().slice(0, 16);
-
-function zoneFormat(timeZone: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 /** Local days `from` to `to` (YYYY-MM-DD) of ERA5 at a launch, shaped like an Open-Meteo response. */
@@ -97,14 +56,7 @@ export function era5Span(
     times.push(local);
   }
   const days = [...new Set(times.map((t) => t.slice(0, 10)))];
-  const sunrise: string[] = [];
-  const sunset: string[] = [];
-  for (const d of days) {
-    const sun = sunTimes(d, lat, lon);
-    const off = zoneOffset(fmt, Date.parse(`${d}T12:00:00Z`));
-    sunrise.push(sun ? localIso(sun[0] + off) : `${d}T00:00`);
-    sunset.push(sun ? localIso(sun[1] + off) : `${d}T23:59`);
-  }
+  const { sunrise, sunset } = localSunTimes(days, lat, lon, timeZone);
   const get = (v: Era5Variable) => utcHours.map((t) => era5At(s, v, t));
   const wind = (u: Era5Variable, v: Era5Variable) => {
     const us = get(u);

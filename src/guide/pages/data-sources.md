@@ -54,6 +54,10 @@ Open-Meteo chooses the forecast for each place. It starts from three global fore
 
 Detailed forecasts only reach a day or two ahead. Later days come from the global forecasts. [Open-Meteo's documentation](https://open-meteo.com/en/docs) lists which forecasts it uses where.
 
+### Many runs at once
+
+ECMWF also runs its forecast {{ensembleRuns}} times at once, each from slightly different starting weather. With experiments on, site pages show how many of those runs give a flyable window. [Experiments](/guide/experiments#how-sure) explains the card.
+
 ### What SoarCast uses
 
 For every hour of the next {{forecastDays}} days, SoarCast takes:

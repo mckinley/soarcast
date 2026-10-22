@@ -53,6 +53,7 @@ import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
 import { COMP_RADIUS_KM } from '@/lib/comps';
 import { NOGA_MIN_POINTS, NOGA_NEAR_KM } from '@/lib/noga';
 import { CALM_KMH, MIN_WIND_FLOWN_DAYS } from '@/lib/flown-winds';
+import { ENSEMBLE_DAYS, ENSEMBLE_GRID_KM, ENSEMBLE_RUNS } from '@/lib/ensembles';
 import { LAPSE_BANDS } from '@/components/windgram/lapse-rate-utils';
 import {
   BARB_FLAG_KMH,
@@ -80,6 +81,9 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   flownRadiusKm: FLOWN_RADIUS_KM,
   calmKmh: CALM_KMH,
   minWindFlownDays: MIN_WIND_FLOWN_DAYS,
+  ensembleRuns: ENSEMBLE_RUNS,
+  ensembleDays: ENSEMBLE_DAYS,
+  ensembleGridKm: ENSEMBLE_GRID_KM,
   flownRefreshHours: FLOWN_REFRESH_HOURS,
   siteRefreshDays: SITE_REFRESH_DAYS,
   compRadiusKm: COMP_RADIUS_KM,
