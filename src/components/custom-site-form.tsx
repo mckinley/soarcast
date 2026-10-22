@@ -37,7 +37,11 @@ const SELECT_CLASS =
 
 // Leaflet needs window, so the map only renders in the browser
 const MapPicker = lazy(() =>
-  import('@/components/map-picker').then((mod) => ({ default: mod.MapPicker })),
+  // Never rendered on the server: leaving the import out of the server build
+  // keeps Leaflet and MapLibre (about 2 MB) out of the Worker.
+  import.meta.env.SSR
+    ? new Promise<never>(() => {})
+    : import('@/components/map-picker').then((mod) => ({ default: mod.MapPicker })),
 );
 
 function MapPlaceholder() {
