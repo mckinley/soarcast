@@ -6,7 +6,7 @@
 // area is a go on a day when any of its launches is. The season build
 // (scripts/seasons/build.ts) finds each launch in pgsites (a listed site
 // matching `match` within 30 km of the point, in the country) and rates its
-// past two years like any other site.
+// past 20 years like any other site.
 
 /** Every launch in an area is within this distance of the area's middle. */
 export const AREA_RADIUS_KM = 100;

@@ -57,7 +57,11 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       fromDate: flown.fromDate,
       toDate: flown.toDate,
       days: flown.days,
-      season: row ? { fromDate: row.fromDate, toDate: row.toDate } : null,
+      // The days rated one by one, which the checks use
+      season:
+        season && season.length > 0
+          ? { fromDate: season[0].date, toDate: season[season.length - 1].date, source: row.source }
+          : null,
       checks: season
         ? Object.fromEntries(GOALS.map((goal) => [goal, checkAgainstFlown(season, flown.days, goal)]))
         : null,

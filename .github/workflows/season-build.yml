@@ -1,20 +1,20 @@
 name: Season build
 
-# Rates the last two years of days at every followed and custom site and the
-# destinations in src/lib/destinations.ts from Open-Meteo's archived
-# forecasts, and writes them to site_seasons for site pages and the Year page
-# (scripts/seasons/build.ts). Each run stays under Open-Meteo's hourly limit
-# and builds what it can; the next run carries on. Runs here because
-# Open-Meteo rate-limits Claude's sandbox. Plain automation, no AI.
+# Rates the last 20 years of days at every followed and custom site and the
+# destinations in src/lib/destinations.ts from ERA5, the record of past
+# weather on Open-Meteo's open copy on Amazon, and writes them to
+# site_seasons for site pages and the Planning page
+# (scripts/seasons/build.ts). Each run builds what it can in its time and
+# the next run carries on. Plain automation, no AI.
 
 on:
   schedule:
     - cron: '23 5,17 * * *'
   workflow_dispatch:
     inputs:
-      budget:
-        description: 'Open-Meteo calls to spend (about 240 a site)'
-        default: '4500'
+      minutes:
+        description: 'Minutes to spend (about half a minute a site)'
+        default: '75'
       dry_run:
         description: 'Rate a few destinations and write nothing (to try a branch)'
         type: boolean
@@ -27,7 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
 
@@ -42,10 +42,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SEASON_CALL_BUDGET: ${{ inputs.budget || '4500' }}
+          SEASON_MINUTES: ${{ inputs.minutes || '75' }}
           # A dry run tries a few destinations without writing
           SEASON_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
           SEASON_LIMIT: ${{ inputs.dry_run && '4' || '' }}
         run: |
-          npx esbuild scripts/seasons/build.ts --bundle --platform=node --format=esm --outfile=season-tmp/build.mjs
+          npx esbuild scripts/seasons/build.ts --bundle --platform=node --format=esm '--external:@openmeteo/*' --outfile=season-tmp/build.mjs
           node season-tmp/build.mjs

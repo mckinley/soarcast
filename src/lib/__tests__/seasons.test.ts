@@ -8,7 +8,12 @@ import {
   lostReason,
   seasonDayFromScore,
   seasonMonths,
+  seasonStats,
+  statsMonths,
+  statsSpread,
+  summaryFromStats,
   typicalWeekGoDays,
+  anyGoSharesFromStats,
   type SeasonDay,
 } from '../seasons';
 import type { DayScore } from '@/types';
@@ -127,6 +132,48 @@ describe('typicalWeekGoDays', () => {
     const days = [...month(2024, 12, 31), ...month(2025, 1, 31)];
     expect(typicalWeekGoDays(days, 'soar', '2026-12-28')).toBe(7);
     expect(typicalWeekGoDays(days.slice(0, 5), 'soar', '2026-12-03')).toBeNull();
+  });
+});
+
+describe('stored seasons', () => {
+  /** July of each year from 2006, `go(year)` thermal go days, the rest rained off. */
+  const julys = (go: (year: number) => number) =>
+    Array.from({ length: 20 }, (_, i) => month(2006 + i, 7, go(2006 + i))).flat();
+
+  it('sums months the same way as the days, after a trip through JSON', () => {
+    const days = [...month(2025, 7, 20), ...month(2026, 7, 10), ...month(2025, 12, 0)];
+    const stats = JSON.parse(JSON.stringify(seasonStats(days)));
+    expect(statsMonths(stats, 'soar')).toEqual(seasonMonths(days, 'soar'));
+    expect(statsMonths(stats, 'launch')[6].counts.go).toBe(30);
+  });
+
+  it('joins launches that start on different days', () => {
+    const a = month(2025, 7, 10);
+    const b = [...month(2025, 6, 0), ...month(2025, 7, 20)];
+    const shares = anyGoSharesFromStats([seasonStats(a), seasonStats(b)], 'soar');
+    expect(shares[6]).toBeCloseTo(20 / 31);
+    expect(shares[5]).toBe(0);
+    expect(anyGoSharesFromStats([], 'soar')).toEqual(Array(12).fill(0));
+  });
+
+  it('gives the middle half of years for a month', () => {
+    // Go days 1 to 20 across the 20 years
+    const stats = seasonStats(julys((year) => year - 2005));
+    const spread = statsSpread(stats, 'soar');
+    expect(spread[6]).toEqual({ low: 6, high: 15, years: 20 });
+    expect(spread[0]).toBeNull();
+  });
+
+  it('needs enough years to say how a month changes', () => {
+    const stats = seasonStats([...month(2024, 7, 10), ...month(2025, 7, 20)]);
+    expect(statsSpread(stats, 'soar')[6]).toBeNull();
+  });
+
+  it('summarizes for a goal', () => {
+    const summary = summaryFromStats(seasonStats(julys(() => 31)), 'soar', '2026-07-10');
+    expect(summary.best?.text).toBe('Jul');
+    expect(summary.typicalWeek).toBe(7);
+    expect(summary.years).toBe(2);
   });
 });
 

@@ -1,54 +1,56 @@
-// Season build: rates every day of the last two years at each site, the
-// same way today's forecast is rated, from Open-Meteo's archived forecasts,
-// and writes the days to site_seasons in the soarcast D1 for site pages and
-// the Year page. Sites: every followed and custom site, then the
-// destinations in src/lib/destinations.ts.
+// Season build: rates every day of the last SEASON_YEARS years at each site,
+// the same way today's forecast is rated, and writes the season to
+// site_seasons in the soarcast D1 for site pages and the Planning page.
+// Sites: every followed and custom site, then the destinations in
+// src/lib/destinations.ts.
 //
-// Runs in the "Season build" workflow: Open-Meteo rate-limits Claude's
-// sandbox, and the free API allows 10,000 calls a day (a call here weighs
-// variables / 10 x days / 14, about 240 a site). The repo is public, so the
-// log names listed destinations only; your own sites show as a short key.
+// The weather is ERA5, ECMWF's record of past weather, read from Open-Meteo's
+// open copy on Amazon (scripts/seasons/era5.ts): no account and no rate limit,
+// about half a minute a site. Launches in the same ERA5 cell share one read.
+// Only each site's time zone comes from Open-Meteo's API (one small call).
+// Runs in the "Season build" workflow. The repo is public, so the log names
+// listed destinations only; your own sites show as a short key.
 //
-// Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; SEASON_CALL_BUDGET
-// (default 4500, under the 5,000-an-hour limit); SEASON_DRY_RUN=1 rates
-// destinations without touching D1's site_seasons (before its migration);
-// SEASON_LIMIT caps the sites built.
+// Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; SEASON_MINUTES (default
+// 75: no site is started after that, the next run carries on); SEASON_DRY_RUN=1
+// rates destinations without touching D1; SEASON_LIMIT caps the sites built.
 
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../src/db/schema';
 import { customSites, launchSites, siteSeasons, userFavoriteSites } from '../../src/db/schema';
 import { ENGINE_VERSION, evaluateDays, launchProfileFromSite } from '../../src/lib/forecast-engine';
-import { profileFromOpenMeteo, type OpenMeteoProfileResponse } from '../../src/lib/weather-profile';
 import { launchSiteToSite } from '../../src/lib/launch-sites';
 import { customSiteToSite } from '../../src/lib/custom-sites';
 import {
   bestMonths,
   encodeSeasonDays,
   seasonDayFromScore,
-  seasonMonths,
+  seasonStats,
+  statsMonths,
+  statsSpread,
+  type SeasonDay,
 } from '../../src/lib/seasons';
 import {
   ACCOUNT,
   TOKEN,
   SOARCAST_DB,
-  VARIABLES,
-  callWeight,
-  chunks,
-  cleanProfile,
   d1,
   destinationJobs,
-  fetchChunk,
   jobFor,
-  merge,
+  recordRange,
   seasonRange,
+  timeZoneAt,
   ymd,
   type Job,
 } from './lib';
+import { era5Cell, era5Series, HOUR_MS, missing, type Era5Series } from './era5';
+import { era5Profile } from './era5-profile';
 
-const BUDGET = Number(process.env.SEASON_CALL_BUDGET || 4500);
 const DRY_RUN = process.env.SEASON_DRY_RUN === '1';
 const LIMIT = Number(process.env.SEASON_LIMIT || Infinity);
+const MINUTES = Number(process.env.SEASON_MINUTES || 75);
+const SOURCE = 'era5';
 
 /** A site's season is rebuilt once its last month is this many months old. */
 const REBUILD_AFTER_MONTHS = 2;
@@ -91,24 +93,40 @@ async function ownJobs(): Promise<Job[]> {
   return [...new Map(jobs.map((j) => [j.key, j])).values()];
 }
 
+/** Every day of the range at a site, rated through the engine on ERA5, a local year at a time. */
+function rateSite(job: Job, series: Era5Series, timeZone: string, from: string, to: string) {
+  const { latitude: lat, longitude: lon } = job.site;
+  const launch = launchProfileFromSite(job.site);
+  const days: SeasonDay[] = [];
+  for (let year = Number(from.slice(0, 4)); year <= Number(to.slice(0, 4)); year++) {
+    const profile = era5Profile(series, year, timeZone, lat, lon);
+    if (profile.hours.length === 0) continue;
+    for (const score of evaluateDays(profile, launch)) {
+      if (score.date >= from && score.date <= to) days.push(seasonDayFromScore(score));
+    }
+  }
+  return days;
+}
+
 async function main() {
   if (!ACCOUNT || !TOKEN)
     throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed');
-  const range = seasonRange();
-  const parts = chunks(range);
-  const cost = parts.reduce((s, p) => s + callWeight(p), 0);
+  const started = Date.now();
+  const range = recordRange();
+  const recent = seasonRange();
   console.log(
-    `Season ${range.from} to ${range.to}: ${VARIABLES.length} variables, ~${cost.toFixed(0)} calls a site, budget ${BUDGET}${DRY_RUN ? ', dry run' : ''}`,
+    `Season ${range.from} to ${range.to} from ERA5 (days kept one by one from ${recent.from}), ${MINUTES} minutes${DRY_RUN ? ', dry run' : ''}`,
   );
 
-  // Built rows, by key: their last day and engine, to skip the up-to-date ones
-  const built = new Map<string, { toDate: string; engineVersion: number }>();
+  // Built rows, by key: their last day, engine and source, to skip the up-to-date ones
+  const built = new Map<string, { toDate: string; engineVersion: number; source: string | null }>();
   if (!DRY_RUN) {
     for (const r of await db
       .select({
         key: siteSeasons.key,
         toDate: siteSeasons.toDate,
         engineVersion: siteSeasons.engineVersion,
+        source: siteSeasons.source,
       })
       .from(siteSeasons)) {
       built.set(r.key, r);
@@ -124,46 +142,58 @@ async function main() {
     ),
   );
 
-  // In a dry run (no site_seasons yet) only the public destinations are rated
+  // In a dry run only the public destinations are rated
   const jobs = [...(DRY_RUN ? [] : await ownJobs()), ...(await destinationJobs())];
   const due = jobs.filter((j) => {
     const row = built.get(j.key);
-    return !row || row.toDate < staleBefore || row.engineVersion < ENGINE_VERSION;
+    return (
+      !row ||
+      row.source !== SOURCE ||
+      row.toDate < staleBefore ||
+      row.engineVersion < ENGINE_VERSION
+    );
   });
+  // Launches in one ERA5 cell next to each other, so they share a read
+  const cellOf = (j: Job) => era5Cell(j.site.latitude, j.site.longitude).key;
+  due.sort((a, b) => (cellOf(a) < cellOf(b) ? -1 : cellOf(a) > cellOf(b) ? 1 : 0));
   console.log(`${jobs.length} sites, ${due.length} due`);
 
-  let spent = 0;
+  // ERA5 hours from the first local day to the last, with half a day either side
+  const fromMs = Date.parse(`${range.from}T00:00:00Z`) - 14 * HOUR_MS;
+  const toMs = Date.parse(`${range.to}T23:00:00Z`) + 14 * HOUR_MS;
+  let series = null as { cell: string; data: Era5Series } | null;
   let done = 0;
   for (const [i, job] of due.entries()) {
-    if (done >= LIMIT || spent + cost > BUDGET) {
-      console.log(
-        `Stopping with ${due.length - i} sites left for the next run (${spent.toFixed(0)} calls spent)`,
-      );
+    if (done >= LIMIT || Date.now() - started > MINUTES * 60_000) {
+      console.log(`Stopping with ${due.length - i} sites left for the next run`);
       break;
     }
     const tag = job.destination ? job.label : `${job.label} ${job.key.split('|')[1]}`;
     try {
-      const responses: OpenMeteoProfileResponse[] = [];
-      for (const part of parts) {
-        responses.push(await fetchChunk(job.site.latitude, job.site.longitude, part));
-        spent += callWeight(part);
+      const t0 = Date.now();
+      const cell = cellOf(job);
+      if (series?.cell !== cell) {
+        series = {
+          cell,
+          data: await era5Series(job.site.latitude, job.site.longitude, fromMs, toMs),
+        };
       }
-      const raw = profileFromOpenMeteo(merge(responses));
-      const profile = cleanProfile(raw);
-      const blh =
-        profile.hours.filter((h) => h.surface.boundaryLayerHeight != null).length /
-        Math.max(1, profile.hours.length);
-      const scores = evaluateDays(profile, launchProfileFromSite(job.site));
-      const seasonDays = scores.map(seasonDayFromScore);
-      const months = seasonMonths(seasonDays, job.site.goal ?? 'soar');
-      const best = bestMonths(months);
+      const timeZone = await timeZoneAt(job.site.latitude, job.site.longitude);
+      const read = Date.now() - t0;
+      const days = rateSite(job, series.data, timeZone, range.from, range.to);
+      const expected = (Date.parse(range.to) - Date.parse(range.from)) / 864e5 + 1;
+      const stats = seasonStats(days);
+      const goal = job.site.goal ?? 'soar';
+      const months = statsMonths(stats, goal);
+      const spread = statsSpread(stats, goal);
       console.log(
-        `${tag}: ${seasonDays.length} days (${raw.hours.length - profile.hours.length} hours dropped), boundary layer on ${(blh * 100).toFixed(0)}% of hours; ` +
-          `go for its goal (${job.site.goal}) by month: ${months.map((m) => Math.round(m.goShare * 100)).join(' ')}; best ${best?.text ?? 'none'}`,
+        `${tag}: ${days.length} of ${expected} days rated (read ${(read / 1000).toFixed(0)} s, rated ${((Date.now() - t0 - read) / 1000).toFixed(0)} s); ` +
+          `go for its goal (${goal}) by month: ${months.map((m) => Math.round(m.goShare * 100)).join(' ')}; ` +
+          `best ${bestMonths(months)?.text ?? 'none'}; go days in most years: ${spread.map((s) => (s ? `${s.low}-${s.high}` : '?')).join(' ')}`,
       );
-      // Without the boundary layer the engine sees no thermals: better no season than a wrong one
-      if (blh < 0.7) {
-        console.log(`  skipped: too little boundary-layer data to rate thermals`);
+      // A record with big holes would read as a season it isn't
+      if (days.length < expected * 0.8) {
+        console.log(`  skipped: too few days rated`);
         continue;
       }
       if (!DRY_RUN) {
@@ -175,11 +205,13 @@ async function main() {
           latitude: job.site.latitude,
           longitude: job.site.longitude,
           destination: job.destination,
-          days: encodeSeasonDays(seasonDays),
-          fromDate: seasonDays[0]?.date ?? range.from,
-          toDate: seasonDays[seasonDays.length - 1]?.date ?? range.to,
+          days: encodeSeasonDays(days.filter((d) => d.date >= recent.from)),
+          fromDate: days[0].date,
+          toDate: days[days.length - 1].date,
           builtAt: new Date(),
           engineVersion: ENGINE_VERSION,
+          source: SOURCE,
+          summary: JSON.stringify(stats),
         };
         await db
           .insert(siteSeasons)
@@ -189,13 +221,15 @@ async function main() {
       done++;
     } catch (error) {
       console.log(`${tag}: failed, ${error instanceof Error ? error.message : error}`);
-      if (String(error).includes('Open-Meteo 429')) break;
     }
   }
-  console.log(`Built ${done} sites, ~${spent.toFixed(0)} calls`);
+  if (missing.size > 0) console.log(`ERA5 files missing from the bucket: ${[...missing].join(', ')}`);
+  console.log(`Built ${done} sites in ${((Date.now() - started) / 60_000).toFixed(0)} minutes`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

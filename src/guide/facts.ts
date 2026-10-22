@@ -45,7 +45,7 @@ import {
   TRACK_RECORD_DAYS,
   TRACK_RECORD_MAX_AGE_DAYS,
 } from '@/lib/track-record';
-import { SEASON_MONTHS } from '@/lib/seasons';
+import { SEASON_MONTHS, SEASON_YEARS } from '@/lib/seasons';
 import { FLOWN_RADIUS_KM, FLOWN_REFRESH_HOURS } from '@/lib/flown-days';
 import { AREA_RADIUS_KM } from '@/lib/destinations';
 import { AREA_JOIN_KM } from '@/lib/site-areas';
@@ -72,6 +72,7 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   trackRecordDays: TRACK_RECORD_DAYS,
   trackRecordRebuildDays: TRACK_RECORD_MAX_AGE_DAYS,
   seasonMonths: SEASON_MONTHS,
+  seasonYears: SEASON_YEARS,
   areaRadiusKm: AREA_RADIUS_KM,
   areaJoinKm: AREA_JOIN_KM,
   flownRadiusKm: FLOWN_RADIUS_KM,

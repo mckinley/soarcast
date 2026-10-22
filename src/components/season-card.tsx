@@ -1,7 +1,15 @@
 import { CalendarRange, Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { SeasonCredit } from '@/components/data-credits';
 import { GOAL_LABEL } from '@/lib/site-goals';
-import { LOST_REASON_WORD, topMonths, type SeasonMonth, type SeasonSummary } from '@/lib/seasons';
+import {
+  LOST_REASON_WORD,
+  SEASON_YEARS,
+  topMonths,
+  type MonthSpread,
+  type SeasonMonth,
+  type SeasonSummary,
+} from '@/lib/seasons';
 import type { Comp } from '@/lib/comps';
 import type { SiteGoal } from '@/types';
 
@@ -31,6 +39,13 @@ function pct(n: number, of: number): number {
 
 function monthYear(date: string): string {
   return `${MONTHS[Number(date.slice(5, 7)) - 1]} ${date.slice(0, 4)}`;
+}
+
+// Days in each month of a common year, to draw go days as a share
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function spreadText(s: MonthSpread): string {
+  return s.low === s.high ? `${s.low}` : `${s.low} to ${s.high}`;
 }
 
 /** The month in a sentence: how often it was a go, and what lost the other days. */
@@ -76,7 +91,8 @@ export function TypicalWeekLine({
 /**
  * When a site is good through the year: for each month, the share of past
  * days that were a go for the pilot's goal, and that were flyable but less,
- * from the engine run over two years of archived forecasts.
+ * from the engine run over 20 years of past weather (ERA5), with how much
+ * each month's go days change from year to year.
  */
 export function SeasonCard({
   season,
@@ -103,8 +119,8 @@ export function SeasonCard({
         <h2 className="text-lg font-semibold">Season</h2>
         <p className="text-sm text-muted-foreground">
           {followed
-            ? 'SoarCast is rating this site’s last two years, month by month. It runs twice a day, so check back tomorrow.'
-            : 'Add this site to Favorites to see its best months. SoarCast then rates its last two years, month by month.'}
+            ? `SoarCast is rating this site’s last ${SEASON_YEARS} years, month by month. It runs twice a day, so check back tomorrow.`
+            : `Add this site to Favorites to see its best months. SoarCast then rates its last ${SEASON_YEARS} years, month by month.`}
         </p>
       </Card>
     );
@@ -115,6 +131,7 @@ export function SeasonCard({
   const compMonths = Array.from({ length: 12 }, () => 0);
   for (const c of comps) if (c.endDate < today) compMonths[Number(c.startDate.slice(5, 7)) - 1]++;
   const busiest = flownByMonth ? topMonths(flownByMonth) : null;
+  const hasSpread = season.spread.some(Boolean);
 
   return (
     <Card className="gap-3 p-4 sm:p-6">
@@ -132,7 +149,7 @@ export function SeasonCard({
             {Math.round(season.best.share * 100)}% of days.
           </>
         ) : (
-          `No month here was a go (${GOAL_LABEL[goal].toLowerCase()}) in the last two years.`
+          `No month here was a go (${GOAL_LABEL[goal].toLowerCase()}) in the last ${season.years} years.`
         )}
       </p>
       {busiest && (
@@ -161,6 +178,7 @@ export function SeasonCard({
             {season.months.map((m, i) => {
               const go = pct(m.counts.go, m.days);
               const flyable = pct(m.counts.flyable, m.days);
+              const spread = season.spread[i];
               const align = i < 3 ? 'left-0' : i > 8 ? 'right-0' : 'left-1/2 -translate-x-1/2';
               return (
                 <div
@@ -171,6 +189,18 @@ export function SeasonCard({
                 >
                   {m === peak && go > 0 && (
                     <span className="mb-0.5 text-[10px] font-semibold tabular-nums">{go}%</span>
+                  )}
+                  {spread && (
+                    // Go days in the middle half of years, as a share of the month
+                    <div
+                      className="pointer-events-none absolute left-1/2 z-[1] flex w-[7px] -translate-x-1/2 justify-center border-y-2 border-foreground/70"
+                      style={{
+                        bottom: `${Math.min(100, (spread.low / MONTH_DAYS[i]) * 100)}%`,
+                        height: `${Math.min(100, ((spread.high - spread.low) / MONTH_DAYS[i]) * 100)}%`,
+                      }}
+                    >
+                      <div className="h-full w-[2px] bg-foreground/70" />
+                    </div>
                   )}
                   <div className="flex w-full max-w-6 flex-col items-stretch gap-[2px] px-[3px] transition-opacity group-hover:opacity-80 group-focus:opacity-80">
                     {flyable > 0 && (
@@ -191,6 +221,11 @@ export function SeasonCard({
                   >
                     <div className="font-medium">{MONTHS_LONG[i]}</div>
                     <div className="text-muted-foreground">{monthDetail(m)}</div>
+                    {spread && (
+                      <div className="mt-1 text-muted-foreground">
+                        Go days in most years: {spreadText(spread)}
+                      </div>
+                    )}
                     {flownByMonth?.[i] != null && (
                       <div className="mt-1 text-muted-foreground">
                         Tracked flights on {pct(flownByMonth[i]!, 1)}% of days
@@ -235,6 +270,14 @@ export function SeasonCard({
           <span className={`h-2.5 w-2.5 rounded-sm ${FLYABLE_FILL}`} />
           Flyable, but less than that
         </li>
+        {season.spread.some(Boolean) && (
+          <li className="flex items-center gap-1.5">
+            <span className="flex h-3 w-[7px] justify-center border-y-2 border-foreground/70">
+              <span className="h-full w-[2px] bg-foreground/70" />
+            </span>
+            Go days in most years
+          </li>
+        )}
         {compMonths.some((n) => n > 0) && (
           <li className="flex items-center gap-1.5">
             <Trophy className="h-3 w-3 text-amber-600 dark:text-amber-400" />
@@ -253,6 +296,9 @@ export function SeasonCard({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-1 pr-2 font-medium">Month</th>
                 <th className="py-1 pr-2 text-right font-medium">Go</th>
+                {hasSpread && (
+                  <th className="py-1 pr-2 text-right font-medium">Go days, most years</th>
+                )}
                 <th className="py-1 pr-2 text-right font-medium">Flyable</th>
                 <th className="py-1 pr-2 text-right font-medium">Marginal</th>
                 <th className="py-1 pr-2 text-right font-medium">Not flyable</th>
@@ -265,6 +311,11 @@ export function SeasonCard({
                 <tr key={m.month} className="border-b last:border-0">
                   <td className="py-1 pr-2">{MONTHS[i]}</td>
                   <td className="py-1 pr-2 text-right">{pct(m.counts.go, m.days)}%</td>
+                  {hasSpread && (
+                    <td className="py-1 pr-2 text-right">
+                      {season.spread[i] ? spreadText(season.spread[i]!) : ''}
+                    </td>
+                  )}
                   <td className="py-1 pr-2 text-right">{pct(m.counts.flyable, m.days)}%</td>
                   <td className="py-1 pr-2 text-right">{pct(m.counts.marginal, m.days)}%</td>
                   <td className="py-1 pr-2 text-right">{pct(m.counts.no, m.days)}%</td>
@@ -284,14 +335,27 @@ export function SeasonCard({
       </details>
 
       <p className="text-xs text-muted-foreground">
-        Every day from {monthYear(season.fromDate)} to {monthYear(season.toDate)}, rated on archived
-        forecasts the same way as today&apos;s forecast. Two years is enough to show the seasons,
-        but one odd year can still shift a month.
+        {season.source === 'era5' ? (
+          <>
+            Every day from {monthYear(season.fromDate)} to {monthYear(season.toDate)}, rated the
+            same way as today&apos;s forecast. The weather for those days comes from ERA5, a record
+            of past weather.
+            {hasSpread &&
+              ' The line on each month spans the middle half of years. A quarter of years had more go days, and a quarter had fewer.'}
+          </>
+        ) : (
+          <>
+            Every day from {monthYear(season.fromDate)} to {monthYear(season.toDate)}, rated on
+            archived forecasts the same way as today&apos;s forecast. Two years is enough to show
+            the seasons, but one odd year can still shift a month.
+          </>
+        )}
         {!season.sameSettings &&
           " These use the site's settings from when it was rated. The current settings apply from the next update."}
         {flownByMonth &&
           ' Flown is the share of days with a flight on a pilot’s live tracker (Syncing Pilots).'}
       </p>
+      {season.source === 'era5' && <SeasonCredit />}
     </Card>
   );
 }

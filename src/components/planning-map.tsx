@@ -98,7 +98,7 @@ export function PlanningMap({ points, extents, radiusKm }: PlanningMapProps) {
               <p className="text-xs">
                 {p.share != null
                   ? `A go on ${Math.round(p.share * 100)}% of days`
-                  : 'Not rated yet. Its last two years arrive within a day.'}
+                  : 'Not rated yet. Its seasons arrive within a day.'}
               </p>
               {p.href && (
                 <Link

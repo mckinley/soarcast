@@ -287,13 +287,20 @@ export const siteSeasons = sqliteTable('site_seasons', {
   longitude: real('longitude').notNull(),
   // Slug in src/lib/destinations.ts when the site is a destination
   destination: text('destination'),
-  // encodeSeasonDays(): one entry per past day
+  // encodeSeasonDays(): one entry per past day, the last SEASON_MONTHS months
+  // (rows from before `summary` hold every day they rated)
   days: text('days').notNull(),
+  // The whole span rated
   fromDate: text('from_date').notNull(),
   toDate: text('to_date').notNull(),
   builtAt: integer('built_at', { mode: 'timestamp' }).notNull(),
   // ENGINE_VERSION the days were rated with; an older one is rated again
   engineVersion: integer('engine_version').notNull().default(0),
+  // What the days were rated on: 'era5' (the record of past weather); null
+  // for rows rated on archived forecasts, which the build rates again
+  source: text('source'),
+  // JSON SeasonStats (src/lib/seasons.ts) over the whole span; null on old rows
+  summary: text('summary'),
 });
 
 // Export types for use in application code

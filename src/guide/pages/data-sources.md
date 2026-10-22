@@ -16,6 +16,9 @@ covers:
   - src/components/flown-here.tsx
   - scripts/seasons/build.ts
   - scripts/seasons/lib.ts
+  - scripts/seasons/era5.ts
+  - scripts/seasons/era5-profile.ts
+  - src/components/season-card.tsx
   - .github/workflows/season-build.yml
   - src/lib/destinations.ts
   - src/lib/pgsites-client.ts
@@ -89,17 +92,27 @@ An airport usually sits on flat ground or in a valley. Its weather can differ fr
 
 The Season card on site pages and the Planning page show how often each month was good for flying.
 
-SoarCast rates each day of the last {{seasonMonths}} months the same way it rates today's forecast. The weather for those days comes from [Open-Meteo's archive of past forecasts](https://open-meteo.com/en/docs/historical-forecast-api). For each past day, the archive keeps what the forecast said a few hours ahead.
+SoarCast rates each day of the last {{seasonYears}} years the same way it rates today's forecast. The weather for those days comes from [ERA5](https://climate.copernicus.eu/climate-reanalysis), a record of past weather from the European weather centre (ECMWF) and the EU's Copernicus program. ERA5 combines weather measurements from around the world into a picture of every hour. SoarCast reads it from [Open-Meteo's open copy](https://registry.opendata.aws/open-meteo/).
 
-So a season shows what the forecasts said, not what pilots flew. If the forecast often gets a site wrong, its season is wrong in the same way. The site's track record shows how far to trust it. [Flown days](#flown-days) show what pilots flew.
+A record of {{seasonYears}} years shows how a month usually goes, and how much it changes from year to year. On the Season card, a line on each month spans the middle half of years. A quarter of years had more go days than the top of the line, and a quarter had fewer than the bottom.
 
-SoarCast builds seasons in batches twice a day. A site gets its seasons within a day or two of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months. They are also rebuilt when SoarCast changes how it rates a day.
+A season shows what the weather was, as SoarCast rates it, not what pilots flew. [Flown days](#flown-days) show what pilots flew.
+
+SoarCast builds seasons twice a day. A site gets its seasons within a day of being added to Favorites or as a private site. Each site's seasons are rebuilt every few months to take in the latest months. They are also rebuilt when SoarCast changes how it rates a day.
 
 The flying areas on the Planning page are SoarCast's own list of places pilots travel to. Each area is a few launches within {{areaRadiusKm}} km of its middle.
 
+### What a season can't tell you
+
+- ERA5 describes the weather over squares about 30 km wide. That is coarser than a forecast, so peaks, ridges and valleys get smoothed out even more.
+- SoarCast reads its wind near the ground and 100 m above it, but nothing higher up. At a launch high above ERA5's ground, the wind at launch height is a guess.
+- The copy SoarCast reads has no measure of storms or fog. So storms and fog never hold a past day back, and a season can show Go on days a forecast would have held back.
+- Some hours are missing from the copy. A day with too few hours left isn't rated.
+
+
 ## Flown days
 
-The "Flown here" card on a site page lists the latest days pilots flew from the site. When the site has a season, the card also says how SoarCast rated the days pilots flew. The Season card then shows how often pilots flew in each month.
+The "Flown here" card on a site page lists the latest days pilots flew from the site. When the site has a season, the card also says how SoarCast rated the days pilots flew in the last {{seasonMonths}} months. The Season card then shows how often pilots flew in each month.
 
 These days come from [Syncing Pilots](https://syncingpilots.com). It follows the live maps that pilots share from their Garmin inReach and SPOT trackers. SoarCast only gets counts for each day: how many pilots launched, and how many flights were glides down, soaring flights or cross-country flights. It gets no names, tracks or positions.
 
@@ -191,6 +204,7 @@ The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://the
 | Data                                         | Licence                                                               |
 | -------------------------------------------- | --------------------------------------------------------------------- |
 | Forecasts from Open-Meteo                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Past weather: ERA5 from Copernicus           | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
 | Sites from Paragliding Earth                 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
 | Place names from GeoNames                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
 | Thermal maps from kk7                        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |

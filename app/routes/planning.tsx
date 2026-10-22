@@ -6,7 +6,13 @@ import { getSession, requireAuth } from '~/app/lib/auth.server';
 import { ensureLaunchSite } from '~/app/lib/launch-sites.server';
 import { putInNamedArea } from '~/app/lib/site-areas.server';
 import { compsWorldwide } from '~/app/lib/comps.server';
-import { destinationSeasons, seasonSiteRef, seasonsForSites } from '~/app/lib/seasons.server';
+import {
+  destinationSeasons,
+  rowStats,
+  seasonSiteRef,
+  seasonsForSites,
+  type SeasonRow,
+} from '~/app/lib/seasons.server';
 import { customSites, launchSites, userFavoriteSites } from '~/db/schema';
 import {
   COMP_RADIUS_KM,
@@ -34,12 +40,16 @@ import {
   DESTINATION_BY_SLUG,
   type Destination,
 } from '~/lib/destinations';
-import { anyGoShares, decodeSeasonDays, type SeasonDay } from '~/lib/seasons';
+import {
+  anyGoSharesFromStats,
+  SEASON_YEARS,
+  statsMonths,
+  type SeasonStats,
+} from '~/lib/seasons';
 import { GOAL_LABEL } from '~/lib/site-goals';
-import type { SiteSeason } from '~/db/schema';
 import type { Site } from '~/types';
 import { CompName, CompRow } from '@/components/site-comps';
-import { CompsCredit } from '@/components/data-credits';
+import { CompsCredit, SeasonCredit } from '@/components/data-credits';
 import { PlanningMapWrapper } from '@/components/planning-map-wrapper';
 import type { PlanningMapPoint, PlanningMapProps } from '@/components/planning-map';
 import { Button } from '@/components/ui/button';
@@ -170,7 +180,7 @@ export function meta() {
     {
       name: 'description',
       content:
-        'Where and when the paragliding is good, month by month from two years of rated days, and the comps worldwide to plan trips around.',
+        `Where and when the paragliding is good, month by month from ${SEASON_YEARS} years of past weather, and the comps worldwide to plan trips around.`,
     },
   ];
 }
@@ -307,7 +317,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const rated = new Map<string, Launch>();
     for (const row of rows) {
       const dest = DESTINATION_BY_SLUG.get(row.destination ?? '');
-      if (dest) rated.set(dest.slug, { row, dest, days: decodeSeasonDays(row.days) });
+      if (dest) rated.set(dest.slug, { row, dest, stats: rowStats(row) });
     }
     const otherGoal: WhereGoal = goal === 'great' ? 'soar' : 'great';
     const otherLabel = otherGoal === 'great' ? 'great' : 'soar';
@@ -321,7 +331,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** A launch, rated or not yet. */
     const launchRow = (dest: Destination): PlaceRow => {
       const l = rated.get(dest.slug);
-      const shares = l ? inWindow(anyGoShares([l.days], goal)) : null;
+      const shares = l ? inWindow(launchShares(l, goal)) : null;
       return {
         key: dest.slug,
         name: dest.name,
@@ -334,7 +344,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         avg: shares ? mean(shares) : 0,
         comps: compsByMonth(l?.row.latitude ?? dest.latitude, l?.row.longitude ?? dest.longitude),
         other: l
-          ? { label: otherLabel, share: mean(inWindow(anyGoShares([l.days], otherGoal))) }
+          ? { label: otherLabel, share: mean(inWindow(launchShares(l, otherGoal))) }
           : undefined,
       };
     };
@@ -351,8 +361,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           const members = dests.flatMap((dest) => rated.get(dest.slug) ?? []);
           const share = (g: WhereGoal) =>
             inWindow(
-              anyGoShares(
-                members.map((l) => l.days),
+              anyGoSharesFromStats(
+                members.map((l) => l.stats),
                 g,
               ),
             );
@@ -529,11 +539,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   return { areaId };
 }
 
-/** A rated travel launch, with its days. */
+/** A rated travel launch, with its season. */
 interface Launch {
-  row: SiteSeason;
+  row: SeasonRow;
   dest: Destination;
-  days: SeasonDay[];
+  stats: SeasonStats;
+}
+
+/** A launch's go share by calendar month (index 0 = Jan). */
+function launchShares(l: Launch, goal: WhereGoal): number[] {
+  return statsMonths(l.stats, goal).map((m) => m.goShare);
 }
 
 function uniqueComps(comps: Comp[]): Comp[] {
@@ -686,7 +701,7 @@ function shareCell(share: number): string {
 
 const pct = (share: number) => `${Math.round(share * 100)}%`;
 
-const PENDING = 'Being rated. Its last two years arrive within a day.';
+const PENDING = 'Being rated. Its seasons arrive within a day.';
 
 function ShareLegend({ pending = false }: { pending?: boolean }) {
   return (
@@ -949,7 +964,7 @@ function SaveArea({
 }
 
 const SEASONS_NOTE =
-  'Seasons come from the last two years of days, so a month reads the same in any year. Comps are the ones listed for those dates.';
+  `Seasons come from the last ${SEASON_YEARS} years of weather, so a month reads the same in any year. Comps are the ones listed for those dates.`;
 
 export default function PlanningPage() {
   const {
@@ -1028,8 +1043,8 @@ export default function PlanningPage() {
           </div>
           {destinationsRated === 0 ? (
             <p className="text-muted-foreground">
-              The flying areas&apos; last two years are being rated now. They arrive over the next
-              day or two.
+              The flying areas&apos; last {SEASON_YEARS} years are being rated now. They arrive
+              within a day.
             </p>
           ) : (
             <div className="space-y-3">
@@ -1080,11 +1095,12 @@ export default function PlanningPage() {
               <p className="text-xs text-muted-foreground">
                 {destinationsRated < DESTINATIONS.length &&
                   `${destinationsRated} of ${DESTINATIONS.length} launches rated so far. `}
-                Each launch is rated on archived forecasts, with its Paragliding Earth wind
-                directions and SoarCast&apos;s default wind limit. An area or country counts a day
+                Each launch is rated on {SEASON_YEARS} years of past weather, with its Paragliding
+                Earth wind directions and SoarCast&apos;s default wind limit. An area or country counts a day
                 as a go when any of its launches was. Open a launch to see its own season.{' '}
                 {SEASONS_NOTE}
               </p>
+              <SeasonCredit />
             </div>
           )}
         </>
@@ -1118,6 +1134,7 @@ export default function PlanningPage() {
             </p>
             <Places rows={places} months={months} label="Site" />
             <p className="text-xs text-muted-foreground">{SEASONS_NOTE}</p>
+            <SeasonCredit />
           </div>
         ))}
 

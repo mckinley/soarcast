@@ -1,5 +1,6 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
-// forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
+// forecast shows, ERA5 (Copernicus, CC BY 4.0) and Open-Meteo wherever a
+// season does, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
 // kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do, and GeoNames (CC BY
 // 4.0) wherever a search lists sites near a town. A launch found from
 // tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
@@ -36,6 +37,35 @@ export function ForecastCredit({ className = '' }: { className?: string }) {
       </a>
       ) ·{' '}
       <Link to="/guide/data-sources" className={link}>
+        Data sources
+      </Link>
+    </p>
+  );
+}
+
+/** Seasons: ERA5, the record of past weather, through Open-Meteo's open copy. */
+export function SeasonCredit({ className = '' }: { className?: string }) {
+  return (
+    <p className={`text-xs text-muted-foreground ${className}`}>
+      Past weather: ERA5 from the{' '}
+      <a href="https://climate.copernicus.eu" className={link} target="_blank" rel="noreferrer">
+        Copernicus Climate Change Service
+      </a>
+      , through{' '}
+      <a href="https://open-meteo.com/" className={link} target="_blank" rel="noreferrer">
+        Open-Meteo.com
+      </a>{' '}
+      (
+      <a
+        href="https://creativecommons.org/licenses/by/4.0/"
+        className={link}
+        target="_blank"
+        rel="noreferrer"
+      >
+        CC BY 4.0
+      </a>
+      ) ·{' '}
+      <Link to="/guide/data-sources#seasons" className={link}>
         Data sources
       </Link>
     </p>

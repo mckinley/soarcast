@@ -7,7 +7,7 @@ import type { AtmosphericProfile, OpenMeteoProfileResponse } from '../../src/lib
 import { defaultGoal, siteKindFromTags } from '../../src/lib/site-goals';
 import { getIdealWindDirections, getOkWindDirections } from '../../src/lib/site-utils';
 import { DESTINATIONS, type Destination } from '../../src/lib/destinations';
-import { launchProfileKey, SEASON_MONTHS } from '../../src/lib/seasons';
+import { launchProfileKey, SEASON_MONTHS, SEASON_YEARS } from '../../src/lib/seasons';
 import type { Site } from '../../src/types';
 
 export const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
@@ -47,14 +47,48 @@ export function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** The SEASON_MONTHS whole months before this one. */
-export function seasonRange(now = new Date()): DayRange {
+/** The SEASON_MONTHS whole months before this one: the days kept one by one. */
+export function seasonRange(now = new Date(), months = SEASON_MONTHS): DayRange {
   const y = now.getUTCFullYear();
   const m = now.getUTCMonth();
   return {
-    from: ymd(new Date(Date.UTC(y, m - SEASON_MONTHS, 1))),
+    from: ymd(new Date(Date.UTC(y, m - months, 1))),
     to: ymd(new Date(Date.UTC(y, m, 0))),
   };
+}
+
+/** The SEASON_YEARS of whole months before this one: the span a season is rated over. */
+export function recordRange(now = new Date()): DayRange {
+  return seasonRange(now, SEASON_YEARS * 12);
+}
+
+const timeZones = new Map<string, string>();
+
+/** A place's time zone, from Open-Meteo's forecast API (one small call). */
+export async function timeZoneAt(lat: number, lng: number): Promise<string> {
+  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  const known = timeZones.get(key);
+  if (known) return known;
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lng),
+    daily: 'sunrise',
+    forecast_days: '1',
+    timezone: 'auto',
+  });
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+    if (res.ok) {
+      const { timezone } = (await res.json()) as { timezone: string };
+      timeZones.set(key, timezone);
+      return timezone;
+    }
+    if (attempt < 3 && (res.status === 429 || res.status >= 500)) {
+      await sleep(res.status === 429 ? 65_000 : 10_000);
+      continue;
+    }
+    throw new Error(`Open-Meteo ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  }
 }
 
 export function chunks({ from, to }: DayRange): DayRange[] {
