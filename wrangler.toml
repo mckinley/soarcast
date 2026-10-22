@@ -5,6 +5,12 @@ main = "./worker.ts"
 compatibility_date = "2025-03-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Run page requests next to the D1 database (eastern North America, no read
+# replicas), so each query is a short hop instead of a cross-country round
+# trip. Files under [assets] are still served from the nearest location.
+[placement]
+region = "aws:us-east-1"
+
 [assets]
 directory = "./build/client"
 binding = "ASSETS"
