@@ -140,6 +140,10 @@ export const AREAS: Area[] = [
   area('jalisco', 'Jalisco', [d('tapalpa', 'Tapalpa', 'mx', 19.95, -103.77, ['%Tapalpa%'])]),
   area('cauca-valley', 'Cauca Valley', [
     d('roldanillo', 'Roldanillo', 'co', 4.42, -76.13, ['%Roldanillo%']),
+    d('piedechinche', 'Piedechinche (Paraíso del Vuelo)', 'co', 3.636, -76.177, [
+      '%Paraiso del Vuelo%',
+      '%Piedechinche%',
+    ]),
   ]),
   area('antioquia', 'Antioquia', [
     d('medellin', 'Medellín (San Félix)', 'co', 6.34, -75.62, ['%San F%lix%', '%Medell%']),
