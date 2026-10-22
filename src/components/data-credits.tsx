@@ -1,6 +1,7 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
 // forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
-// kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do. The Guide's Data
+// kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do, and GeoNames (CC BY
+// 4.0) wherever a search lists sites near a town. The Guide's Data
 // sources page (src/guide/pages/data-sources.md) lists them all.
 
 import { Link } from 'react-router';
@@ -89,5 +90,27 @@ export function CompsCredit({ className = '' }: { className?: string }) {
       </a>
       . Dates and places can change. Check the comp&apos;s own page before planning around it.
     </p>
+  );
+}
+
+/** Credit for the town names a site search found. */
+export function PlacesCredit({ className = '' }: { className?: string }) {
+  return (
+    <span className={`text-xs text-muted-foreground ${className}`}>
+      Places:{' '}
+      <a href="https://www.geonames.org/" className={link} target="_blank" rel="noreferrer">
+        GeoNames
+      </a>{' '}
+      (
+      <a
+        href="https://creativecommons.org/licenses/by/4.0/"
+        className={link}
+        target="_blank"
+        rel="noreferrer"
+      >
+        CC BY 4.0
+      </a>
+      )
+    </span>
   );
 }

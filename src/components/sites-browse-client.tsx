@@ -15,6 +15,7 @@ import {
 import { Search, SlidersHorizontal, X, Loader2, Mountain } from 'lucide-react';
 import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { getOrientations } from '@/lib/site-utils';
+import { PlacesCredit } from '@/components/data-credits';
 
 /** Minimal site shape used by the browse page. */
 export interface BrowseSite {
@@ -37,6 +38,8 @@ export interface BrowseSite {
   isParagliding: boolean;
   isHanggliding: boolean;
   createdAt: string | null;
+  /** Pilots tracked flying from here in the last year; null when none */
+  flownPilots: number | null;
 }
 
 interface SitesBrowseClientProps {
@@ -44,6 +47,8 @@ interface SitesBrowseClientProps {
   /** 'search' = fit map to results; 'preloaded' = default area, no fitBounds; 'empty' = wait for map */
   sitesMode: 'search' | 'preloaded' | 'empty';
   searchParams: { search?: string };
+  /** Places the search named ("Cali, Valle del Cauca, CO"), whose nearby sites follow the name matches */
+  places?: string[];
   initialFavoriteIds?: string[];
 }
 
@@ -53,6 +58,7 @@ export function SitesBrowseClient({
   initialSites,
   sitesMode,
   searchParams,
+  places = [],
   initialFavoriteIds = [],
 }: SitesBrowseClientProps) {
   const navigate = useNavigate();
@@ -76,17 +82,21 @@ export function SitesBrowseClient({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rawSites = isSearchMode ? initialSites : mapSites;
 
-  // Client-side filter by orientation
+  // Client-side filter by orientation. On the map the sites most pilots fly
+  // come first; a search keeps its own order.
   const displaySites = useMemo(() => {
-    if (selectedOrientations.length === 0) return rawSites;
-    return rawSites.filter((site) => {
+    const sorted = isSearchMode
+      ? rawSites
+      : [...rawSites].sort((a, b) => (b.flownPilots ?? 0) - (a.flownPilots ?? 0));
+    if (selectedOrientations.length === 0) return sorted;
+    return sorted.filter((site) => {
       const orientations = getOrientations(site);
       return selectedOrientations.some((o) => {
         const rating = orientations[o];
         return rating != null && rating >= 1;
       });
     });
-  }, [rawSites, selectedOrientations]);
+  }, [rawSites, selectedOrientations, isSearchMode]);
 
   const hasPreloadedRef = useRef(sitesMode === 'preloaded');
 
@@ -252,6 +262,13 @@ export function SitesBrowseClient({
               </button>
             </Badge>
           )}
+          {isSearchMode &&
+            places.map((place) => (
+              <Badge key={place} variant="outline">
+                Near {place}
+              </Badge>
+            ))}
+          {isSearchMode && places.length > 0 && <PlacesCredit />}
           {selectedOrientations.map((o) => (
             <Badge key={o} variant="secondary" className="gap-1">
               {o}
@@ -382,6 +399,7 @@ function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: bo
       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
         {site.countryCode && <span>{site.countryCode}</span>}
         {site.altitude && <span>{site.altitude}m</span>}
+        {site.flownPilots ? <FlownPilots count={site.flownPilots} /> : null}
         {activeOrientations.length > 0 && (
           <span className="text-muted-foreground/80">{activeOrientations.join(' ')}</span>
         )}
@@ -409,8 +427,22 @@ function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolea
       <div className="text-xs text-muted-foreground space-y-0.5">
         {site.countryCode && <p>{site.countryCode}</p>}
         {site.altitude && <p>{site.altitude}m elevation</p>}
+        {site.flownPilots ? (
+          <p>
+            <FlownPilots count={site.flownPilots} />
+          </p>
+        ) : null}
         {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
       </div>
     </Link>
+  );
+}
+
+// ── Pilots tracked flying from a site in the last year ──
+function FlownPilots({ count }: { count: number }) {
+  return (
+    <span title="Pilots tracked flying from here in the last year">
+      {count} {count === 1 ? 'pilot' : 'pilots'} last year
+    </span>
   );
 }
