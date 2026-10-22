@@ -84,27 +84,46 @@ function SlopeLines({
   );
 }
 
-function LeeLines({ study, listed }: { study: TerrainStudy; listed: number[] }) {
-  const lee = study.upwind.filter((u) => u.lee && u.height != null && u.distance != null);
+/**
+ * The ground upwind of the launch: a line for each wind the launch takes
+ * (listed, else the ones the slope suits), then the other directions in a
+ * sentence, since wind from them comes over the back anyway.
+ */
+function LeeLines({ study, launchWinds }: { study: TerrainStudy; launchWinds: number[] }) {
+  const own = study.upwind.filter((u) => launchWinds.includes(u.direction));
+  const others = study.upwind
+    .filter((u) => u.lee && !launchWinds.includes(u.direction))
+    .map((u) => u.direction);
   return (
     <div className="space-y-1.5">
       <h4 className="text-sm font-semibold">Higher ground upwind</h4>
-      {lee.length === 0 ? (
-        <p className="text-sm">No higher ground lies close upwind in any direction.</p>
-      ) : (
+      {own.length > 0 && (
         <ul className="space-y-1 text-sm">
-          {lee.map((u) => (
+          {own.map((u) => (
             <li key={u.direction}>
-              <span className="font-medium">Wind from {compassPoint(u.direction)}</span>
-              {listed.includes(u.direction) && (
-                <span className="ml-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-                  Listed
-                </span>
+              <span className="font-medium">Wind from {compassPoint(u.direction)}:</span>{' '}
+              {u.lee && u.height != null && u.distance != null ? (
+                <>
+                  ground {meters(u.height)} higher, {km(u.distance)} upwind.{' '}
+                  <span className="text-amber-700 dark:text-amber-400">
+                    The launch is in its lee.
+                  </span>
+                </>
+              ) : (
+                'no higher ground close upwind.'
               )}
-              : ground {meters(u.height!)} higher, {km(u.distance!)} away.
             </li>
           ))}
         </ul>
+      )}
+      {others.length > 0 ? (
+        <p className="text-sm">
+          Wind from {inWords(others)} comes over higher ground close upwind.
+        </p>
+      ) : (
+        own.length === 0 && (
+          <p className="text-sm">No higher ground lies close upwind in any direction.</p>
+        )
       )}
       <p className="text-xs text-muted-foreground">
         Wind that crosses higher ground before it reaches the launch can be rough in its lee. Ground
@@ -158,6 +177,12 @@ export function TerrainStudyCard({
   if (!experiment.view) return null;
   const { study, today, months } = experiment.view;
   const listed = [...ideal, ...ok].filter((d) => COMPASS_POINTS.some((p) => p.degrees === d));
+  // The winds the launch takes: listed, else the ones a clear slope suits
+  const launchWinds = listed.length
+    ? listed
+    : study.face.slope >= FLAT_SLOPE_DEGREES
+      ? [...study.suggestion.good, ...study.suggestion.ok]
+      : [];
   return (
     <Card className="gap-3 p-4 sm:p-6">
       <h3 className="text-lg font-semibold">Terrain around the launch</h3>
@@ -165,7 +190,7 @@ export function TerrainStudyCard({
         Read once from satellite heights: a height every 30 m near the pin, every 60 m out to 15 km.
       </p>
       <SlopeLines study={study} ideal={ideal} ok={ok} listedAltitude={listedAltitude} />
-      <LeeLines study={study} listed={listed} />
+      <LeeLines study={study} launchWinds={launchWinds} />
       {today && months && <SunLines today={today} months={months} />}
       <p className="text-xs text-muted-foreground">
         The heights are of the surface, trees and buildings included. Heights: Copernicus DEM

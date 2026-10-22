@@ -87,7 +87,7 @@ The card says whether the slope fits the listed wind. It fits when it faces with
 
 For each of the eight compass directions, SoarCast looks upwind for ground higher than the launch. Air that crosses a ridge or a peak tumbles on its far side. This rough air is the lee, or rotor. It reaches about 5 to 10 times the ridge's height downwind, and farther in strong wind.
 
-The card lists ground at least {{leeMinHeightM}} m higher than the launch that lies closer than {{leeRatio}} times that height. "Listed" marks a direction the launch is listed for. The slope above a launch counts too: wind from behind comes over it.
+Ground counts when it is at least {{leeMinHeightM}} m higher than the launch and closer than {{leeRatio}} times that height. The card gives a line for each wind the launch is listed for. When none is listed, it uses the winds the slope suits. It then names the other directions with higher ground close upwind. The slope above a launch counts too: wind from behind comes over it.
 
 ### Sun on the launch
 
