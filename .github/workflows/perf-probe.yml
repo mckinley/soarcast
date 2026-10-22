@@ -4,9 +4,16 @@ name: Perf probe
 # the forecast cache rows are, how many saved sites a dashboard loads, how
 # long a 7-day Open-Meteo profile takes, and how long pages took for real
 # (request_timings: page patterns and durations only, so the public log never
-# says which site anyone looked at). Run it from the Actions tab.
+# says which site anyone looked at). Run it from the Actions tab. With
+# "refresh forecasts" ticked it first runs the saved sites' forecast refresh
+# the hourly cron runs (counts only in the log).
 on:
   workflow_dispatch:
+    inputs:
+      refresh_forecasts:
+        description: Run the saved sites' forecast refresh first
+        type: boolean
+        default: false
   push:
     branches: [claude/project-thread-zjn5p6]
     paths: [.github/workflows/perf-probe.yml]
@@ -21,6 +28,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Refresh saved sites' forecasts
+        if: inputs.refresh_forecasts
+        run: |
+          curl -sS -X POST -H "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nhttp=%{http_code} total=%{time_total}s\n" \
+            https://soarcast.mckinleyaviation.com/api/forecasts/refresh
       - name: D1 location and table sizes
         continue-on-error: true
         env:
