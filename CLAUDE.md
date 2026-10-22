@@ -32,7 +32,7 @@ Everything runs on Cloudflare; don't add infrastructure outside it.
 - **Copy:** name pages, nav items, card titles and labels neutrally (Planning, This week, Favorites, Private site), never "Your …" or "My …". All text pilots read (screens, emails, alerts, the Guide) follows the writing rules in `src/guide/README.md`.
 - **Guide:** `/guide` explains SoarCast to pilots. Pages are Markdown in `src/guide/pages/` with front matter (title, summary, order, `covers`: the code each page describes), rendered by `app/lib/guide.server.ts`. A number the code decides is a `{{name}}` placeholder from `src/guide/facts.ts`, which imports the code's own constant. `src/guide/__tests__/guide.test.ts` checks the rules a machine can (dashes, semicolons, sentence length, internal words, facts, covers).
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
-- **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR)
+- **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR). Every map's layers are one panel, `MapLayers` (`src/components/map-layers.tsx`, sources and rules in `src/lib/map-layers.ts`): kk7 thermals and skyways by time of year and of day, rain now (RainViewer), clouds now (the satellite that sees the map's middle: GOES and Himawari through NASA GIBS, Meteosat from EUMETSAT's map service, visible light by day and infrared at night) and lightning now (NOAA nowCOAST over the Americas and the Pacific, Meteosat's lightning camera over Europe and Africa). The browser asks those sources itself (all allow it) and shows each picture's age. Airspace from openAIP goes through `/api/airspace/{z}/{x}/{y}`, which adds the optional `OPENAIP_API_KEY` secret and keeps tiles a day. The root loader's `airspace` flag shows the layer only once the secret is set. Choices are kept in `localStorage`. No layer changes a verdict.
 - **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
 - **Alerts:** an hourly Cron Trigger (`[triggers]` in `wrangler.toml`) runs `worker.ts` `scheduled`, which posts to `/api/notifications/check`. Each user's morning run (digest) is at their digest hour and the evening run at 18:00, in their `settings.timeZone` (`src/lib/alert-schedule.ts`). `?run=morning|evening` with the `CRON_SECRET` bearer forces a run for everyone.
 - **Health:** after the alerts run, the cron calls `/api/health` (CRON_SECRET bearer): D1 write, Open-Meteo forecast, pgsites search and daily sync age, last alerts run. It emails the `HEALTH_ALERT_TO` secret when the result changes (failing or recovered) and throws, so the cron shows as failed in Cloudflare. State is in the `app_state` table.
@@ -85,6 +85,7 @@ VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
 CRON_SECRET
 PGSITES_API_KEY
 HEALTH_ALERT_TO   (optional: where health-check failures are emailed)
+OPENAIP_API_KEY   (optional: the map's Airspace layer)
 ```
 
 Email needs no secret: the `EMAIL` binding in `wrangler.toml` sends through Cloudflare Email Sending, and `mckinleyaviation.com` must be onboarded there.

@@ -209,8 +209,7 @@ export function MapLayers({ hotspotsOn = false }: { hotspotsOn?: boolean }) {
   const cloudKey = `${clouds.satellite.id}:${clouds.visible ? 'day' : 'night'}`;
   const cloudTime = usePolled(isOn('clouds'), cloudKey, () => newestImageryTime(clouds.imagery));
 
-  // Lightning now: every source draws where it has lightning; the note names
-  // the time of the ones that cover the map's middle
+  // Lightning now: the sources that cover the map's middle, and their newest time
   const lightningTimes = usePolled(isOn('lightning'), 'lightning', async () => {
     const times = await Promise.all(
       LIGHTNING_SOURCES.map((s) =>
@@ -394,7 +393,7 @@ export function MapLayers({ hotspotsOn = false }: { hotspotsOn?: boolean }) {
         />
       )}
       {isOn('lightning') &&
-        LIGHTNING_SOURCES.map((s) => {
+        lightningHere.map((s) => {
           const at = lightningTimes?.[s.id];
           return at ? (
             <LightningLayer

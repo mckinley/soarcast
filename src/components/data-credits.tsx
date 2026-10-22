@@ -25,7 +25,7 @@ export const KK7_ATTRIBUTION =
 export const RAINVIEWER_ATTRIBUTION = 'Rain: <a href="https://www.rainviewer.com">RainViewer</a>';
 
 export const NASA_GIBS_ATTRIBUTION =
-  'Clouds: NASA <a href="https://nasa-gibs.github.io/gibs-api-docs/">GIBS</a>, from NOAA and JMA satellites';
+  'Clouds: NASA <a href="https://nasa-gibs.github.io/gibs-api-docs/">GIBS</a>';
 
 export const EUMETSAT_ATTRIBUTION = `© <a href="https://view.eumetsat.int">EUMETSAT</a> ${new Date().getUTCFullYear()}`;
 
