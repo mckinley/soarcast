@@ -1,14 +1,14 @@
-import {
-  Html,
-  Head,
-  Body,
-  Container,
-  Section,
-  Heading,
-  Text,
-  Link,
-  Hr,
-} from '@react-email/components';
+// Each component from its own package: @react-email/components would also
+// bring a code highlighter, Tailwind and Prettier into the Worker.
+import { Html } from '@react-email/html';
+import { Head } from '@react-email/head';
+import { Body } from '@react-email/body';
+import { Container } from '@react-email/container';
+import { Section } from '@react-email/section';
+import { Heading } from '@react-email/heading';
+import { Text } from '@react-email/text';
+import { Link } from '@react-email/link';
+import { Hr } from '@react-email/hr';
 import { digestTitle } from '@/lib/notifications';
 import type { DayStatus as DigestStatus } from '@/lib/verdict-display';
 
@@ -44,6 +44,29 @@ const STATUS_ORDER: Record<DigestStatus, number> = { go: 0, flyable: 1, marginal
 /** The digest's one-line answer, also its subject: "Go today at Tiger Mountain". */
 export function digestHeadline(sites: SiteDigestItem[]): string {
   return digestTitle(sites);
+}
+
+/** The digest as plain text, for mail apps that don't show HTML. */
+export function digestText({ date, sites, appUrl = APP_URL }: MorningDigestEmailProps): string {
+  const ordered = [...sites].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  const lines = [digestHeadline(sites), `SoarCast · ${date}`, ''];
+  if (ordered.length === 0)
+    lines.push('No flying sites yet. Visit SoarCast to add your sites.', '');
+  for (const site of ordered) {
+    lines.push(site.name, site.headline);
+    if (site.detail) lines.push(site.detail);
+    if (site.concern) lines.push(`Watch for: ${site.concern}`);
+    if (site.url) lines.push(site.url.startsWith('/') ? `${appUrl}${site.url}` : site.url);
+    lines.push('');
+  }
+  lines.push(
+    'A go is a flyable day with the flying you said each site is worth going for.',
+    '',
+    `See this week: ${appUrl}/dashboard`,
+    `Manage notifications: ${appUrl}/settings`,
+    'Weather data by Open-Meteo.com (CC BY 4.0)',
+  );
+  return lines.join('\n');
 }
 
 export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDigestEmailProps) {

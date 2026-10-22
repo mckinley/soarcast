@@ -2,7 +2,11 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import type { PlanningMapProps } from '@/components/planning-map';
 
 const PlanningMap = lazy(() =>
-  import('@/components/planning-map').then((mod) => ({ default: mod.PlanningMap })),
+  // Never rendered on the server: leaving the import out of the server build
+  // keeps Leaflet and MapLibre (about 2 MB) out of the Worker.
+  import.meta.env.SSR
+    ? new Promise<never>(() => {})
+    : import('@/components/planning-map').then((mod) => ({ default: mod.PlanningMap })),
 );
 
 const SKELETON = (

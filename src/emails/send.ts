@@ -1,5 +1,19 @@
-import { render, toPlainText } from '@react-email/components';
-import { MorningDigestEmail, digestHeadline, type SiteDigestItem } from './morning-digest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import {
+  MorningDigestEmail,
+  digestHeadline,
+  digestText,
+  type SiteDigestItem,
+} from './morning-digest';
+
+// What email clients expect at the top, as React Email's own render adds it
+const DOCTYPE =
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
+
+/** The digest's HTML, rendered by React without React Email's heavier render. */
+export function renderDigestHtml(message: Pick<MorningDigestMessage, 'date' | 'sites'>): string {
+  return DOCTYPE + renderToStaticMarkup(MorningDigestEmail(message));
+}
 
 /**
  * Every SoarCast email comes from this address. Its domain must be onboarded on
@@ -25,14 +39,12 @@ export async function sendMorningDigestEmail(
   mailer: SendEmail,
   { to, date, sites }: MorningDigestMessage,
 ): Promise<EmailSendResult> {
-  const html = await render(MorningDigestEmail({ date, sites }));
-
   return mailer.send({
     from: EMAIL_FROM,
     to,
     subject: `${digestHeadline(sites)} · SoarCast`,
-    html,
-    text: toPlainText(html),
+    html: renderDigestHtml({ date, sites }),
+    text: digestText({ date, sites }),
   });
 }
 

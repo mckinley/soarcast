@@ -1,7 +1,11 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 
 const MapDisplay = lazy(() =>
-  import('@/components/map-display').then((mod) => ({ default: mod.MapDisplay })),
+  // Never rendered on the server: leaving the import out of the server build
+  // keeps Leaflet and MapLibre (about 2 MB) out of the Worker.
+  import.meta.env.SSR
+    ? new Promise<never>(() => {})
+    : import('@/components/map-display').then((mod) => ({ default: mod.MapDisplay })),
 );
 
 export function MapDisplayWrapper({
