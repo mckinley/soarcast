@@ -9,9 +9,13 @@ compatibility_flags = ["nodejs_compat"]
 # No public URL: the cron and the Workflow are all it does
 workers_dev = false
 
-# Rating 20 years of days at a launch takes a few seconds of CPU per step
+# Rating 20 years of days at a launch takes a few seconds of CPU per step.
+# A Workflow's steps can share one invocation, and an ERA5 cell's 20 years
+# take about 8,500 requests to the open copy, so the default of 10,000 a run
+# stopped the season build at its second cell.
 [limits]
 cpu_ms = 300000
+subrequests = 5000000
 
 # The ERA5 reader's WebAssembly with 16 MB of memory instead of 64, written
 # to jobs/.build before each build (run wrangler from the repository root)
