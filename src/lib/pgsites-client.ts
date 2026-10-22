@@ -1,5 +1,13 @@
 const BASE_URL = 'https://pgsites.mckinleyaviation.com';
 
+/** Where pgsites got a site (PgSite.source). */
+export type SiteOrigin = 'pge' | 'flown' | 'osm';
+
+/** A site's origin, reading anything unknown (or an older answer) as Paragliding Earth. */
+export function siteOrigin(source: string | null | undefined): SiteOrigin {
+  return source === 'flown' || source === 'osm' ? source : 'pge';
+}
+
 export interface PgSite {
   id: string;
   pge_site_id: number;
@@ -38,6 +46,21 @@ export interface PgSite {
   flown_pilots?: number | null;
   flown_days?: number | null;
   flown_last?: string | null;
+  /**
+   * 'pge' for a Paragliding Earth site. 'flown' for a busy launch no listed
+   * site covered, found from flights Syncing Pilots tracked: its name comes
+   * from OpenStreetMap and its wind directions are the directions pilots flew
+   * off launch. 'osm' for a takeoff mapped in OpenStreetMap that no listed
+   * site covered, with the directions mapped there. Neither has a Paragliding
+   * Earth page (empty pge_link).
+   */
+  source?: SiteOrigin;
+  /** An 'osm' site's page on openstreetmap.org. Null otherwise. */
+  source_url?: string | null;
+  /** Where tracked pilots really launch near the site, when they do. Null when none. */
+  launch_latitude?: number | null;
+  launch_longitude?: number | null;
+  launch_altitude?: number | null;
 }
 
 /** A place pgsites' search found by name ("Cali"), with the listed sites near it, busiest first. */

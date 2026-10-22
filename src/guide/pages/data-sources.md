@@ -130,13 +130,29 @@ The sites most pilots fly come first. Browse Sites shows how many pilots [Syncin
 
 Pilots write these pages, so details can be missing, old or wrong. Check the site's rules and ask the local club before flying. To fix a site, edit it on Paragliding Earth. SoarCast picks up the change within a day, or within {{siteRefreshDays}} days for a site in Favorites.
 
+### Launches found from flights
+
+Some busy launches are missing from Paragliding Earth. SoarCast finds them from the flights [Syncing Pilots](https://syncingpilots.com) tracked. A spot where at least 5 different pilots took off in the last two years becomes a launch, unless a listed site already covers it. Browse Sites marks these launches "Found from flights". SoarCast looks for new ones every week.
+
+- The name comes from [OpenStreetMap](https://www.openstreetmap.org). It is the peak or hill the launch is on, or else a listed site or town nearby.
+- The wind directions are the directions pilots took off in. Pilots take off into the wind, so this is a good guess. It can miss a direction that works but is rarely flown.
+- These launches have no description, landing or site rules. Ask local pilots before flying there.
+
+### Takeoffs from OpenStreetMap
+
+[OpenStreetMap](https://www.openstreetmap.org) is a world map anyone can edit. Pilots and flying clubs map takeoffs there too. A mapped takeoff becomes a launch when no listed site covers it and it has a name and the directions it faces. Browse Sites marks these launches "From OpenStreetMap". SoarCast checks OpenStreetMap every week.
+
+- The wind directions are the ones mapped in OpenStreetMap. Check them with local pilots.
+- A closed or private takeoff, or one only for hang gliders, is left out. A takeoff with no directions is left out too, since SoarCast can't rate it.
+- Most of these launches have no description, landing or site rules. Ask local pilots before flying there.
+
 ## Private sites
 
 A pilot can add a private site that is missing from the list. Only that pilot can see it.
 
 When a pilot drops a pin, SoarCast looks up the height of the ground there. It also looks at the slopes around the pin to suggest which way the launch faces. The heights come from the European Union's Copernicus elevation map, which has a height every 90 m. SoarCast gets them through Open-Meteo.
 
-The place search uses [OpenStreetMap](https://www.openstreetmap.org). SoarCast also lists Paragliding Earth sites near the pin, so a pilot can add one of those to Favorites instead.
+The place search uses [OpenStreetMap](https://www.openstreetmap.org). SoarCast also lists the sites it knows near the pin, so a pilot can add one of those to Favorites instead.
 
 ## Comps
 
@@ -159,10 +175,10 @@ The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://the
 
 ## Credits
 
-| Data                         | Licence                                                               |
-| ---------------------------- | --------------------------------------------------------------------- |
-| Forecasts from Open-Meteo    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Sites from Paragliding Earth | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
-| Place names from GeoNames    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
-| Thermal maps from kk7        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
-| Map data from OpenStreetMap  | [ODbL](https://www.openstreetmap.org/copyright)                       |
+| Data                                         | Licence                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| Forecasts from Open-Meteo                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Sites from Paragliding Earth                 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
+| Place names from GeoNames                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
+| Thermal maps from kk7                        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Map data and launch names from OpenStreetMap | [ODbL](https://www.openstreetmap.org/copyright)                       |

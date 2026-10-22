@@ -1,10 +1,14 @@
 // Credits the data licences ask for: Open-Meteo (CC BY 4.0) wherever a
 // forecast shows, Paragliding Earth (CC BY-SA 3.0) wherever its sites do, and
 // kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do, and GeoNames (CC BY
-// 4.0) wherever a search lists sites near a town. The Guide's Data
-// sources page (src/guide/pages/data-sources.md) lists them all.
+// 4.0) wherever a search lists sites near a town. A launch found from
+// tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
+// name. A takeoff from OpenStreetMap credits OpenStreetMap (ODbL) and links
+// its page there. The Guide's Data sources page
+// (src/guide/pages/data-sources.md) lists them all.
 
 import { Link } from 'react-router';
+import type { SiteOrigin } from '@/lib/pgsites-client';
 
 const link = 'underline underline-offset-2 hover:text-foreground';
 
@@ -38,14 +42,73 @@ export function ForecastCredit({ className = '' }: { className?: string }) {
   );
 }
 
-/** Credit for one Paragliding Earth site, linking its own page when known. */
+/**
+ * Credit for one listed site: its Paragliding Earth page, for a launch found
+ * from tracked flights Syncing Pilots and OpenStreetMap, or for a takeoff
+ * from OpenStreetMap its page there.
+ */
 export function SiteSourceCredit({
   pgeLink,
+  origin = 'pge',
+  sourceUrl,
   className = '',
 }: {
   pgeLink?: string | null;
+  origin?: SiteOrigin;
+  sourceUrl?: string | null;
   className?: string;
 }) {
+  if (origin === 'osm') {
+    return (
+      <p className={`text-xs text-muted-foreground ${className}`}>
+        No site guide lists this launch. It is a takeoff mapped in{' '}
+        <a
+          href={sourceUrl || 'https://www.openstreetmap.org'}
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          OpenStreetMap
+        </a>{' '}
+        (
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          ODbL
+        </a>
+        ). Ask local pilots about the site&apos;s rules and landing before flying.{' '}
+        <Link to="/guide/data-sources#takeoffs-from-openstreetmap" className={link}>
+          More
+        </Link>
+      </p>
+    );
+  }
+  if (origin === 'flown') {
+    return (
+      <p className={`text-xs text-muted-foreground ${className}`}>
+        No site guide lists this launch. SoarCast found it from flights{' '}
+        <a href="https://syncingpilots.com" className={link} target="_blank" rel="noreferrer">
+          Syncing Pilots
+        </a>{' '}
+        tracked. Its name comes from{' '}
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          OpenStreetMap
+        </a>{' '}
+        (ODbL). Ask local pilots about the site&apos;s rules and landing before flying.{' '}
+        <Link to="/guide/data-sources#launches-found-from-flights" className={link}>
+          More
+        </Link>
+      </p>
+    );
+  }
   return (
     <p className={`text-xs text-muted-foreground ${className}`}>
       Site information from{' '}
