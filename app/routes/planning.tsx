@@ -6,6 +6,7 @@ import { getSession, requireAuth } from '~/app/lib/auth.server';
 import { ensureLaunchSite } from '~/app/lib/launch-sites.server';
 import { putInNamedArea } from '~/app/lib/site-areas.server';
 import { compsWorldwide } from '~/app/lib/comps.server';
+import { allNogaTakeoffs } from '~/app/lib/noga.server';
 import {
   destinationSeasons,
   rowStats,
@@ -40,16 +41,12 @@ import {
   DESTINATION_BY_SLUG,
   type Destination,
 } from '~/lib/destinations';
-import {
-  anyGoSharesFromStats,
-  SEASON_YEARS,
-  statsMonths,
-  type SeasonStats,
-} from '~/lib/seasons';
+import { anyGoSharesFromStats, SEASON_YEARS, statsMonths, type SeasonStats } from '~/lib/seasons';
 import { GOAL_LABEL } from '~/lib/site-goals';
+import { aboutPerYear, regionFlights, siteFlights, type NogaFlights } from '~/lib/noga';
 import type { Site } from '~/types';
 import { CompName, CompRow } from '@/components/site-comps';
-import { CompsCredit, SeasonCredit } from '@/components/data-credits';
+import { CompsCredit, NogaCredit, SeasonCredit } from '@/components/data-credits';
 import { PlanningMapWrapper } from '@/components/planning-map-wrapper';
 import type { PlanningMapPoint, PlanningMapProps } from '@/components/planning-map';
 import { Button } from '@/components/ui/button';
@@ -98,6 +95,10 @@ type RegionFilter = Region | 'all';
 const GOALS = { soar: 'Soaring days', great: 'Great days' } as const;
 type WhereGoal = keyof typeof GOALS;
 
+/** Where to fly ranks by go days, or by the long cross-country flights pilots logged there. */
+const SORTS = { go: 'Most go days', xc: 'Most cross-country flights' } as const;
+type Sort = keyof typeof SORTS;
+
 /** Where to fly ranks flying areas, or whole countries. */
 const GROUPS = { area: 'Areas', country: 'Countries' } as const;
 type Group = keyof typeof GROUPS;
@@ -109,6 +110,7 @@ const DEFAULT_FILTERS: Record<string, string> = {
   level: 'all',
   region: 'all',
   goal: 'soar',
+  sort: 'go',
   by: 'area',
 };
 
@@ -172,6 +174,18 @@ interface PlaceRow {
   comps: Comp[][];
   /** Where to fly over one month: the other goal's share */
   other?: { label: string; share: number };
+  /** Cross-country flights a year from the place in each window month (NOGA); null when none near */
+  xc?: PlaceXc | null;
+}
+
+/** A place's cross-country flights in the window, from NOGA's site or regions. */
+interface PlaceXc {
+  perMonth: number[];
+  /** Mean over the window, to rank by */
+  avg: number;
+  /** NOGA's site or region the flights are from */
+  name: string;
+  href: string | null;
 }
 
 export function meta() {
@@ -179,8 +193,7 @@ export function meta() {
     { title: 'Planning | SoarCast' },
     {
       name: 'description',
-      content:
-        `Where and when the paragliding is good, month by month from ${SEASON_YEARS} years of past weather, and the comps worldwide to plan trips around.`,
+      content: `Where and when the paragliding is good, month by month from ${SEASON_YEARS} years of past weather, and the comps worldwide to plan trips around.`,
     },
   ];
 }
@@ -199,6 +212,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const level = pick<Level>(q.get('level'), LEVELS, 'all');
   const region = pick<RegionFilter>(q.get('region'), REGIONS, 'all');
   const goal = pick<WhereGoal>(q.get('goal'), GOALS, 'soar');
+  const sort = pick<Sort>(q.get('sort'), SORTS, 'go');
   const by = pick<Group>(q.get('by'), GROUPS, 'area');
   // Where to fly opened on one area or country lists its launches
   const inArea = AREA_BY_SLUG.has(q.get('area') ?? '') ? q.get('area')! : null;
@@ -227,6 +241,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (validFrom) query.from = validFrom;
   if (spanParam && spanParam in SPANS) query.span = span;
   if (goal !== 'soar') query.goal = goal;
+  if (sort !== 'go') query.sort = sort;
   if (region !== 'all') query.region = region;
   if (kind !== 'flying') query.kind = kind;
   if (level !== 'all') query.level = level;
@@ -274,8 +289,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return months.map((m) => near.filter((c) => c.startDate.slice(0, 7) === m));
   };
   const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
-  const byRank = (a: PlaceRow, b: PlaceRow) =>
+  const byGo = (a: PlaceRow, b: PlaceRow) =>
     (b.shares ? 1 : 0) - (a.shares ? 1 : 0) || b.avg - a.avg || a.name.localeCompare(b.name);
+  const byRank =
+    view === 'where' && sort === 'xc'
+      ? (a: PlaceRow, b: PlaceRow) => (b.xc?.avg ?? -1) - (a.xc?.avg ?? -1) || byGo(a, b)
+      : byGo;
+  // Cross-country flights from NOGA's copy, for Where to fly and Favorites
+  const noga = view === 'comps' ? [] : await allNogaTakeoffs(db);
+  /** Cross-country flights in each window month. */
+  const xcInWindow = (f: NogaFlights | null): PlaceXc | null => {
+    if (!f) return null;
+    const perMonth = months.map((m) => f.perYear[Number(m.slice(5, 7)) - 1]);
+    return { perMonth, avg: mean(perMonth), name: f.name, href: f.href };
+  };
 
   let places: PlaceRow[] = [];
   let destinationsRated = 0;
@@ -297,6 +324,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           shares,
           avg: shares ? mean(shares) : 0,
           comps: compsByMonth(site.latitude, site.longitude),
+          xc: xcInWindow(siteFlights(noga, site.latitude, site.longitude)),
         };
       })
       .sort(byRank);
@@ -332,6 +360,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const launchRow = (dest: Destination): PlaceRow => {
       const l = rated.get(dest.slug);
       const shares = l ? inWindow(launchShares(l, goal)) : null;
+      const latitude = l?.row.latitude ?? dest.latitude;
+      const longitude = l?.row.longitude ?? dest.longitude;
       return {
         key: dest.slug,
         name: dest.name,
@@ -342,7 +372,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         flag: countryFlag(dest.countryCode),
         shares,
         avg: shares ? mean(shares) : 0,
-        comps: compsByMonth(l?.row.latitude ?? dest.latitude, l?.row.longitude ?? dest.longitude),
+        comps: compsByMonth(latitude, longitude),
+        xc: xcInWindow(siteFlights(noga, latitude, longitude)),
         other: l
           ? { label: otherLabel, share: mean(inWindow(launchShares(l, otherGoal))) }
           : undefined,
@@ -385,6 +416,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             shares,
             avg: shares ? mean(shares) : 0,
             comps: months.map((_, i) => uniqueComps(parts.flatMap((p) => p.comps[i]))),
+            xc: xcInWindow(
+              regionFlights(
+                noga,
+                dests.map((dest) => {
+                  const l = rated.get(dest.slug);
+                  return {
+                    latitude: l?.row.latitude ?? dest.latitude,
+                    longitude: l?.row.longitude ?? dest.longitude,
+                  };
+                }),
+              ),
+            ),
             other: shares ? { label: otherLabel, share: mean(share(otherGoal)) } : undefined,
             parts: parts
               .filter((p) => p.shares && p.href)
@@ -485,7 +528,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     months,
     firstMonth: thisMonth,
     lastMonth,
-    filters: { kind, level, region, goal, by },
+    filters: { kind, level, region, goal, sort, by },
     comps: shown,
     failed: comps === null,
     signedIn: !!session?.user?.id,
@@ -701,6 +744,18 @@ function shareCell(share: number): string {
 
 const pct = (share: number) => `${Math.round(share * 100)}%`;
 
+/** Cross-country flights in a typical month, short for a grid cell: "120", "4", "<1". */
+function xcShort(n: number): string {
+  if (n === 0) return '';
+  return n < 1 ? '<1' : String(Math.round(n));
+}
+
+/** "about 120 flights of 100 km or more in a typical November" */
+function xcWords(n: number, month: string): string {
+  const count = n === 0 ? 'no flights' : `${aboutPerYear(n)} flight${n >= 1.5 ? 's' : ''}`;
+  return `${count} of 100 km or more in a typical ${monthLabel(month, { long: true })}`;
+}
+
 const PENDING = 'Being rated. Its seasons arrive within a day.';
 
 function ShareLegend({ pending = false }: { pending?: boolean }) {
@@ -787,6 +842,11 @@ function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
               <div className="min-w-0">
                 <PlaceName row={row} />
                 {row.parts && <PartsLine parts={row.parts} />}
+                {row.xc && (
+                  <div className="text-xs text-muted-foreground">
+                    Cross-country: {xcWords(row.xc.perMonth[0], month)}
+                  </div>
+                )}
                 {row.comps[0].map((c) => (
                   <span
                     key={c.id}
@@ -864,6 +924,7 @@ function PlaceGrid({ rows, months, label }: { rows: PlaceRow[]; months: string[]
                     title={`${row.name}: a go on ${pct(row.avg)} of days across ${windowLabel(months)}`}
                   >
                     {pct(row.avg)}
+                    {row.xc && <XcCount n={row.xc.avg} />}
                   </td>
                   {months.map((m, i) => {
                     const share = row.shares![i];
@@ -872,11 +933,12 @@ function PlaceGrid({ rows, months, label }: { rows: PlaceRow[]; months: string[]
                       <td
                         key={m}
                         className={`relative h-10 rounded text-center tabular-nums ${shareCell(share)}`}
-                        title={`${row.name} in ${monthLabel(m, { year: true })}: a go on ${pct(share)} of days${comps
-                          .map((c) => `. Comp: ${c.name}, ${compDates(c)}`)
-                          .join('')}`}
+                        title={`${row.name} in ${monthLabel(m, { year: true })}: a go on ${pct(share)} of days${
+                          row.xc ? `. Cross-country: ${xcWords(row.xc.perMonth[i], m)}` : ''
+                        }${comps.map((c) => `. Comp: ${c.name}, ${compDates(c)}`).join('')}`}
                       >
                         {pct(share)}
+                        {row.xc && <XcCount n={row.xc.perMonth[i]} />}
                         {comps.length > 0 && (
                           <Trophy className="absolute right-0.5 top-0.5 h-3 w-3 text-amber-600 dark:text-amber-400" />
                         )}
@@ -900,6 +962,11 @@ function PlaceGrid({ rows, months, label }: { rows: PlaceRow[]; months: string[]
   );
 }
 
+/** A grid cell's second line: cross-country flights in a typical month. */
+function XcCount({ n }: { n: number }) {
+  return <span className="block text-[9px] font-normal leading-none opacity-75">{xcShort(n)}</span>;
+}
+
 function Places({ rows, months, label }: { rows: PlaceRow[]; months: string[]; label: string }) {
   return months.length === 1 ? (
     <RankedList rows={rows} month={months[0]} />
@@ -907,6 +974,12 @@ function Places({ rows, months, label }: { rows: PlaceRow[]; months: string[]; l
     <div className="space-y-3">
       <PlaceGrid rows={rows} months={months} label={label} />
       <ShareLegend />
+      {rows.some((r) => r.xc) && (
+        <p className="text-xs text-muted-foreground">
+          The small number under a share is how many cross-country flights of 100 km or more pilots
+          logged there in a typical month.
+        </p>
+      )}
     </div>
   );
 }
@@ -963,8 +1036,7 @@ function SaveArea({
   );
 }
 
-const SEASONS_NOTE =
-  `Seasons come from the last ${SEASON_YEARS} years of weather, so a month reads the same in any year. Comps are the ones listed for those dates.`;
+const SEASONS_NOTE = `Seasons come from the last ${SEASON_YEARS} years of weather, so a month reads the same in any year. Comps are the ones listed for those dates.`;
 
 export default function PlanningPage() {
   const {
@@ -1017,6 +1089,7 @@ export default function PlanningPage() {
         <>
           <div className="space-y-2">
             <FilterChips name="goal" options={GOALS} value={filters.goal} query={query} />
+            <FilterChips name="sort" options={SORTS} value={filters.sort} query={query} />
             {!opened && (
               <>
                 <FilterChips name="by" options={GROUPS} value={filters.by} query={query} />
@@ -1065,16 +1138,22 @@ export default function PlanningPage() {
               <p className="text-sm text-muted-foreground">
                 {opened ? (
                   <>
-                    How often {when} was {goalWords} at each of its launches, best{' '}
-                    {months.length > 1 ? 'on average ' : ''}first.
+                    How often {when} was {goalWords} at each of its launches
+                    {filters.sort === 'go' &&
+                      `, best ${months.length > 1 ? 'on average ' : ''}first`}
+                    .
                   </>
                 ) : (
                   <>
                     How often {when} was {goalWords} somewhere in each{' '}
-                    {filters.by === 'country' ? 'country' : 'area'}, at one launch or another, best{' '}
-                    {months.length > 1 ? 'on average ' : ''}first. Open one for its launches.
+                    {filters.by === 'country' ? 'country' : 'area'}, at one launch or another
+                    {filters.sort === 'go' &&
+                      `, best ${months.length > 1 ? 'on average ' : ''}first`}
+                    . Open one for its launches.
                   </>
                 )}{' '}
+                {filters.sort === 'xc' &&
+                  'Ranked by the cross-country flights of 100 km or more pilots logged there, most first. '}
                 A trophy marks a comp there.
               </p>
               {places.length > 0 && (
@@ -1096,11 +1175,15 @@ export default function PlanningPage() {
                 {destinationsRated < DESTINATIONS.length &&
                   `${destinationsRated} of ${DESTINATIONS.length} launches rated so far. `}
                 Each launch is rated on {SEASON_YEARS} years of past weather, with its Paragliding
-                Earth wind directions and SoarCast&apos;s default wind limit. An area or country counts a day
-                as a go when any of its launches was. Open a launch to see its own season.{' '}
-                {SEASONS_NOTE}
+                Earth wind directions and SoarCast&apos;s default wind limit. An area or country
+                counts a day as a go when any of its launches was. Open a launch to see its own
+                season. {SEASONS_NOTE} Cross-country flights for a launch are the ones from the
+                takeoffs around it. For an area or country they are the ones from the flying regions
+                its launches are in. Only long flights count, so a place with few can still be good
+                for local flying.
               </p>
               <SeasonCredit />
+              <NogaCredit />
             </div>
           )}
         </>
@@ -1135,6 +1218,7 @@ export default function PlanningPage() {
             <Places rows={places} months={months} label="Site" />
             <p className="text-xs text-muted-foreground">{SEASONS_NOTE}</p>
             <SeasonCredit />
+            {places.some((p) => p.xc) && <NogaCredit />}
           </div>
         ))}
 

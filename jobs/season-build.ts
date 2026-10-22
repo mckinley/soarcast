@@ -4,11 +4,12 @@
 // and custom site, then the destinations in src/lib/destinations.ts.
 //
 // A Cloudflare Workflow, started twice a day by this Worker's cron (index.ts)
-// or by hand (the "Season build" workflow on GitHub). The weather is ERA5,
+// or by hand (the "Cloudflare job" workflow on GitHub). The weather is ERA5,
 // ECMWF's record of past weather, read from Open-Meteo's open copy on Amazon
 // (src/lib/season-build/era5.ts): no account and no rate limit. Each ERA5
-// cell is one step, so launches in the same cell share one read, and a step
-// that fails is tried again. Only each site's time zone comes from
+// cell is a step per five years, so launches in the same cell share one
+// read, then a step that joins and writes them. A step that fails is tried
+// again. Only each site's time zone comes from
 // Open-Meteo's API (one small call).
 
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
@@ -22,6 +23,7 @@ import { customSiteToSite } from '../src/lib/custom-sites';
 import { DESTINATIONS } from '../src/lib/destinations';
 import {
   bestMonths,
+  decodeSeasonDays,
   encodeSeasonDays,
   seasonStats,
   statsMonths,
@@ -54,6 +56,11 @@ const SOURCE = 'era5';
 const REBUILD_AFTER_MONTHS = 2;
 /** A Worker waits on at most six connections at a time; more only queue. */
 const READS_AT_ONCE = 6;
+/**
+ * Years a step reads and rates. A Worker has 128 MB, and reading and rating
+ * all 20 years at once ran out of it.
+ */
+const BLOCK_YEARS = 5;
 /** Sites a dry run rates when no limit is given. */
 const DRY_RUN_SITES = 4;
 
@@ -78,6 +85,12 @@ interface CellResult {
   lines: string[];
   built: number;
   skipped: number;
+}
+
+/** A block of years at a cell: each launch's days, encoded (encodeSeasonDays). */
+interface BlockResult {
+  lines: string[];
+  days: Record<string, string>;
 }
 
 async function ownJobs(env: JobsEnv): Promise<Job[]> {
@@ -216,36 +229,62 @@ async function writeSeason(
     .onConflictDoUpdate({ target: siteSeasons.key, set: row });
 }
 
-/** Reads one ERA5 cell, then rates and writes each of its launches. */
-async function buildCell(
-  env: JobsEnv,
+/** The range in blocks of BLOCK_YEARS calendar years, so a step holds a few years at a time. */
+function blocks({ from, to }: DayRange): DayRange[] {
+  const out: DayRange[] = [];
+  for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y += BLOCK_YEARS) {
+    const blockFrom = `${y}-01-01` < from ? from : `${y}-01-01`;
+    const blockTo = `${y + BLOCK_YEARS - 1}-12-31` > to ? to : `${y + BLOCK_YEARS - 1}-12-31`;
+    out.push({ from: blockFrom, to: blockTo });
+  }
+  return out;
+}
+
+/** Reads a block of years of one ERA5 cell and rates each of its launches over it. */
+async function rateBlock(
   { cell, jobs }: Plan['cells'][number],
-  { range, recent }: Plan,
-  dryRun: boolean,
-): Promise<CellResult> {
+  block: DayRange,
+): Promise<BlockResult> {
   // ERA5 hours from the first local day to the last, with half a day either side
-  const fromMs = Date.parse(`${range.from}T00:00:00Z`) - 14 * HOUR_MS;
-  const toMs = Date.parse(`${range.to}T23:00:00Z`) + 14 * HOUR_MS;
+  const fromMs = Date.parse(`${block.from}T00:00:00Z`) - 14 * HOUR_MS;
+  const toMs = Date.parse(`${block.to}T23:00:00Z`) + 14 * HOUR_MS;
   const t0 = Date.now();
   const { latitude, longitude } = jobs[0].site;
   const series = await era5Series(latitude, longitude, fromMs, toMs, READS_AT_ONCE);
-  const result: CellResult = {
-    lines: [`cell ${cell}: ERA5 read in ${((Date.now() - t0) / 1000).toFixed(0)} s`],
-    built: 0,
-    skipped: 0,
+  const result: BlockResult = {
+    lines: [
+      `cell ${cell}, ${block.from.slice(0, 4)} to ${block.to.slice(0, 4)}: ERA5 read in ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+    ],
+    days: {},
   };
-  if (missing.size > 0) result.lines.push(`  files missing from the bucket: ${[...missing].join(', ')}`);
+  if (missing.size > 0)
+    result.lines.push(`  files missing from the bucket: ${[...missing].join(', ')}`);
+  for (const job of jobs) {
+    const timeZone = await timeZoneAt(job.site.latitude, job.site.longitude);
+    result.days[job.key] = encodeSeasonDays(rateSite(job, series, timeZone, block));
+  }
+  for (const line of result.lines) console.log(line);
+  return result;
+}
+
+/** Joins a cell's blocks into each launch's season and writes it. */
+async function writeCell(
+  env: JobsEnv,
+  { jobs }: Plan['cells'][number],
+  rated: BlockResult[],
+  { range, recent }: Plan,
+  dryRun: boolean,
+): Promise<CellResult> {
+  const result: CellResult = { lines: [], built: 0, skipped: 0 };
   const expected = daysIn(range);
   for (const job of jobs) {
-    const t1 = Date.now();
-    const timeZone = await timeZoneAt(job.site.latitude, job.site.longitude);
-    const days = rateSite(job, series, timeZone, range);
+    const days = rated.flatMap((b) => decodeSeasonDays(b.days[job.key] ?? ''));
     const stats = seasonStats(days);
     const goal = job.site.goal ?? 'soar';
     const months = statsMonths(stats, goal);
     const spread = statsSpread(stats, goal);
     result.lines.push(
-      `${jobTag(job)}: ${days.length} of ${expected} days rated in ${((Date.now() - t1) / 1000).toFixed(0)} s; ` +
+      `${jobTag(job)}: ${days.length} of ${expected} days rated; ` +
         `go for its goal (${goal}) by month: ${months.map((m) => Math.round(m.goShare * 100)).join(' ')}; ` +
         `best ${bestMonths(months)?.text ?? 'none'}; go days in most years: ${spread.map((s) => (s ? `${s.low}-${s.high}` : '?')).join(' ')}`,
     );
@@ -271,12 +310,22 @@ export class SeasonBuild extends WorkflowEntrypoint<JobsEnv, SeasonBuildParams> 
     let built = 0;
     let skipped = 0;
     const failed: string[] = [];
+    const tries = {
+      retries: { limit: 2, delay: '1 minute', backoff: 'exponential' },
+      timeout: '30 minutes',
+    } as const;
     for (const group of planned.cells) {
       try {
-        const result = await step.do(
-          `cell ${group.cell}`,
-          { retries: { limit: 2, delay: '1 minute', backoff: 'exponential' }, timeout: '30 minutes' },
-          () => buildCell(this.env, group, planned, dryRun),
+        const rated: BlockResult[] = [];
+        for (const block of blocks(planned.range)) {
+          rated.push(
+            await step.do(`cell ${group.cell} ${block.from.slice(0, 4)}`, tries, () =>
+              rateBlock(group, block),
+            ),
+          );
+        }
+        const result = await step.do(`cell ${group.cell} write`, tries, () =>
+          writeCell(this.env, group, rated, planned, dryRun),
         );
         built += result.built;
         skipped += result.skipped;

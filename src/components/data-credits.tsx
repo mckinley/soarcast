@@ -5,7 +5,8 @@
 // 4.0) wherever a search lists sites near a town. A launch found from
 // tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
 // name. A takeoff from OpenStreetMap credits OpenStreetMap (ODbL) and links
-// its page there. The Guide's Data sources page
+// its page there. Cross-country flights credit NOGA's map and XContest,
+// whose flights it counts. The Guide's Data sources page
 // (src/guide/pages/data-sources.md) lists them all.
 
 import { Link } from 'react-router';
@@ -216,5 +217,37 @@ export function PlacesCredit({ className = '' }: { className?: string }) {
       </a>
       )
     </span>
+  );
+}
+
+/** Where the cross-country flight counts come from: NOGA's map, built from XContest flights. */
+export function NogaCredit({
+  href = 'https://noga.es/paragliding/map/',
+  className = '',
+}: {
+  /** NOGA's page for the place, or its map */
+  href?: string | null;
+  className?: string;
+}) {
+  return (
+    <p className={`text-xs text-muted-foreground ${className}`}>
+      Flights from{' '}
+      <a
+        href={href ?? 'https://noga.es/paragliding/map/'}
+        className={link}
+        target="_blank"
+        rel="noreferrer"
+      >
+        NOGA&apos;s map of cross-country takeoffs
+      </a>
+      , counted from flights on{' '}
+      <a href="https://www.xcontest.org" className={link} target="_blank" rel="noreferrer">
+        XContest
+      </a>{' '}
+      ·{' '}
+      <Link to="/guide/data-sources#cross-country-flights" className={link}>
+        Data sources
+      </Link>
+    </p>
   );
 }

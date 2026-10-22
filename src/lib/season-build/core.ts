@@ -132,7 +132,10 @@ export const PG_COLUMNS = `id, name, country_code, latitude, longitude, altitude
 export type PgQuery = (sql: string, params: unknown[]) => Promise<PgRow[]>;
 
 /** The listed launch a destination stands for: a name match near its point, nearest first. */
-export async function findDestinationSite(query: PgQuery, dest: Destination): Promise<PgRow | null> {
+export async function findDestinationSite(
+  query: PgQuery,
+  dest: Destination,
+): Promise<PgRow | null> {
   const dLat = 30 / 111;
   const dLng = dLat / Math.cos((dest.latitude * Math.PI) / 180);
   for (const pattern of dest.match) {
@@ -209,7 +212,7 @@ export function destinationJob(dest: Destination, row: PgRow): Job {
   });
 }
 
-/** Every day of the range at a site, rated through the engine on ERA5, a local year at a time. */
+/** Every day of the range at a site, rated through the engine on ERA5, a local month at a time. */
 export function rateSite(
   job: Job,
   series: Era5Series,
@@ -219,12 +222,23 @@ export function rateSite(
   const { latitude: lat, longitude: lon } = job.site;
   const launch = launchProfileFromSite(job.site);
   const days: SeasonDay[] = [];
-  for (let year = Number(from.slice(0, 4)); year <= Number(to.slice(0, 4)); year++) {
-    const profile = era5Profile(series, year, timeZone, lat, lon);
+  for (
+    let month = new Date(`${from.slice(0, 7)}-01T00:00:00Z`);
+    ymd(month) <= to;
+    month = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1))
+  ) {
+    const first = ymd(month);
+    const last = ymd(new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0)));
+    const profile = era5Profile(
+      series,
+      first < from ? from : first,
+      last > to ? to : last,
+      timeZone,
+      lat,
+      lon,
+    );
     if (profile.hours.length === 0) continue;
-    for (const score of evaluateDays(profile, launch)) {
-      if (score.date >= from && score.date <= to) days.push(seasonDayFromScore(score));
-    }
+    for (const score of evaluateDays(profile, launch)) days.push(seasonDayFromScore(score));
   }
   return days;
 }
@@ -233,4 +247,3 @@ export function rateSite(
 export function daysIn({ from, to }: DayRange): number {
   return (Date.parse(to) - Date.parse(from)) / 864e5 + 1;
 }
-

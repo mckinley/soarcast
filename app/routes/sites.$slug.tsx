@@ -39,6 +39,8 @@ import { SeasonCard } from '@/components/season-card';
 import { flownHereFor } from '~/app/lib/flown-days.server';
 import { FlownHereCard } from '@/components/flown-here';
 import { flownByMonthToShow } from '~/lib/flown-days';
+import { nogaFlightsAt } from '~/app/lib/noga.server';
+import { XcFlightsCard } from '@/components/xc-flights';
 
 /** Site shape used by the detail page — works for both local and pgsites-only sites. */
 interface DetailSite {
@@ -320,9 +322,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
   const pgsitesId = localSite?.pgsitesId ?? site.id;
-  const [comps, seasonFull] = await Promise.all([
+  const [comps, seasonFull, xc] = await Promise.all([
     compsPromise,
     seasonWithDays(db, seasonSiteRef('pgsites', pgsitesId), engineSite, compsToday),
+    nogaFlightsAt(db, site.latitude, site.longitude),
   ]);
   // Days pilots flew from here (Syncing Pilots): streamed in after the page
   const flown =
@@ -356,6 +359,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     compsToday,
     season: seasonFull?.summary ?? null,
     flown,
+    xc,
   };
 }
 
@@ -515,6 +519,7 @@ export default function SiteDetailPage() {
     compsToday,
     season,
     flown,
+    xc,
   } = useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -581,6 +586,8 @@ export default function SiteDetailPage() {
           )}
         </Await>
       </Suspense>
+
+      {xc && <XcFlightsCard xc={xc} today={compsToday} />}
 
       <SiteCompsCard comps={comps} today={compsToday} />
 

@@ -21,6 +21,8 @@ import { SeasonCard } from '@/components/season-card';
 import { flownHereFor } from '~/app/lib/flown-days.server';
 import { FlownHereCard } from '@/components/flown-here';
 import { flownByMonthToShow } from '~/lib/flown-days';
+import { nogaFlightsAt } from '~/app/lib/noga.server';
+import { XcFlightsCard } from '@/components/xc-flights';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, Pencil } from 'lucide-react';
@@ -66,9 +68,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   // Without a forecast, comps and the season go by the UTC date
   const compsToday = today ?? new Date().toISOString().slice(0, 10);
-  const [comps, seasonFull] = await Promise.all([
+  const [comps, seasonFull, xc] = await Promise.all([
     compsPromise,
     seasonWithDays(db, seasonSiteRef('custom', site.id), site, compsToday),
+    nogaFlightsAt(db, site.latitude, site.longitude),
   ]);
   // Days pilots flew from here (Syncing Pilots): streamed in after the page
   const flown =
@@ -96,11 +99,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     compsToday,
     season: seasonFull?.summary ?? null,
     flown,
+    xc,
   };
 }
 
 export default function CustomSiteDetailPage() {
-  const { site, sharedSlug, scores, today, forecastError, comps, compsToday, season, flown } =
+  const { site, sharedSlug, scores, today, forecastError, comps, compsToday, season, flown, xc } =
     useLoaderData<typeof loader>();
   const seasonCard = (flownByMonth: Array<number | null> | null) => (
     <SeasonCard
@@ -176,6 +180,8 @@ export default function CustomSiteDetailPage() {
           )}
         </Await>
       </Suspense>
+
+      {xc && <XcFlightsCard xc={xc} today={compsToday} />}
 
       <SiteCompsCard comps={comps} today={compsToday} />
 

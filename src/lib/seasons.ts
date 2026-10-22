@@ -183,27 +183,30 @@ export function topMonths(shares: Array<number | null>): { text: string; share: 
   if (top === 0) return null;
   const best = shares.flatMap((v, i) => (v != null && v >= top * 0.8 ? [i + 1] : []));
   const share = best.reduce((sum, m) => sum + (shares[m - 1] ?? 0), 0) / best.length;
+  return { text: monthsInWords(best), share };
+}
+
+/** Months (1 = Jan, in order) in words: "Jun to Aug", "Apr, May and Sep", "every month but Feb". */
+export function monthsInWords(months: number[]): string {
   // Nearly every month reads as the months left out
-  if (best.length >= 9) {
-    const rest = MONTH.filter((_, i) => !best.includes(i + 1));
-    if (rest.length === 0) return { text: 'every month', share };
+  if (months.length >= 9) {
+    const rest = MONTH.filter((_, i) => !months.includes(i + 1));
+    if (rest.length === 0) return 'every month';
     const last = rest.pop()!;
-    return { text: `every month but ${rest.length ? `${rest.join(', ')} and ` : ''}${last}`, share };
+    return `every month but ${rest.length ? `${rest.join(', ')} and ` : ''}${last}`;
   }
   // A run of months, allowing one across New Year, reads as a range
-  const set = new Set(best);
-  const start = best.find((m) => !set.has(m === 1 ? 12 : m - 1)) ?? best[0];
+  const set = new Set(months);
+  const start = months.find((m) => !set.has(m === 1 ? 12 : m - 1)) ?? months[0];
   const run: number[] = [];
   for (let m = start; set.has(m) && run.length < 12; m = m === 12 ? 1 : m + 1) run.push(m);
-  if (run.length === best.length && run.length >= 3) {
-    return { text: `${MONTH[run[0] - 1]} to ${MONTH[run[run.length - 1] - 1]}`, share };
+  if (run.length === months.length && run.length >= 3) {
+    return `${MONTH[run[0] - 1]} to ${MONTH[run[run.length - 1] - 1]}`;
   }
-  const names = best.map((m) => MONTH[m - 1]);
-  const text =
-    names.length === 1
-      ? names[0]
-      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  return { text, share };
+  const names = months.map((m) => MONTH[m - 1]);
+  return names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /**

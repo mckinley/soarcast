@@ -1,6 +1,6 @@
-# SoarCast's background jobs (jobs/index.ts): the season build, as a
-# Cloudflare Workflow. Its own Worker, so the site never loads the jobs' code.
-# Deployed by the deploy workflow after the site.
+# SoarCast's background jobs (jobs/index.ts): the season build and the NOGA
+# copy, each a Cloudflare Workflow. Its own Worker, so the site never loads
+# the jobs' code. Deployed by the deploy workflow after the site.
 name = "soarcast-jobs"
 account_id = "7c0ef4ee4d820ffe791557c534882957"
 main = "./index.ts"
@@ -18,14 +18,20 @@ cpu_ms = 300000
 [alias]
 "@openmeteo/file-format-wasm" = "./om-wasm.ts"
 
-# Twice a day, like the old GitHub run. A run that finds nothing due ends at once.
+# The season build twice a day (a run that finds nothing due ends at once),
+# the NOGA copy on Mondays. index.ts says which cron starts which.
 [triggers]
-crons = ["23 5,17 * * *"]
+crons = ["23 5,17 * * *", "41 4 * * 1"]
 
 [[workflows]]
 name = "season-build"
 binding = "SEASON_BUILD"
 class_name = "SeasonBuild"
+
+[[workflows]]
+name = "noga-sync"
+binding = "NOGA_SYNC"
+class_name = "NogaSync"
 
 [[d1_databases]]
 binding = "DB"

@@ -1,0 +1,92 @@
+name: Cloudflare job
+
+# SoarCast's background jobs run on Cloudflare: Workflows in the
+# soarcast-jobs Worker (jobs/), each started by that Worker's cron. This
+# starts one by hand and prints how it went, step by step. Plain automation,
+# no AI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job'
+        type: choice
+        options:
+          - season-build
+          - noga-sync
+        default: season-build
+      dry_run:
+        description: 'Season build: rate a few destinations and write nothing'
+        type: boolean
+        default: false
+      limit:
+        description: 'Season build: build at most this many sites (empty: every site due)'
+        default: ''
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Start the job on Cloudflare and follow it
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          JOB: ${{ inputs.job }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workflows/$JOB/instances"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          id="github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if [ "$JOB" = season-build ]; then
+            params=$(jq -nc --arg dry "$DRY_RUN" --arg limit "$LIMIT" \
+              '{dryRun: ($dry == "true")} + (if $limit == "" then {} else {limit: ($limit | tonumber)} end)')
+          else
+            params='{}'
+          fi
+          body=$(jq -nc --arg id "$id" --argjson params "$params" '{instance_id: $id, params: $params}')
+          curl -sS -X POST -H "$auth" -H 'content-type: application/json' -d "$body" "$api" > started.json
+          jq -c '{success, errors, id: .result.id}' started.json
+          jq -e '.success' started.json > /dev/null
+
+          shown=0
+          while true; do
+            sleep 30
+            curl -sS -H "$auth" "$api/$id" > instance.json
+            # Each finished step once. The API names a step "<name>-1" and may
+            # hand its output back as JSON text, cut short when it's long.
+            jq -r --argjson from "$shown" '
+              def parsed: if type == "string" then (fromjson? // .) else . end;
+              def field($k): if type == "object" then .[$k] else null end;
+              # A step that logs puts its lines first, so they survive the cut
+              def lines:
+                (if type == "object" then .lines
+                 else (tostring | capture("^\\{\"lines\":(?<l>\\[[^\\]]*\\])")? | .l | fromjson?)
+                 end) // null;
+              [.result.steps[]? | select(.type == "step" and .end != null)] | .[$from:][] |
+              (.output | parsed) as $out |
+              (.name | sub("-[0-9]+$"; "")) as $name |
+              if (.success | not) then
+                "\($name): failed, \(.error // .attempts[-1].error // {} | tojson)"
+              elif ($out | lines) != null then
+                ($out | lines)[]
+              elif $name == "plan" then
+                (if ($out | type) == "object" then $out
+                 else ($out | tostring | capture("\"sites\":(?<sites>[0-9]+),\"due\":(?<due>[0-9]+)")? // {})
+                 end) as $p |
+                "plan: \($p.sites // "?") sites, \($p.due // "?") due"
+              else
+                "\($name): \($out | if type == "string" then .[0:300] else tojson end)"
+              end
+            ' instance.json || echo "(could not read the steps: $(head -c 300 instance.json))"
+            shown=$(jq '[.result.steps[]? | select(.type == "step" and .end != null)] | length' instance.json)
+            status=$(jq -r '.result.status' instance.json)
+            case "$status" in
+              complete) exit 0 ;;
+              errored|terminated|unknown|null)
+                echo "The job ended: $status"
+                jq -c '.result.error // .errors' instance.json
+                exit 1 ;;
+            esac
+          done

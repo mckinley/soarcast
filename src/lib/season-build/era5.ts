@@ -98,13 +98,18 @@ async function readPoint(path: string, y: number, x: number): Promise<Float32Arr
   for (let attempt = 0; ; attempt++) {
     try {
       const reader = await OmFileReader.create(new OmHttpBackend({ url: `${BUCKET}/${path}.om` }));
-      const dims = reader.getDimensions();
-      const ranges = [
-        { start: y, end: y + 1 },
-        { start: x, end: x + 1 },
-        ...(dims.length > 2 ? [{ start: 0, end: dims[2] }] : []),
-      ];
-      return (await reader.read({ type: OmDataType.FloatArray, ranges })) as Float32Array;
+      try {
+        const dims = reader.getDimensions();
+        const ranges = [
+          { start: y, end: y + 1 },
+          { start: x, end: x + 1 },
+          ...(dims.length > 2 ? [{ start: 0, end: dims[2] }] : []),
+        ];
+        return (await reader.read({ type: OmDataType.FloatArray, ranges })) as Float32Array;
+      } finally {
+        // Frees the file's description held in WebAssembly memory
+        reader.dispose();
+      }
     } catch (error) {
       if ((error as { statusCode?: number }).statusCode === 404) {
         missing.add(path);

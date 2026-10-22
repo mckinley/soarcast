@@ -7,4 +7,5 @@ export interface JobsEnv {
   /** pgsites' database, read only: the listed launch each destination stands for */
   PGSITES: D1Database;
   SEASON_BUILD: Workflow<SeasonBuildParams>;
+  NOGA_SYNC: Workflow;
 }

@@ -1,6 +1,6 @@
 ---
 title: Data sources
-summary: Where the forecasts, sites, flown days, comps and maps come from, and how often each one updates.
+summary: Where the forecasts, sites, flown days, cross-country flights, comps and maps come from, and how often each one updates.
 order: 1
 covers:
   - src/lib/weather-profile.ts
@@ -14,6 +14,10 @@ covers:
   - src/lib/flown-days.ts
   - app/lib/flown-days.server.ts
   - src/components/flown-here.tsx
+  - src/lib/noga.ts
+  - app/lib/noga.server.ts
+  - jobs/noga-sync.ts
+  - src/components/xc-flights.tsx
   - jobs/season-build.ts
   - jobs/index.ts
   - src/lib/season-build/core.ts
@@ -109,7 +113,6 @@ The flying areas on the Planning page are SoarCast's own list of places pilots t
 - The copy SoarCast reads has no measure of storms or fog. So storms and fog never hold a past day back, and a season can show Go on days a forecast would have held back.
 - Some hours are missing from the copy. A day with too few hours left isn't rated.
 
-
 ## Flown days
 
 The "Flown here" card on a site page lists the latest days pilots flew from the site. When the site has a season, the card also says how SoarCast rated the days pilots flew in the last {{seasonMonths}} months. The Season card then shows how often pilots flew in each month.
@@ -128,6 +131,26 @@ SoarCast checks Syncing Pilots again every {{flownRefreshHours}} hours. Flown da
 - Busy sites have many tracked pilots. Quiet sites may have few or none, so their numbers say little.
 - A pilot who drives down from a launch can now and then look like a glide down.
 - Two launches less than {{flownRadiusKm}} km apart show the same flights.
+
+## Cross-country flights
+
+The "Cross-country flights" card on a site page shows how many long flights pilots made from the site in each month. The Planning page shows the same for each launch, area and country, and can rank places by it.
+
+These counts come from [NOGA's map of cross-country takeoffs](https://noga.es/paragliding/map/). NOGA counts the flights pilots uploaded to [XContest](https://www.xcontest.org) from 2015 to 2025. It only counts flights that scored at least {{nogaMinPoints}} points. XContest scores a flight by its distance, with extra points for a closed triangle. So {{nogaMinPoints}} points is about 100 km in a straight line, or less around a triangle.
+
+NOGA groups the spots where these flights started into takeoffs. It groups nearby takeoffs into sites, and nearby sites into flying regions.
+
+- A launch shows the flights from the NOGA site its nearest takeoff belongs to. That takeoff must be within {{nogaNearKm}} km.
+- An area or country on the Planning page shows the flights from the flying regions its launches are in.
+- The numbers are flights in a typical year: the total divided by the years counted.
+
+SoarCast copies NOGA's map every week. It keeps counts only. It shows no pilot names and no flights. Each card links to the place's own page on NOGA, which lists its best flights. Cross-country flights don't change how a day is rated.
+
+### What it can't tell you
+
+- Only long flights count. A site with few of them can still be great for local soaring or a short trip.
+- Only pilots who upload to XContest count. That is most cross-country pilots in Europe, and fewer elsewhere.
+- A busy month can mean many visiting pilots, not only good weather. Comps add many flights too.
 
 ## Sites
 
@@ -208,4 +231,5 @@ The Thermal hotspots and Skyways layers come from [kk7 thermal maps](https://the
 | Sites from Paragliding Earth                 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)       |
 | Place names from GeoNames                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             |
 | Thermal maps from kk7                        | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Cross-country flights from NOGA and XContest | None stated. Credited and linked on every card.                       |
 | Map data and launch names from OpenStreetMap | [ODbL](https://www.openstreetmap.org/copyright)                       |

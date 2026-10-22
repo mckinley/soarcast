@@ -51,6 +51,7 @@ import { AREA_RADIUS_KM } from '@/lib/destinations';
 import { AREA_JOIN_KM } from '@/lib/site-areas';
 import { SITE_REFRESH_DAYS } from '@/lib/launch-sites';
 import { COMP_RADIUS_KM } from '@/lib/comps';
+import { NOGA_MIN_POINTS, NOGA_NEAR_KM } from '@/lib/noga';
 import { LAPSE_BANDS } from '@/components/windgram/lapse-rate-utils';
 import {
   BARB_FLAG_KMH,
@@ -79,6 +80,8 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   flownRefreshHours: FLOWN_REFRESH_HOURS,
   siteRefreshDays: SITE_REFRESH_DAYS,
   compRadiusKm: COMP_RADIUS_KM,
+  nogaNearKm: NOGA_NEAR_KM,
+  nogaMinPoints: NOGA_MIN_POINTS,
 
   // How a day is rated
   windowHours: MIN_WINDOW_HOURS,

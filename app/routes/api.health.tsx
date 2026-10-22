@@ -4,6 +4,7 @@ import { appState, getDb } from '~/app/lib/db.server';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { getPgsitesApiKey, getSyncStatus, searchSites } from '~/lib/pgsites-client';
 import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '~/lib/season-build/run';
+import { NOGA_SYNC_STATE_KEY, type NogaSyncRun } from '~/lib/noga';
 
 // Checks what pilots depend on. The hourly cron (worker.ts) calls this after
 // the alerts run and emails when the result changes; it needs the
@@ -15,6 +16,8 @@ const ALERTS_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 const PGSITES_MAX_SYNC_AGE_DAYS = 2;
 // The season build runs twice a day; most runs find nothing due and end at once
 const SEASON_BUILD_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+// The NOGA copy runs on Mondays; two missed weeks fail
+const NOGA_MAX_AGE_MS = 15 * 24 * 60 * 60 * 1000;
 
 export interface HealthCheck {
   name: string;
@@ -119,6 +122,15 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       // Every due site failing means the build itself is broken
       if (last.due > 0 && last.built === 0 && last.failed.length > 0) throw new Error(detail);
       return detail;
+    }),
+    check('NOGA copy', async () => {
+      const [row] = await db.select().from(appState).where(eq(appState.key, NOGA_SYNC_STATE_KEY));
+      if (!row) return 'no copy yet';
+      const last = JSON.parse(row.value) as NogaSyncRun;
+      if (now.getTime() - Date.parse(last.finishedAt) > NOGA_MAX_AGE_MS) {
+        throw new Error(`no copy since ${last.finishedAt}`);
+      }
+      return `last copy ${last.finishedAt}: ${last.takeoffs} takeoffs, ${last.flights} flights`;
     }),
   ]);
 

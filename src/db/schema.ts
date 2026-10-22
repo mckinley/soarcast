@@ -303,6 +303,32 @@ export const siteSeasons = sqliteTable('site_seasons', {
   summary: text('summary'),
 });
 
+// A copy of NOGA's map of cross-country takeoffs (noga.es/paragliding/map):
+// where XContest flights of 100 points or more started, 2015 to 2025, as
+// counts only. Takeoffs group into NOGA's sites, and sites into regions. The
+// jobs Worker copies it once a week (jobs/noga-sync.ts, src/lib/noga.ts).
+export const nogaTakeoffs = sqliteTable('noga_takeoffs', {
+  // "pg-takeoff-1"
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  // Lower case, like the destinations
+  countryCode: text('country_code').notNull(),
+  latitude: real('latitude').notNull(),
+  longitude: real('longitude').notNull(),
+  siteId: text('site_id').notNull(),
+  siteName: text('site_name').notNull(),
+  regionId: text('region_id').notNull(),
+  regionName: text('region_name').notNull(),
+  flights: integer('flights').notNull(),
+  // Years of flights counted (2015 to 2025: 11)
+  years: integer('years').notNull(),
+  // JSON array of 12 counts, January first
+  byMonth: text('by_month').notNull(),
+  avgPoints: real('avg_points'),
+  maxPoints: real('max_points'),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
+});
+
 // Export types for use in application code
 export type LaunchSite = typeof launchSites.$inferSelect;
 export type NewLaunchSite = typeof launchSites.$inferInsert;

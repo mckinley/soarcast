@@ -1,10 +1,14 @@
-// ERA5 at a launch turned into the profile the forecast engine rates, one
-// year at a time, in the launch's local time. ERA5 has surface weather
+// ERA5 at a launch turned into the profile the forecast engine rates, a
+// month at a time, in the launch's local time. ERA5 has surface weather
 // only: no storm energy, no pressure levels and no visibility. Its 100 m
 // wind stands in for the wind above the ground, and sunrise and sunset come
 // from the sun's position. So storms and fog never hold a past day back.
 
-import { profileFromOpenMeteo, type AtmosphericProfile, type OpenMeteoProfileResponse } from '../weather-profile';
+import {
+  profileFromOpenMeteo,
+  type AtmosphericProfile,
+  type OpenMeteoProfileResponse,
+} from '../weather-profile';
 import { era5At, HOUR_MS, windFromUV, type Era5Series, type Era5Variable } from './era5';
 
 /** Hours missing what the engine can't do without are dropped, then days left short. */
@@ -70,23 +74,25 @@ function zoneFormat(timeZone: string): Intl.DateTimeFormat {
   });
 }
 
-/** One local year of ERA5 at a launch, shaped like an Open-Meteo response. */
-export function era5Year(
+/** Local days `from` to `to` (YYYY-MM-DD) of ERA5 at a launch, shaped like an Open-Meteo response. */
+export function era5Span(
   s: Era5Series,
-  year: number,
+  from: string,
+  to: string,
   timeZone: string,
   lat: number,
   lon: number,
 ): OpenMeteoProfileResponse {
   const fmt = zoneFormat(timeZone);
-  const from = Date.UTC(year, 0, 1);
-  const to = Date.UTC(year + 1, 0, 1);
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`) + 24 * HOUR_MS;
   const utcHours: number[] = [];
   const times: string[] = [];
-  for (let t = from - 14 * HOUR_MS; t < to + 14 * HOUR_MS; t += HOUR_MS) {
+  for (let t = start - 14 * HOUR_MS; t < end + 14 * HOUR_MS; t += HOUR_MS) {
     const local = localIso(t + zoneOffset(fmt, t));
+    const day = local.slice(0, 10);
     // The hour repeated when clocks go back is kept once
-    if (!local.startsWith(String(year)) || local === times[times.length - 1]) continue;
+    if (day < from || day > to || local === times[times.length - 1]) continue;
     utcHours.push(t);
     times.push(local);
   }
@@ -141,18 +147,21 @@ export function era5Year(
 }
 
 /**
- * One local year of ERA5 as the engine's profile. Hours missing what the
- * engine reads for thermals, cloud or rain are dropped, then days left with
- * fewer than 20 hours: a day ERA5 can't say enough about isn't rated.
+ * Local days `from` to `to` of ERA5 as the engine's profile. Hours missing
+ * what the engine reads for thermals, cloud or rain are dropped, then days
+ * left with fewer than 20 hours: a day ERA5 can't say enough about isn't
+ * rated. A month at a time keeps memory low: a year at once came near a
+ * Worker's 128 MB.
  */
 export function era5Profile(
   s: Era5Series,
-  year: number,
+  from: string,
+  to: string,
   timeZone: string,
   lat: number,
   lon: number,
 ): AtmosphericProfile {
-  const profile = profileFromOpenMeteo(era5Year(s, year, timeZone, lat, lon));
+  const profile = profileFromOpenMeteo(era5Span(s, from, to, timeZone, lat, lon));
   return cleanProfile({
     ...profile,
     hours: profile.hours.filter(
