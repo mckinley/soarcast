@@ -14,12 +14,12 @@ covers:
   - src/lib/flown-days.ts
   - app/lib/flown-days.server.ts
   - src/components/flown-here.tsx
-  - scripts/seasons/build.ts
-  - scripts/seasons/lib.ts
-  - scripts/seasons/era5.ts
-  - scripts/seasons/era5-profile.ts
+  - jobs/season-build.ts
+  - jobs/index.ts
+  - src/lib/season-build/core.ts
+  - src/lib/season-build/era5.ts
+  - src/lib/season-build/era5-profile.ts
   - src/components/season-card.tsx
-  - .github/workflows/season-build.yml
   - src/lib/destinations.ts
   - src/lib/pgsites-client.ts
   - src/components/sites-browse-client.tsx

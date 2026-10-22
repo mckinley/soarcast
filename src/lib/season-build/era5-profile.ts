@@ -4,9 +4,27 @@
 // wind stands in for the wind above the ground, and sunrise and sunset come
 // from the sun's position. So storms and fog never hold a past day back.
 
-import { profileFromOpenMeteo, type AtmosphericProfile, type OpenMeteoProfileResponse } from '../../src/lib/weather-profile';
+import { profileFromOpenMeteo, type AtmosphericProfile, type OpenMeteoProfileResponse } from '../weather-profile';
 import { era5At, HOUR_MS, windFromUV, type Era5Series, type Era5Variable } from './era5';
-import { cleanProfile } from './lib';
+
+/** Hours missing what the engine can't do without are dropped, then days left short. */
+export function cleanProfile(profile: AtmosphericProfile): AtmosphericProfile {
+  const complete = profile.hours.filter(
+    (h) =>
+      h.surface.temperature != null &&
+      h.surface.windSpeed != null &&
+      h.surface.windDirection != null &&
+      h.surface.windGusts != null &&
+      h.pressureLevels.every((l) => l.geopotentialHeight != null && l.windSpeed != null),
+  );
+  const perDay = new Map<string, number>();
+  for (const h of complete)
+    perDay.set(h.time.slice(0, 10), (perDay.get(h.time.slice(0, 10)) ?? 0) + 1);
+  return {
+    ...profile,
+    hours: complete.filter((h) => (perDay.get(h.time.slice(0, 10)) ?? 0) >= 20),
+  };
+}
 
 const RAD = Math.PI / 180;
 

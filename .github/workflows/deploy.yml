@@ -33,6 +33,15 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
+      # The background jobs Worker (jobs/index.ts): the season build Workflow
+      # and its cron. The site never loads its code.
+      - name: Deploy the jobs Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy -c jobs/wrangler.toml
+
       # The forecast pages depend on Open-Meteo answering the Worker; check
       # the live profile API end to end so a rejected request shows up here.
       - name: Smoke test the forecast API

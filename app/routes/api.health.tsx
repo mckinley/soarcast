@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { appState, getDb } from '~/app/lib/db.server';
 import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { getPgsitesApiKey, getSyncStatus, searchSites } from '~/lib/pgsites-client';
+import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '~/lib/season-build/run';
 
 // Checks what pilots depend on. The hourly cron (worker.ts) calls this after
 // the alerts run and emails when the result changes; it needs the
@@ -12,6 +13,8 @@ import { getPgsitesApiKey, getSyncStatus, searchSites } from '~/lib/pgsites-clie
 const PROBE = { latitude: 47.49, longitude: -121.79 };
 const ALERTS_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 const PGSITES_MAX_SYNC_AGE_DAYS = 2;
+// The season build runs twice a day; most runs find nothing due and end at once
+const SEASON_BUILD_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export interface HealthCheck {
   name: string;
@@ -99,6 +102,23 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         throw new Error(`last run was at ${last.at}`);
       }
       return `last run ${last.at}: ${last.detail}`;
+    }),
+    check('season build', async () => {
+      const [row] = await db
+        .select()
+        .from(appState)
+        .where(eq(appState.key, SEASON_BUILD_STATE_KEY));
+      if (!row) return 'no run on Cloudflare yet';
+      const last = JSON.parse(row.value) as SeasonBuildRun;
+      const detail =
+        `last run ${last.finishedAt}: built ${last.built} of ${last.due} due` +
+        (last.failed.length > 0 ? `, failed ${last.failed.join(', ')}` : '');
+      if (now.getTime() - Date.parse(last.finishedAt) > SEASON_BUILD_MAX_AGE_MS) {
+        throw new Error(`no run since ${last.finishedAt}`);
+      }
+      // Every due site failing means the build itself is broken
+      if (last.due > 0 && last.built === 0 && last.failed.length > 0) throw new Error(detail);
+      return detail;
     }),
   ]);
 

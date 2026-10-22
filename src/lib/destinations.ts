@@ -4,7 +4,7 @@
 // destinations: an area is a few launches within AREA_RADIUS_KM of its
 // middle, so a trip based in one place can fly whichever suits the day. An
 // area is a go on a day when any of its launches is. The season build
-// (scripts/seasons/build.ts) finds each launch in pgsites (a listed site
+// (jobs/season-build.ts) finds each launch in pgsites (a listed site
 // matching `match` within 30 km of the point, in the country) and rates its
 // past 20 years like any other site.
 

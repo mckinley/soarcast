@@ -6,11 +6,12 @@
 // none from January to mid-June 2024): those hours are simply missing.
 
 import { OmDataType, OmFileReader, OmHttpBackend } from '@openmeteo/file-reader';
-import { fetchRetrying } from './lib';
+import { fetchRetrying } from './fetch';
 
 const BUCKET = 'https://openmeteo.s3.amazonaws.com/data/copernicus_era5';
 const CHUNK_HOURS = 504;
 export const HOUR_MS = 3600_000;
+/** Files read at once. A Worker can wait on only six connections at a time. */
 const CONCURRENCY = 48;
 /** Files the bucket didn't have, for the log. */
 export const missing = new Set<string>();
@@ -130,6 +131,7 @@ export async function era5Series(
   longitude: number,
   fromMs: number,
   toMs: number,
+  concurrency = CONCURRENCY,
 ): Promise<Era5Series> {
   const { y, x } = era5Cell(latitude, longitude);
   const hours = Math.floor((toMs - fromMs) / HOUR_MS) + 1;
@@ -151,7 +153,7 @@ export async function era5Series(
         }
       }),
   );
-  const [ground] = await Promise.all([readPoint('static/HSURF', y, x), pool(tasks, CONCURRENCY)]);
+  const [ground] = await Promise.all([readPoint('static/HSURF', y, x), pool(tasks, concurrency)]);
   return { start: fromMs, hours, values, elevation: ground?.[0] ?? 0 };
 }
 

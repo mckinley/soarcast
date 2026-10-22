@@ -1,51 +1,62 @@
 name: Season build
 
-# Rates the last 20 years of days at every followed and custom site and the
-# destinations in src/lib/destinations.ts from ERA5, the record of past
-# weather on Open-Meteo's open copy on Amazon, and writes them to
-# site_seasons for site pages and the Planning page
-# (scripts/seasons/build.ts). Each run builds what it can in its time and
-# the next run carries on. Plain automation, no AI.
+# The season build runs on Cloudflare: a Workflow in the soarcast-jobs
+# Worker (jobs/season-build.ts), started twice a day by that Worker's cron.
+# This starts one by hand and prints how it went, step by step. Plain
+# automation, no AI.
 
 on:
-  schedule:
-    - cron: '23 5,17 * * *'
   workflow_dispatch:
     inputs:
-      minutes:
-        description: 'Minutes to spend (about half a minute a site)'
-        default: '75'
       dry_run:
-        description: 'Rate a few destinations and write nothing (to try a branch)'
+        description: 'Rate a few destinations and write nothing'
         type: boolean
         default: false
-
-concurrency:
-  group: season-build
-  cancel-in-progress: false
+      limit:
+        description: 'Build at most this many sites (empty: every site due)'
+        default: ''
 
 jobs:
-  build:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Build seasons
+      - name: Start the build on Cloudflare and follow it
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SEASON_MINUTES: ${{ inputs.minutes || '75' }}
-          # A dry run tries a few destinations without writing
-          SEASON_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
-          SEASON_LIMIT: ${{ inputs.dry_run && '4' || '' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          LIMIT: ${{ inputs.limit }}
         run: |
-          npx esbuild scripts/seasons/build.ts --bundle --platform=node --format=esm '--external:@openmeteo/*' --outfile=season-tmp/build.mjs
-          node season-tmp/build.mjs
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workflows/season-build/instances"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          id="github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          params=$(jq -nc --arg dry "$DRY_RUN" --arg limit "$LIMIT" \
+            '{dryRun: ($dry == "true")} + (if $limit == "" then {} else {limit: ($limit | tonumber)} end)')
+          body=$(jq -nc --arg id "$id" --argjson params "$params" '{instance_id: $id, params: $params}')
+          curl -sS -X POST -H "$auth" -H 'content-type: application/json' -d "$body" "$api" > started.json
+          jq -c '{success, errors, id: .result.id}' started.json
+          jq -e '.success' started.json > /dev/null
+
+          shown=0
+          while true; do
+            sleep 30
+            curl -sS -H "$auth" "$api/$id" > instance.json
+            # Each finished step once: the plan's counts, each cell's lines, the run's record
+            jq -r --argjson from "$shown" '
+              [.result.steps[]? | select(.type == "step" and .end != null)] | .[$from:][] |
+              if .name == "plan" then "plan: \(.output.sites) sites, \(.output.due) due"
+              elif .name == "record" then "run: \(.output | tostring)"
+              elif .success then (.output.lines // [] | .[])
+              else "\(.name): failed, \(.error // .attempts[-1].error // {} | tostring)" end
+            ' instance.json
+            shown=$(jq '[.result.steps[]? | select(.type == "step" and .end != null)] | length' instance.json)
+            status=$(jq -r '.result.status' instance.json)
+            case "$status" in
+              complete) exit 0 ;;
+              errored|terminated|unknown|null)
+                echo "The build ended: $status"
+                jq -c '.result.error // .errors' instance.json
+                exit 1 ;;
+            esac
+          done

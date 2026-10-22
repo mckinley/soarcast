@@ -1,5 +1,5 @@
-// A site's seasons: every past day rated by the forecast engine on archived
-// forecasts (scripts/seasons/build.ts), kept compactly per site in
+// A site's seasons: every past day rated by the forecast engine on ERA5, the
+// record of past weather (jobs/season-build.ts), kept compactly per site in
 // site_seasons, and summed into months for the pilot's goal.
 
 import type { DayScore, FlightType, SiteGoal } from '@/types';

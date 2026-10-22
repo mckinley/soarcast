@@ -272,9 +272,9 @@ export const flownDaysCache = sqliteTable('flown_days', {
   fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
 });
 
-// A site's past days rated by the engine on archived forecasts, written by
-// the "Season build" workflow (scripts/seasons/build.ts) and summed into
-// months on site pages and the Year page (src/lib/seasons.ts).
+// A site's past days rated by the engine on ERA5, written by the season build
+// (jobs/season-build.ts, a Cloudflare Workflow) and summed into months on
+// site pages and the Planning page (src/lib/seasons.ts).
 export const siteSeasons = sqliteTable('site_seasons', {
   // "<siteRef>|<launchProfileKey>": one row per launch and the way it's rated
   key: text('key').primaryKey(),

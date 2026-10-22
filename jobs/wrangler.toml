@@ -1,0 +1,43 @@
+# SoarCast's background jobs (jobs/index.ts): the season build, as a
+# Cloudflare Workflow. Its own Worker, so the site never loads the jobs' code.
+# Deployed by the deploy workflow after the site.
+name = "soarcast-jobs"
+account_id = "7c0ef4ee4d820ffe791557c534882957"
+main = "./index.ts"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+# No public URL: the cron and the Workflow are all it does
+workers_dev = false
+
+# Rating 20 years of days at a launch takes a few seconds of CPU per step
+[limits]
+cpu_ms = 300000
+
+# The ERA5 reader fetches its WebAssembly at runtime; this hands it the
+# bundled module instead (om-wasm.ts)
+[alias]
+"@openmeteo/file-format-wasm" = "./om-wasm.ts"
+
+# Twice a day, like the old GitHub run. A run that finds nothing due ends at once.
+[triggers]
+crons = ["23 5,17 * * *"]
+
+[[workflows]]
+name = "season-build"
+binding = "SEASON_BUILD"
+class_name = "SeasonBuild"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "soarcast"
+database_id = "e92d8ad3-7ca9-47aa-b26b-e2288ec3b963"
+migrations_dir = "../migrations"
+
+# pgsites' database, read only: the listed launch each destination stands for
+[[d1_databases]]
+binding = "PGSITES"
+database_name = "paragliding-sites"
+database_id = "b7a6fb40-1aa2-4824-b589-2243c38487fc"
+
+[observability]
+enabled = true
