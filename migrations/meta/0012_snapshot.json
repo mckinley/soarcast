@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f6122366-e7d5-4998-bffa-2a70746b4cc2",
+  "id": "03aa8928-c8d0-45be-b668-b1d9c97e8003",
   "prevId": "9ce83394-cbc6-4ee4-aa47-1a351a384475",
   "tables": {
     "app_state": {
@@ -644,6 +644,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'pge'"
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "last_synced_at": {
           "name": "last_synced_at",

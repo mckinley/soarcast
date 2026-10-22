@@ -12,6 +12,7 @@ import {
   getPgsitesApiKey,
   getSiteById,
   pgsitesSlug,
+  siteOrigin,
   type PgSite,
 } from '~/lib/pgsites-client';
 
@@ -53,7 +54,7 @@ function pgSiteToBrowseSite(site: PgSite): BrowseSite {
     isHanggliding: !!site.is_hanggliding,
     createdAt: site.created_at ? new Date(site.created_at * 1000).toISOString() : null,
     flownPilots: site.flown_pilots ?? null,
-    foundFromFlights: site.source === 'flown',
+    origin: siteOrigin(site.source),
   };
 }
 

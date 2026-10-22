@@ -16,6 +16,7 @@ import { Search, SlidersHorizontal, X, Loader2, Mountain } from 'lucide-react';
 import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { getOrientations } from '@/lib/site-utils';
 import { PlacesCredit } from '@/components/data-credits';
+import type { SiteOrigin } from '@/lib/pgsites-client';
 
 /** Minimal site shape used by the browse page. */
 export interface BrowseSite {
@@ -40,8 +41,8 @@ export interface BrowseSite {
   createdAt: string | null;
   /** Pilots tracked flying from here in the last year; null when none */
   flownPilots: number | null;
-  /** A busy launch found from tracked flights, which no site guide lists */
-  foundFromFlights?: boolean;
+  /** Where a site no site guide lists came from: tracked flights or OpenStreetMap */
+  origin?: SiteOrigin;
 }
 
 interface SitesBrowseClientProps {
@@ -402,7 +403,7 @@ function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: bo
         {site.countryCode && <span>{site.countryCode}</span>}
         {site.altitude && <span>{site.altitude}m</span>}
         {site.flownPilots ? <FlownPilots count={site.flownPilots} /> : null}
-        {site.foundFromFlights && <FoundFromFlights />}
+        {site.origin && site.origin !== 'pge' && <UnlistedOrigin origin={site.origin} />}
         {activeOrientations.length > 0 && (
           <span className="text-muted-foreground/80">{activeOrientations.join(' ')}</span>
         )}
@@ -435,9 +436,9 @@ function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolea
             <FlownPilots count={site.flownPilots} />
           </p>
         ) : null}
-        {site.foundFromFlights && (
+        {site.origin && site.origin !== 'pge' && (
           <p>
-            <FoundFromFlights />
+            <UnlistedOrigin origin={site.origin} />
           </p>
         )}
         {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
@@ -446,11 +447,15 @@ function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolea
   );
 }
 
-// ── A launch no site guide lists, found from tracked flights ──
-function FoundFromFlights() {
-  return (
+// ── Where a launch no site guide lists came from ──
+function UnlistedOrigin({ origin }: { origin: 'flown' | 'osm' }) {
+  return origin === 'flown' ? (
     <span title="No site guide lists this launch. It was found from tracked flights.">
       Found from flights
+    </span>
+  ) : (
+    <span title="No site guide lists this launch. It is a takeoff mapped in OpenStreetMap.">
+      From OpenStreetMap
     </span>
   );
 }

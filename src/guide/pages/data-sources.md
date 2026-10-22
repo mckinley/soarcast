@@ -138,6 +138,14 @@ Some busy launches are missing from Paragliding Earth. SoarCast finds them from 
 - The wind directions are the directions pilots took off in. Pilots take off into the wind, so this is a good guess. It can miss a direction that works but is rarely flown.
 - These launches have no description, landing or site rules. Ask local pilots before flying there.
 
+### Takeoffs from OpenStreetMap
+
+[OpenStreetMap](https://www.openstreetmap.org) is a world map anyone can edit. Pilots and flying clubs map takeoffs there too. A mapped takeoff becomes a launch when no listed site covers it and it has a name and the directions it faces. Browse Sites marks these launches "From OpenStreetMap". SoarCast checks OpenStreetMap every week.
+
+- The wind directions are the ones mapped in OpenStreetMap. Check them with local pilots.
+- A closed or private takeoff, or one only for hang gliders, is left out. A takeoff with no directions is left out too, since SoarCast can't rate it.
+- Most of these launches have no description, landing or site rules. Ask local pilots before flying there.
+
 ## Private sites
 
 A pilot can add a private site that is missing from the list. Only that pilot can see it.

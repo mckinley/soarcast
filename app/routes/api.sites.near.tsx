@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs } from 'react-router';
-import { nearbySites, getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
+import { nearbySites, getPgsitesApiKey, pgsitesSlug, siteOrigin } from '~/lib/pgsites-client';
 
 // Resource route — no default export.
 
@@ -42,7 +42,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     isHanggliding: !!s.is_hanggliding,
     createdAt: s.created_at ? new Date(s.created_at * 1000).toISOString() : null,
     flownPilots: s.flown_pilots ?? null,
-    foundFromFlights: s.source === 'flown',
+    origin: siteOrigin(s.source),
   }));
 
   return new Response(JSON.stringify({ sites }), {

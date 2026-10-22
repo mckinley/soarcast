@@ -32,6 +32,13 @@ const pgSite: PgSite = {
 describe('launchSiteValuesFromPgSite', () => {
   it('keeps where pgsites got the site', () => {
     expect(launchSiteValuesFromPgSite({ ...pgSite, source: 'flown' }).origin).toBe('flown');
+    const osm = launchSiteValuesFromPgSite({
+      ...pgSite,
+      source: 'osm',
+      source_url: 'https://www.openstreetmap.org/node/1',
+    });
+    expect(osm.origin).toBe('osm');
+    expect(osm.sourceUrl).toBe('https://www.openstreetmap.org/node/1');
     expect(launchSiteValuesFromPgSite({ ...pgSite, source: 'pge' }).origin).toBe('pge');
     // pgsites answers from before it said where a site came from
     expect(launchSiteValuesFromPgSite(pgSite).origin).toBe('pge');

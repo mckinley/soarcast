@@ -5,7 +5,7 @@
 import type { LaunchSite, NewLaunchSite, UserFavoriteSite } from '@/db/schema';
 import type { Site, SiteKind } from '@/types';
 import type { PgSite } from '@/lib/pgsites-client';
-import { pgsitesSlug } from '@/lib/pgsites-client';
+import { pgsitesSlug, siteOrigin } from '@/lib/pgsites-client';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { getIdealWindDirections, getOkWindDirections } from '@/lib/site-utils';
 import { defaultGoal, siteKindFromTags } from '@/lib/site-goals';
@@ -73,7 +73,8 @@ export function launchSiteValuesFromPgSite(
     isHike: !!pgSite.is_hike,
     description: pgSite.description,
     pgeLink: pgSite.pge_link,
-    origin: pgSite.source === 'flown' ? 'flown' : 'pge',
+    origin: siteOrigin(pgSite.source),
+    sourceUrl: pgSite.source_url ?? null,
     lastSyncedAt: new Date(),
   };
 }

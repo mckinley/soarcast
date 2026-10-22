@@ -20,7 +20,14 @@ import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { OrientationBadges } from '@/components/orientation-badges';
 import { WindDirectionBadges } from '@/components/wind-direction-badges';
 import { ElevationDisplay } from '@/components/elevation-display';
-import { searchSites, getSiteById, getPgsitesApiKey, type PgSite } from '~/lib/pgsites-client';
+import {
+  searchSites,
+  getSiteById,
+  getPgsitesApiKey,
+  siteOrigin,
+  type PgSite,
+  type SiteOrigin,
+} from '~/lib/pgsites-client';
 import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
 import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
 import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals';
@@ -64,8 +71,10 @@ interface DetailSite {
   description: string | null;
   landingDescription: string | null;
   pgeLink: string | null;
-  /** 'flown': a busy launch found from tracked flights, not a Paragliding Earth site */
-  origin: 'pge' | 'flown';
+  /** Paragliding Earth, a busy launch found from tracked flights, or an OpenStreetMap takeoff */
+  origin: SiteOrigin;
+  /** An OpenStreetMap takeoff's page */
+  sourceUrl: string | null;
   source: string;
   createdAt: string;
   updatedAt: string;
@@ -116,7 +125,8 @@ function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
     description: site.description || null,
     landingDescription: null,
     pgeLink: site.pge_link || null,
-    origin: site.source === 'flown' ? 'flown' : 'pge',
+    origin: siteOrigin(site.source),
+    sourceUrl: site.source_url ?? null,
     source: 'pgsites',
     createdAt: site.created_at
       ? new Date(site.created_at * 1000).toISOString()
@@ -159,7 +169,8 @@ function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSit
     description: site.description || null,
     landingDescription: site.landingDescription || null,
     pgeLink: site.pgeLink || null,
-    origin: site.origin === 'flown' ? 'flown' : 'pge',
+    origin: siteOrigin(site.origin),
+    sourceUrl: site.sourceUrl ?? null,
     source: site.source,
     createdAt: site.createdAt ? new Date(site.createdAt).toISOString() : new Date().toISOString(),
     updatedAt: site.updatedAt ? new Date(site.updatedAt).toISOString() : new Date().toISOString(),
@@ -618,10 +629,12 @@ export default function SiteDetailPage() {
                 <div>
                   <div className="font-medium mb-2">Ideal Wind Directions:</div>
                   <WindDirectionBadges directions={idealDirs} />
-                  {site.origin === 'flown' && (
+                  {site.origin !== 'pge' && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      These are the directions tracked pilots took off in. Check them with local
-                      pilots.
+                      {site.origin === 'flown'
+                        ? 'These are the directions tracked pilots took off in.'
+                        : 'These are the directions mapped in OpenStreetMap.'}{' '}
+                      Check them with local pilots.
                     </p>
                   )}
                 </div>
@@ -670,7 +683,11 @@ export default function SiteDetailPage() {
             <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
           </div>
 
-          <SiteSourceCredit pgeLink={site.pgeLink} origin={site.origin} />
+          <SiteSourceCredit
+            pgeLink={site.pgeLink}
+            origin={site.origin}
+            sourceUrl={site.sourceUrl}
+          />
         </div>
       </Card>
     </div>

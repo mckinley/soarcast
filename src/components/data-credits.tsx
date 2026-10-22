@@ -3,10 +3,12 @@
 // kk7 (CC BY-NC-SA 4.0) wherever its thermal maps do, and GeoNames (CC BY
 // 4.0) wherever a search lists sites near a town. A launch found from
 // tracked flights credits Syncing Pilots, and OpenStreetMap (ODbL) for its
-// name. The Guide's Data sources page (src/guide/pages/data-sources.md)
-// lists them all.
+// name. A takeoff from OpenStreetMap credits OpenStreetMap (ODbL) and links
+// its page there. The Guide's Data sources page
+// (src/guide/pages/data-sources.md) lists them all.
 
 import { Link } from 'react-router';
+import type { SiteOrigin } from '@/lib/pgsites-client';
 
 const link = 'underline underline-offset-2 hover:text-foreground';
 
@@ -41,18 +43,49 @@ export function ForecastCredit({ className = '' }: { className?: string }) {
 }
 
 /**
- * Credit for one listed site: its Paragliding Earth page, or for a launch
- * found from tracked flights, Syncing Pilots and OpenStreetMap.
+ * Credit for one listed site: its Paragliding Earth page, for a launch found
+ * from tracked flights Syncing Pilots and OpenStreetMap, or for a takeoff
+ * from OpenStreetMap its page there.
  */
 export function SiteSourceCredit({
   pgeLink,
   origin = 'pge',
+  sourceUrl,
   className = '',
 }: {
   pgeLink?: string | null;
-  origin?: 'pge' | 'flown';
+  origin?: SiteOrigin;
+  sourceUrl?: string | null;
   className?: string;
 }) {
+  if (origin === 'osm') {
+    return (
+      <p className={`text-xs text-muted-foreground ${className}`}>
+        No site guide lists this launch. It is a takeoff mapped in{' '}
+        <a
+          href={sourceUrl || 'https://www.openstreetmap.org'}
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          OpenStreetMap
+        </a>{' '}
+        (
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          className={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          ODbL
+        </a>
+        ). Ask local pilots about the site&apos;s rules and landing before flying.{' '}
+        <Link to="/guide/data-sources#takeoffs-from-openstreetmap" className={link}>
+          More
+        </Link>
+      </p>
+    );
+  }
   if (origin === 'flown') {
     return (
       <p className={`text-xs text-muted-foreground ${className}`}>
