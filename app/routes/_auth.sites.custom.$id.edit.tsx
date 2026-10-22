@@ -8,7 +8,10 @@ import {
   ELEVATION_LOOKUP_ERROR,
   findOwnedCustomSite,
   resolveElevation,
+  shareProblemMessage,
+  syncSharing,
 } from '~/app/lib/custom-sites.server';
+import { getPgsitesApiKey } from '~/lib/pgsites-client';
 import { customSites } from '~/db/schema';
 import {
   customSiteToSite,
@@ -42,8 +45,18 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     kind: row.siteKind,
     goal: row.goal,
     notes: row.notes,
+    share: row.sharedSiteId !== null,
   };
-  return { id: row.id, initial };
+  // Adding a site sends here when sharing it didn't work
+  const url = new URL(request.url);
+  const listed = url.searchParams.get('listed');
+  const shareError =
+    url.searchParams.get('share') === 'failed'
+      ? shareProblemMessage('failed')
+      : listed
+        ? shareProblemMessage({ listed })
+        : undefined;
+  return { id: row.id, initial, shareError };
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -54,8 +67,21 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   if (!row) throw new Response('Site not found', { status: 404 });
   const owned = and(eq(customSites.id, row.id), eq(customSites.userId, session.user.id));
 
+  const apiKey = getPgsitesApiKey(env);
   const form = await request.formData();
   if (form.get('intent') === 'delete') {
+    // A shared copy goes first, so it never stays listed with no one to take it back
+    if ((await syncSharing(db, apiKey, row, null)) !== null) {
+      return data(
+        {
+          errors: {
+            share:
+              "Couldn't take the shared copy back just now, so the site is still here. Try again later.",
+          } as CustomSiteErrors,
+        },
+        { status: 502 },
+      );
+    }
     await db.delete(customSites).where(owned);
     return redirect('/dashboard');
   }
@@ -76,11 +102,15 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     .update(customSites)
     .set({ ...values, updatedAt: new Date() })
     .where(owned);
+  const problem = await syncSharing(db, apiKey, row, { input, elevation });
+  if (problem) {
+    return data({ errors: { share: shareProblemMessage(problem) } as CustomSiteErrors });
+  }
   return redirect(`/sites/custom/${row.id}`);
 }
 
 export default function EditCustomSitePage() {
-  const { id, initial } = useLoaderData<typeof loader>();
+  const { id, initial, shareError } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const siteHref = `/sites/custom/${id}`;
 
@@ -95,7 +125,7 @@ export default function EditCustomSitePage() {
       <h1 className="text-3xl font-bold">Edit {initial.name}</h1>
       <CustomSiteForm
         initial={initial}
-        errors={actionData?.errors}
+        errors={actionData?.errors ?? (shareError ? { share: shareError } : undefined)}
         submitLabel="Save changes"
         cancelHref={siteHref}
       />

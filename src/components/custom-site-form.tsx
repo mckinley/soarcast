@@ -117,6 +117,7 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
   );
   const [maxWind, setMaxWind] = useState(String(initial?.maxWindSpeed ?? DEFAULT_MAX_WIND_KMH));
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [share, setShare] = useState(initial?.share ?? false);
   const [kind, setKind] = useState<SiteKind | ''>(initial?.kind ?? '');
   const [goal, setGoal] = useState<SiteGoal>(
     initial?.goal ?? defaultGoal(initial?.kind ?? null, true),
@@ -431,6 +432,28 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
           className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
         />
         {shownErrors.notes && <p className="text-sm text-red-500">{shownErrors.notes}</p>}
+      </div>
+
+      <div className="grid gap-1">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="share"
+            checked={share}
+            onChange={(e) => {
+              clearError('share');
+              setShare(e.target.checked);
+            }}
+            className="h-4 w-4"
+          />
+          Share with other pilots
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Other pilots can then find this launch in Browse Sites and follow it. They see its name,
+          place, height, wind directions and what it gives. Notes, the wind limit and the goal stay
+          private.
+        </p>
+        {shownErrors.share && <p className="text-sm text-red-500">{shownErrors.share}</p>}
       </div>
 
       <div className="flex gap-3">

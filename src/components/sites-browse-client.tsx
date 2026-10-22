@@ -448,16 +448,21 @@ function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolea
 }
 
 // ── Where a launch no site guide lists came from ──
-function UnlistedOrigin({ origin }: { origin: 'flown' | 'osm' }) {
-  return origin === 'flown' ? (
-    <span title="No site guide lists this launch. It was found from tracked flights.">
-      Found from flights
-    </span>
-  ) : (
-    <span title="No site guide lists this launch. It is a takeoff mapped in OpenStreetMap.">
-      From OpenStreetMap
-    </span>
-  );
+const UNLISTED_ORIGIN = {
+  flown: [
+    'Found from flights',
+    'No site guide lists this launch. It was found from tracked flights.',
+  ],
+  osm: [
+    'From OpenStreetMap',
+    'No site guide lists this launch. It is a takeoff mapped in OpenStreetMap.',
+  ],
+  pilot: ['Shared by a pilot', 'No site guide lists this launch. A pilot shared it.'],
+} as const;
+
+function UnlistedOrigin({ origin }: { origin: Exclude<SiteOrigin, 'pge'> }) {
+  const [label, title] = UNLISTED_ORIGIN[origin];
+  return <span title={title}>{label}</span>;
 }
 
 // ── Pilots tracked flying from a site in the last year ──

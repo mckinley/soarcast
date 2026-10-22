@@ -1,0 +1,1 @@
+ALTER TABLE `custom_sites` ADD `shared_site_id` text;

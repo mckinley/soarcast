@@ -31,6 +31,8 @@ covers:
   - src/components/vector-basemap.tsx
   - src/lib/basemap.ts
   - src/components/data-credits.tsx
+  - src/lib/custom-sites.ts
+  - app/lib/custom-sites.server.ts
 ---
 
 SoarCast does not make its own weather forecasts or write its own site guide. It brings together data from the public sources below. Each section says what SoarCast uses, how often it updates and what it can't tell you.
@@ -146,9 +148,20 @@ Some busy launches are missing from Paragliding Earth. SoarCast finds them from 
 - A closed or private takeoff, or one only for hang gliders, is left out. A takeoff with no directions is left out too, since SoarCast can't rate it.
 - Most of these launches have no description, landing or site rules. Ask local pilots before flying there.
 
+### Launches pilots shared
+
+A pilot who adds a [private site](#private-sites) can share it with other pilots. Anyone can then find it in Browse Sites and add it to Favorites. Browse Sites marks these launches "Shared by a pilot".
+
+- Other pilots see the launch's name, place, height, wind directions and what it gives. The pilot's notes, wind limit and goal stay private.
+- The wind directions are the ones the pilot set. Check them with local pilots.
+- A launch that a listed site already covers can't be shared. SoarCast names that site, so the pilot can add it to Favorites instead.
+- When the pilot changes the site, the shared launch changes too. Pilots who follow it see the change within {{siteRefreshDays}} days.
+- When the pilot stops sharing it, no one else can find it any more. Pilots who already follow it keep it.
+- These launches have no description, landing or site rules. Ask local pilots before flying there.
+
 ## Private sites
 
-A pilot can add a private site that is missing from the list. Only that pilot can see it.
+A pilot can add a private site that is missing from the list. Only that pilot can see it, unless they [share it](#launches-pilots-shared). To share a site, it needs at least one wind direction.
 
 When a pilot drops a pin, SoarCast looks up the height of the ground there. It also looks at the slopes around the pin to suggest which way the launch faces. The heights come from the European Union's Copernicus elevation map, which has a height every 90 m. SoarCast gets them through Open-Meteo.
 

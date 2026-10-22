@@ -6,7 +6,9 @@ import {
   customSiteValues,
   ELEVATION_LOOKUP_ERROR,
   resolveElevation,
+  syncSharing,
 } from '~/app/lib/custom-sites.server';
+import { getPgsitesApiKey } from '~/lib/pgsites-client';
 import { customSites } from '~/db/schema';
 import { parseCustomSiteForm, type CustomSiteErrors } from '~/lib/custom-sites';
 import { CustomSiteForm } from '@/components/custom-site-form';
@@ -31,10 +33,24 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
 
-  const [site] = await getDb(env)
+  const db = getDb(env);
+  const [site] = await db
     .insert(customSites)
     .values({ userId: session.user.id, ...customSiteValues(input, elevation) })
     .returning({ id: customSites.id });
+  if (input.share) {
+    const problem = await syncSharing(
+      db,
+      getPgsitesApiKey(env),
+      { id: site.id, sharedSiteId: null },
+      { input, elevation },
+    );
+    // The site is saved: say what went wrong on its edit page, so a retry doesn't add it twice
+    if (problem === 'failed') return redirect(`/sites/custom/${site.id}/edit?share=failed`);
+    if (problem) {
+      return redirect(`/sites/custom/${site.id}/edit?listed=${encodeURIComponent(problem.listed)}`);
+    }
+  }
   return redirect(`/sites/custom/${site.id}`);
 }
 
@@ -51,8 +67,8 @@ export default function NewCustomSitePage() {
       <div>
         <h1 className="text-3xl font-bold">Add a private site</h1>
         <p className="text-muted-foreground mt-1">
-          Pin a launch that isn&apos;t listed, like a hike-and-fly peak. Only you can see it, and
-          SoarCast rates it and sends alerts for it like any site you follow.
+          Pin a launch that isn&apos;t listed, like a hike-and-fly peak. Only you can see it unless
+          you share it. SoarCast rates it and sends alerts for it like any site you follow.
         </p>
       </div>
       <CustomSiteForm errors={actionData?.errors} submitLabel="Add site" cancelHref="/dashboard" />
