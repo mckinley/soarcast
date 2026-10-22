@@ -1,8 +1,10 @@
 name: Perf probe
 
 # Read-only numbers for page-speed work: where the D1 database runs, how big
-# the forecast cache rows are, how many saved sites a dashboard loads, and how
-# long a 7-day Open-Meteo profile takes. Counts only (public log).
+# the forecast cache rows are, how many saved sites a dashboard loads, how
+# long a 7-day Open-Meteo profile takes, and how long pages took for real
+# (request_timings: page patterns and durations only, so the public log never
+# says which site anyone looked at). Run it from the Actions tab.
 on:
   workflow_dispatch:
   push:
@@ -35,6 +37,17 @@ jobs:
           q "SELECT (SELECT COUNT(*) FROM user) AS users, (SELECT COUNT(*) FROM user_favorite_sites) AS favorites, (SELECT COUNT(*) FROM custom_sites) AS custom_sites, (SELECT COUNT(*) FROM site_areas) AS areas, (SELECT COUNT(*) FROM session) AS sessions"
           q "SELECT COUNT(*) AS rows, ROUND(AVG(LENGTH(days))) AS avg_bytes FROM site_seasons" || true
           q "SELECT COUNT(*) AS rows FROM flown_days" || true
+      - name: Page load timings (request_timings)
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7c0ef4ee4d820ffe791557c534882957
+        run: |
+          q() { npx wrangler d1 execute soarcast --remote --json --command "$1" | jq -r '.[0].results[] | [.[]] | @tsv'; }
+          echo "page | signed in | fresh start | loads | avg ms | max ms | avg D1 queries | avg D1 ms"
+          q "SELECT page, signed_in, cold, COUNT(*), ROUND(AVG(total_ms)), MAX(total_ms), ROUND(AVG(d1_count), 1), ROUND(AVG(d1_ms)) FROM request_timings WHERE at > unixepoch() - 7 * 86400 GROUP BY page, signed_in, cold ORDER BY COUNT(*) DESC LIMIT 40"
+          echo; echo "latest 40: page | signed in | fresh start | total ms | D1 queries | D1 ms | calls | colo"
+          q "SELECT page, signed_in, cold, total_ms, d1_count, d1_ms, calls, colo FROM request_timings ORDER BY id DESC LIMIT 40"
       - name: Open-Meteo 7-day profile timing
         run: |
           levels="1000 975 950 925 900 875 850 825 800 775 750 725 700 650 600 500"

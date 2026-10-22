@@ -14,8 +14,61 @@ declare module 'react-router' {
 // Import the built server bundle directly
 import * as serverBuild from './build/server/index.js';
 import type { AlertsRun, HealthReport } from './app/routes/api.health';
+import {
+  serverTimingHeader,
+  timedD1,
+  timedPage,
+  timeOutgoingFetches,
+  withRequestTiming,
+  type RequestTiming,
+} from './src/lib/request-timing';
 
 const requestHandler = createRequestHandler(serverBuild as unknown as ServerBuild, 'production');
+timeOutgoingFetches();
+
+/** Rows kept in request_timings; older ones are deleted now and then. */
+const TIMINGS_KEPT = 2000;
+
+/** Keeps one row per page load, so slow pages can be found later. */
+async function recordTiming(
+  db: D1Database,
+  page: string,
+  status: number,
+  signedIn: boolean,
+  timing: RequestTiming,
+  totalMs: number,
+  colo: string | null,
+) {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO request_timings (page, status, signed_in, cold, total_ms, d1_count, d1_ms, calls, colo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        page,
+        status,
+        signedIn ? 1 : 0,
+        timing.cold ? 1 : 0,
+        totalMs,
+        timing.d1.count,
+        timing.d1.ms,
+        JSON.stringify(Object.fromEntries(timing.calls)),
+        colo,
+      )
+      .run();
+    if (Math.random() < 0.05) {
+      await db
+        .prepare(
+          'DELETE FROM request_timings WHERE id <= (SELECT MAX(id) FROM request_timings) - ?',
+        )
+        .bind(TIMINGS_KEPT)
+        .run();
+    }
+  } catch (error) {
+    console.error('Could not record a request timing:', error);
+  }
+}
 
 async function getState(db: D1Database, key: string): Promise<string | null> {
   const row = await db
@@ -72,8 +125,26 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    return requestHandler(request, {
-      cloudflare: { env, ctx, cf: request.cf as IncomingRequestCfProperties | undefined },
+    const cf = request.cf as IncomingRequestCfProperties | undefined;
+    return withRequestTiming(async (timing) => {
+      const response = await requestHandler(request, {
+        cloudflare: { env: { ...env, DB: timedD1(env.DB) }, ctx, cf },
+      });
+      const totalMs = Date.now() - timing.start;
+      const headers = new Headers(response.headers);
+      headers.append('Server-Timing', serverTimingHeader(timing, totalMs));
+      const page = request.method === 'GET' ? timedPage(new URL(request.url)) : null;
+      if (page) {
+        const signedIn = /session_token=/.test(request.headers.get('cookie') ?? '');
+        ctx.waitUntil(
+          recordTiming(env.DB, page, response.status, signedIn, timing, totalMs, cf?.colo ?? null),
+        );
+      }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
     });
   },
 
