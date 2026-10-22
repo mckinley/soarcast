@@ -35,7 +35,7 @@ A site stays in its area until you move it. An area with no sites left goes away
 
 ## The dashboard
 
-With more than one area, the dashboard shows a button for each area at the top. Tap one to see its sites.
+The dashboard shows a button for each area at the top. Tap one to see its sites. When all your sites are in one area, there is just that one button. To split them, move a site to a new area in Settings.
 
 All areas shows one row per area. Each day in a row shows the area's best site that day. So an area is a Go on any day one of its sites is.
 
