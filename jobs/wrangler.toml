@@ -13,6 +13,12 @@ workers_dev = false
 [limits]
 cpu_ms = 300000
 
+# The ERA5 reader's WebAssembly with 16 MB of memory instead of 64, written
+# to jobs/.build before each build (run wrangler from the repository root)
+[build]
+command = "node jobs/shrink-wasm.mjs"
+watch_dir = "../node_modules/@openmeteo/file-format-wasm/dist"
+
 # The ERA5 reader fetches its WebAssembly at runtime; this hands it the
 # bundled module instead (om-wasm.ts)
 [alias]
