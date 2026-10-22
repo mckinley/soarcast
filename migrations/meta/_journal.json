@@ -78,6 +78,13 @@
       "when": 1792630965364,
       "tag": "0010_request_timings",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792632690781,
+      "tag": "0011_forecast_copies_gzip",
+      "breakpoints": true
     }
   ]
 }

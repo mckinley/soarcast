@@ -2,6 +2,7 @@
 // Fetches full vertical atmospheric profiles for windgram visualizations
 
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import { gunzipJson, gzipJson } from './gzip-json';
 
 // DB injection for CF Workers compatibility
 let _injectedDb: DrizzleD1Database<Record<string, unknown>> | null = null;
@@ -696,22 +697,22 @@ export async function refreshAtmosphericProfile(
   const { atmosphericProfilesCache } = await import('@/db/schema');
   const profile = await fetchAtmosphericProfile(latitude, longitude, PROFILE_DAYS);
   try {
+    const copy = {
+      data: {},
+      dataGz: await gzipJson(profile),
+      fetchedAt: new Date(profile.fetchedAt),
+      expiresAt: new Date(profile.expiresAt),
+    };
     await db
       .insert(atmosphericProfilesCache)
       .values({
         locationKey: profileLocationKey(latitude, longitude),
         fetchDate: profile.fetchedAt.slice(0, 10), // the UTC fetch date
-        data: profile,
-        fetchedAt: new Date(profile.fetchedAt),
-        expiresAt: new Date(profile.expiresAt),
+        ...copy,
       })
       .onConflictDoUpdate({
         target: [atmosphericProfilesCache.locationKey, atmosphericProfilesCache.fetchDate],
-        set: {
-          data: profile,
-          fetchedAt: new Date(profile.fetchedAt),
-          expiresAt: new Date(profile.expiresAt),
-        },
+        set: copy,
       });
   } catch (cacheError) {
     console.error('Could not cache the atmospheric profile:', cacheError);
@@ -747,12 +748,16 @@ export async function getAtmosphericProfile(
 
   // The place's newest copy, fresh or stale. Rows are keyed by the UTC date
   // they were fetched on, so a copy from just before UTC midnight still serves.
-  const [cachedRow] = await db
+  const [row] = await db
     .select()
     .from(atmosphericProfilesCache)
     .where(eq(atmosphericProfilesCache.locationKey, cacheKey))
     .orderBy(desc(atmosphericProfilesCache.fetchDate))
     .limit(1);
+  const cachedRow = row && {
+    ...row,
+    data: row.dataGz ? await gunzipJson<AtmosphericProfile>(row.dataGz) : row.data,
+  };
 
   const fetchDays = Math.max(days, PROFILE_DAYS);
   if (cachedRow && isCachedProfileFresh(cachedRow, fetchDays, now)) {

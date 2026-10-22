@@ -33,6 +33,7 @@ jobs:
           q() { npx wrangler d1 execute soarcast --remote --json --command "$1" | jq -c '.[0] | {results, meta: (.meta | {duration, served_by, served_by_region, served_by_primary, timings})}'; }
           q "SELECT 1 AS one"
           q "SELECT COUNT(*) AS rows, ROUND(AVG(LENGTH(data))) AS avg_bytes, MAX(LENGTH(data)) AS max_bytes, COUNT(DISTINCT location_key) AS places FROM atmospheric_profiles_cache"
+          q "SELECT COUNT(*) AS gz_rows, ROUND(AVG(LENGTH(data_gz))) AS avg_gz_bytes FROM atmospheric_profiles_cache WHERE data_gz IS NOT NULL" || true
           q "SELECT fetch_date, COUNT(*) AS rows FROM atmospheric_profiles_cache GROUP BY fetch_date ORDER BY fetch_date DESC LIMIT 5"
           q "SELECT (SELECT COUNT(*) FROM user) AS users, (SELECT COUNT(*) FROM user_favorite_sites) AS favorites, (SELECT COUNT(*) FROM custom_sites) AS custom_sites, (SELECT COUNT(*) FROM site_areas) AS areas, (SELECT COUNT(*) FROM session) AS sessions"
           q "SELECT COUNT(*) AS rows, ROUND(AVG(LENGTH(days))) AS avg_bytes FROM site_seasons" || true
@@ -65,3 +66,5 @@ jobs:
             for i in 1 2 3; do curl -s -o /dev/null -w "$u new-conn tls=%{time_appconnect} ttfb=%{time_starttransfer}\n" "$B$u"; done
           done
           curl -s $B/cdn-cgi/trace | grep colo
+          # Where the page ran (placement) and where its time went
+          curl -s -o /dev/null -D - $B/planning | grep -i "cf-placement\|server-timing"

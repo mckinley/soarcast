@@ -223,7 +223,10 @@ export const atmosphericProfilesCache = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     locationKey: text('location_key').notNull(), // "lat,lng" rounded to 2 decimals (~1km precision)
     fetchDate: text('fetch_date').notNull(), // ISO date string (YYYY-MM-DD)
+    // Copies written before data_gz keep the profile here. Newer ones store {}
+    // and keep it gzipped in data_gz, at about a quarter of the size.
     data: text('data', { mode: 'json' }).notNull().$type<unknown>(),
+    dataGz: text('data_gz'), // src/lib/gzip-json.ts
     fetchedAt: integer('fetched_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
