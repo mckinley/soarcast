@@ -274,6 +274,12 @@ These three layers show the weather as it is now, not a forecast. Each one says 
 
 A clear lightning or rain layer doesn't prove the air is safe. Storms can build fast. Check the forecast and the sky too.
 
+### Airspace
+
+The Airspace layer draws airspace from [openAIP](https://www.openaip.net), a free aviation map that pilots keep up to date. Each area is outlined and labelled with its class and its heights. Airports and other aviation points show too. SoarCast keeps each piece of the map for a day, so a change in openAIP can take a day to show here.
+
+openAIP is not an official source and can be out of date. Before you fly near airspace, check the official charts and the notices for that day.
+
 ## Credits
 
 | Data                                             | Licence                                                               |
@@ -292,3 +298,4 @@ A clear lightning or rain layer doesn't prove the air is safe. Storms can build 
 | Wind readings gathered by winds.mobi             | None stated. Credited on the card and the map.                        |
 | Heights from the Copernicus elevation model      | Free to use with credit. Credited on the card.                        |
 | Aircraft flying now from the Open Glider Network | [ODbL](https://opendatacommons.org/licenses/odbl/)                    |
+| Airspace from openAIP                            | [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)       |
