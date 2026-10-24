@@ -1,6 +1,28 @@
 import type { PgsitesSyncRun } from './health';
 
-const BASE_URL = 'https://pgsites.mckinleyaviation.com';
+const PRODUCTION_URL = 'https://pgsites.mckinleyaviation.com';
+
+/**
+ * Which pgsites answers: production over the internet, unless the Worker's
+ * env names another one. The staging copy (docs/staging.md) sets PGSITES_URL
+ * to pgsites' staging site and binds its Worker as PGSITES, which it calls
+ * directly, since Cloudflare Access stands in front of that hostname.
+ */
+let pgsites: { baseUrl: string; fetch: typeof fetch } = {
+  baseUrl: PRODUCTION_URL,
+  fetch: (input, init) => fetch(input, init),
+};
+
+/** Points this Worker's pgsites calls where its env says (worker.ts, on every request). */
+export function configurePgsites(env: { PGSITES_URL?: string; PGSITES?: Fetcher }): void {
+  const binding = env.PGSITES;
+  pgsites = {
+    baseUrl: env.PGSITES_URL || PRODUCTION_URL,
+    fetch: binding
+      ? (input, init) => binding.fetch(input, init)
+      : (input, init) => fetch(input, init),
+  };
+}
 
 /** Where pgsites got a site (PgSite.source). 'pilot': a private site its pilot shared. */
 export type SiteOrigin = 'pge' | 'flown' | 'osm' | 'pilot';
@@ -101,7 +123,7 @@ async function fetchApi<T>(
   params?: Record<string, string | number>,
   { fresh = false }: { fresh?: boolean } = {},
 ): Promise<T> {
-  const url = new URL(path, BASE_URL);
+  const url = new URL(path, pgsites.baseUrl);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
@@ -116,7 +138,7 @@ async function fetchApi<T>(
   const hit = await cache?.match(cacheKey).catch(() => undefined);
   if (hit) return hit.json() as Promise<T>;
 
-  const response = await fetch(url.toString(), {
+  const response = await pgsites.fetch(url.toString(), {
     headers: { 'X-API-Key': apiKey },
   });
 
@@ -221,7 +243,7 @@ export async function shareSite(
   ref: string,
   site: SharedSiteBody,
 ): Promise<ShareResult> {
-  const response = await fetch(new URL(`/api/shared-sites/${ref}`, BASE_URL), {
+  const response = await pgsites.fetch(new URL(`/api/shared-sites/${ref}`, pgsites.baseUrl), {
     method: 'PUT',
     headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify(site),
@@ -237,7 +259,7 @@ export async function shareSite(
 
 /** Takes a shared site back. Throws when pgsites fails. */
 export async function unshareSite(apiKey: string, ref: string): Promise<void> {
-  const response = await fetch(new URL(`/api/shared-sites/${ref}`, BASE_URL), {
+  const response = await pgsites.fetch(new URL(`/api/shared-sites/${ref}`, pgsites.baseUrl), {
     method: 'DELETE',
     headers: { 'X-API-Key': apiKey },
   });

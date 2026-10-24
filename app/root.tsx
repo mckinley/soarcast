@@ -7,6 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteLoaderData,
 } from 'react-router';
 import type { Route } from './+types/root';
 import { getSession } from './lib/auth.server';
@@ -23,10 +24,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     user: session?.user ?? null,
     // The map's Airspace layer shows only once openAIP's key is set
     airspace: Boolean(env.OPENAIP_API_KEY),
+    // The staging copy (docs/staging.md) says so on every page
+    staging: env.APP_ENV === 'staging',
   };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>('root');
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -41,6 +45,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="font-sans antialiased">
+        {data?.staging && (
+          <div className="pointer-events-none fixed bottom-2 left-2 z-50 rounded-md bg-amber-400 px-2 py-1 text-xs font-medium text-black shadow">
+            Staging · fake data
+          </div>
+        )}
         {children}
         <ScrollRestoration />
         <Scripts />

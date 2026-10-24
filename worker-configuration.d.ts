@@ -17,8 +17,16 @@ interface Env {
   CF_VERSION_METADATA?: WorkerVersionMetadata;
   /** openAIP's API key for the map's Airspace layer (app/routes/api.airspace.$z.$x.$y.tsx); optional. */
   OPENAIP_API_KEY?: string;
-  /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it. */
-  EMAIL: SendEmail;
+  /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it; none on staging. */
+  EMAIL?: SendEmail;
+  /** Staging only (env.staging in wrangler.toml, docs/staging.md): turns on /dev/login and the email sign-in it uses. */
+  DEV_AUTH?: string;
+  /** 'staging' on the staging copy: the badge, noindex, no Google or GitHub sign-in. */
+  APP_ENV?: string;
+  /** Another pgsites than production (src/lib/pgsites-client.ts); staging's. */
+  PGSITES_URL?: string;
+  /** That pgsites' Worker, called directly; staging only. */
+  PGSITES?: Fetcher;
   /** Syncing Pilots' FlownDaysApi (`[[services]]` in wrangler.toml); missing in local dev. */
   SYNCING_PILOTS?: {
     flownDays(

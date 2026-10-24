@@ -21,6 +21,8 @@ async function buildAuth(env: Env) {
     basePath: '/api/auth',
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    // Only for /dev/login (DEV_AUTH: the staging copy, docs/staging.md)
+    emailAndPassword: { enabled: env.DEV_AUTH === 'true' },
     socialProviders: {
       google: {
         clientId: env.AUTH_GOOGLE_ID,
@@ -53,7 +55,7 @@ async function buildAuth(env: Env) {
         role: { type: 'string', defaultValue: 'user', input: false },
       },
     },
-    // The site's own origin: production, or localhost from .dev.vars
+    // The site's own origin: production, staging, or localhost from .dev.vars
     trustedOrigins: [new URL(env.BETTER_AUTH_URL).origin],
   });
 }

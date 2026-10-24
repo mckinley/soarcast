@@ -5,7 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**'],
+    // test/staging-config.test.mjs runs with node --test (npm run test:staging)
+    exclude: ['**/node_modules/**', '**/e2e/**', '**/.next/**', 'test/staging-config.test.mjs'],
   },
   resolve: {
     alias: {

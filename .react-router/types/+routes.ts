@@ -80,6 +80,9 @@ type Pages = {
   "/api/health": {
     params: {};
   };
+  "/dev/login": {
+    params: {};
+  };
   "/planning": {
     params: {};
   };
@@ -114,7 +117,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/admin/health" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/admin" | "/admin/users" | "/login" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/admin/health" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/dev/login" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/admin" | "/admin/users" | "/login" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -188,6 +191,10 @@ type RouteFiles = {
     id: "routes/api.health";
     page: "/api/health";
   };
+  "routes/dev.login.tsx": {
+    id: "routes/dev.login";
+    page: "/dev/login";
+  };
   "routes/planning.tsx": {
     id: "routes/planning";
     page: "/planning";
@@ -258,6 +265,7 @@ type RouteModules = {
   "routes/sites.$slug": typeof import("./app/routes/sites.$slug.tsx");
   "routes/api.auth.$": typeof import("./app/routes/api.auth.$.tsx");
   "routes/api.health": typeof import("./app/routes/api.health.tsx");
+  "routes/dev.login": typeof import("./app/routes/dev.login.tsx");
   "routes/planning": typeof import("./app/routes/planning.tsx");
   "routes/_index": typeof import("./app/routes/_index.tsx");
   "routes/_auth": typeof import("./app/routes/_auth.tsx");

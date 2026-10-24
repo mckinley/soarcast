@@ -67,7 +67,8 @@ export function callName(url: string): string {
     return 'other';
   }
   if (host.endsWith('open-meteo.com')) return 'openmeteo';
-  if (host === 'pgsites.mckinleyaviation.com') return 'pgsites';
+  if (host === 'pgsites.mckinleyaviation.com' || host === 'staging.pgsites.mckinleyaviation.com')
+    return 'pgsites';
   return host.replace(/[^a-z0-9.-]/gi, '');
 }
 

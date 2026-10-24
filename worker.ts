@@ -22,6 +22,7 @@ import {
   type RequestTiming,
 } from './src/lib/request-timing';
 import { logErrorsAsText } from './src/lib/error-text';
+import { configurePgsites } from './src/lib/pgsites-client';
 import {
   HEALTH_REPORT_KEY,
   healthState,
@@ -109,8 +110,10 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
   await setState(env.DB, 'health_status', status).catch(() => undefined);
   if (status === (previous ?? 'ok')) return;
 
-  if (!env.HEALTH_ALERT_TO) {
-    console.error(`Health is ${status}, but HEALTH_ALERT_TO is not set, so no email went out`);
+  if (!env.HEALTH_ALERT_TO || !env.EMAIL) {
+    console.error(
+      `Health is ${status}, but HEALTH_ALERT_TO or EMAIL is not set, so no email went out`,
+    );
     return;
   }
   const lines = report
@@ -135,6 +138,7 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const cf = request.cf as IncomingRequestCfProperties | undefined;
+    configurePgsites(env);
     return withRequestTiming(async (timing) => {
       // Each request gets its own env object: getSession looks the session
       // up once per request by it (app/lib/auth.server.ts)
@@ -144,6 +148,8 @@ export default {
       const totalMs = Date.now() - timing.start;
       const headers = new Headers(response.headers);
       headers.append('Server-Timing', serverTimingHeader(timing, totalMs));
+      // The staging copy (docs/staging.md) stays out of search results
+      if (env.APP_ENV === 'staging') headers.set('X-Robots-Tag', 'noindex, nofollow');
       const page = request.method === 'GET' ? timedPage(new URL(request.url)) : null;
       if (page) {
         const signedIn = /session_token=/.test(request.headers.get('cookie') ?? '');
@@ -163,6 +169,7 @@ export default {
   // expire, run the alerts check, which decides whose morning or evening run
   // is due in their local time, then the health check.
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    configurePgsites(env);
     const context = { cloudflare: { env, ctx } };
     const headers = { authorization: `Bearer ${env.CRON_SECRET}` };
 

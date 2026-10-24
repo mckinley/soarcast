@@ -1,0 +1,61 @@
+# Staging: check a branch on the staging site before it reaches production
+# (docs/staging.md).
+#
+# - Every push to a pull request from this repo deploys that branch there,
+#   with fake data. One staging site: the most recent deploy wins.
+# - Without a pull request: Actions → Staging → Run workflow, on any branch.
+#   Tick "reset" to delete the staging database and reload the fake data.
+#
+# Production deploys only from main, through deploy.yml. Nothing here can
+# reach production's database or hostname (scripts/staging.mjs,
+# test/staging-config.test.mjs).
+#
+# From the pjmgmt staging standard (mckinley/pjmgmt,
+# scripts/automations/templates/staging/staging.yml).
+name: Staging
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: Delete the staging database and reload the fake data
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One staging site: a newer push replaces a deploy still in progress.
+concurrency:
+  group: staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to staging
+    # Pull requests from forks get no secrets; only this repo's branches deploy.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.soarcast.mckinleyaviation.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # No token here: dependency install scripts never see it.
+      - run: npm ci
+
+      - name: Check the staging config
+        run: node --test test/staging-config.test.mjs
+
+      - name: Deploy staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/staging.mjs deploy ${{ inputs.reset && '--reset' || '' }}

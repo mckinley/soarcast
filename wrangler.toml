@@ -57,3 +57,43 @@ enabled = true
 [version_metadata]
 binding = "CF_VERSION_METADATA"
 
+
+# Staging (docs/staging.md, pjmgmt's staging standard): a private copy with
+# fake data at staging.soarcast.mckinleyaviation.com, behind Cloudflare Access,
+# deployed by the Staging workflow (scripts/staging.mjs). Its own Worker and
+# database; no email, no crons, no Syncing Pilots. It reads pgsites' staging
+# copy over a service binding, so it never touches pgsites' production data.
+# test/staging-config.test.mjs keeps it apart from production.
+[env.staging]
+name = "soarcast-staging"
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "staging.soarcast.mckinleyaviation.com", custom_domain = true }]
+
+[env.staging.vars]
+BETTER_AUTH_URL = "https://staging.soarcast.mckinleyaviation.com"
+PGSITES_URL = "https://staging.pgsites.mckinleyaviation.com"
+DEV_AUTH = "true"
+APP_ENV = "staging"
+
+# scripts/staging.mjs fills in the id at deploy time
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "soarcast-staging-db"
+database_id = "STAGING_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[env.staging.triggers]
+crons = []
+
+# pgsites' staging Worker, called directly (src/lib/pgsites-client.ts), so
+# Cloudflare Access in front of its hostname never stands in the way
+[[env.staging.services]]
+binding = "PGSITES"
+service = "paragliding-sites-staging"
+
+[env.staging.observability]
+enabled = true
+
+[env.staging.version_metadata]
+binding = "CF_VERSION_METADATA"
