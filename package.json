@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run lint",
-    "ci": "npm run check && npm run test -- --run"
+    "ci": "npm run check && npm run test -- --run",
+    "make-admin": "node scripts/make-admin.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

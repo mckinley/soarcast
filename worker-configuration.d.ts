@@ -13,6 +13,8 @@ interface Env {
   PGSITES_API_KEY: string;
   /** Where health-check failures are emailed (worker.ts); optional. */
   HEALTH_ALERT_TO?: string;
+  /** Which deploy is running (`[version_metadata]` in wrangler.toml), shown on /admin. */
+  CF_VERSION_METADATA?: WorkerVersionMetadata;
   /** openAIP's API key for the map's Airspace layer (app/routes/api.airspace.$z.$x.$y.tsx); optional. */
   OPENAIP_API_KEY?: string;
   /** Cloudflare Email Sending (`send_email` binding in wrangler.toml), as `wrangler types` generates it. */

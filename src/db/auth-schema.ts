@@ -20,6 +20,8 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  /** 'user' or 'admin' (src/lib/admin.ts); only the server sets it */
+  role: text('role').default('user'),
   ...timestamps,
 });
 

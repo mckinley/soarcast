@@ -33,3 +33,6 @@ yarn.lock
 
 # Beads metadata
 .beads/
+
+# Copied from pjmgmt (scripts/automations/templates); change it there
+scripts/make-admin.mjs

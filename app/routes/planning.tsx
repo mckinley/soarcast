@@ -1003,7 +1003,7 @@ function SaveArea({
   if (!signedIn) {
     return (
       <p className="text-sm text-muted-foreground">
-        <Link to="/auth/signin" className="underline">
+        <Link to="/login" className="underline">
           Sign in
         </Link>{' '}
         to save this area to Favorites and see its week on the dashboard.
@@ -1204,7 +1204,7 @@ export default function PlanningPage() {
               </>
             ) : (
               <>
-                <Link to="/auth/signin" className="underline">
+                <Link to="/login" className="underline">
                   Sign in
                 </Link>{' '}
                 to see favorite sites month by month.

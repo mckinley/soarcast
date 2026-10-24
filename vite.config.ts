@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => {
     esbuild: {
       keepNames: false,
     },
+    // The commit /admin shows: the deploy workflow builds on GitHub, which sets GITHUB_SHA
+    define: { __COMMIT_SHA__: JSON.stringify(process.env.GITHUB_SHA ?? 'dev') },
     plugins: [cloudflareDevProxy(), reactRouter(), tailwindcss(), tsconfigPaths()],
   };
 });
