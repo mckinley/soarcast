@@ -197,9 +197,9 @@ SoarCast keeps a copy of every Paragliding Earth site and checks for changes eve
 
 ### The ground around a launch
 
-SoarCast measures the ground within {{terrainRadiusKm}} km of every launch, listed or private. It finds how steep that ground is on average and how much height it spans. This tells whether the launch is in big mountains, where [the rating keeps wider margins](/guide/how-a-day-is-rated#big-mountains). The heights come from the European Union's [Copernicus elevation map](https://registry.opendata.aws/copernicus-dem/), read at about 240 m detail from its open copy. Heights © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under Copernicus by the European Union and ESA.
+SoarCast measures the ground within {{terrainRadiusKm}} km of every launch, listed or private. It finds how steep that ground is on average and how much height it spans. This tells whether the launch is in big mountains, where [the rating can keep wider margins](/guide/how-a-day-is-rated#big-mountains). The heights come from the European Union's [Copernicus elevation map](https://registry.opendata.aws/copernicus-dem/), read at about 240 m detail from its open copy. Heights © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under Copernicus by the European Union and ESA.
 
-The measure is a rough guide. A launch on the edge of a big range can come out as Hills and plains, or the other way round. You can choose the terrain yourself in Settings.
+The measure is a rough guide. A launch on the edge of a big range can come out as Hills and plains, or the other way round. With wider margins in big mountains on, you can choose the terrain yourself in Settings.
 
 ### Finding a site
 

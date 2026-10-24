@@ -48,23 +48,25 @@ SoarCast runs eight checks on each hour at the launch. Each check passes, is mar
 | Visibility     | You can see less than {{fogKm}} km. The day shows this as Fog.                                                                          | You can see less than {{hazeKm}} km. The day shows this as Haze.                                                                     |
 | Daylight       | It is dark.                                                                                                                             | Sunrise or sunset falls inside the hour.                                                                                             |
 
-At a site in big mountains, the wind, gust and storm checks keep wider margins. [Big mountains](#big-mountains) explains how.
+You can ask for wider margins on the wind, gust and storm checks at sites in big mountains. [Big mountains](#big-mountains) explains how.
 
 ### Wind and gusts
 
 SoarCast reads the wind at the launch's own height, not at the forecast's ground. Gusts are only forecast near the ground, so SoarCast adds them to the wind at launch height. At a launch high above the forecast's ground, it adds less of them. [Data sources](/guide/data-sources#what-it-cant-tell-you) explains how.
 
-Each site has a wind limit. It comes from the site's listing, or it is {{defaultWindLimitKmh}} km/h when the listing has none. In big mountains it is {{mountainWindLimitKmh}} km/h instead. You can set your own limit for each site in Settings, under Favorites. A private site's limit is set on the site itself. Leave it empty there for the usual limit.
+Each site has a wind limit. It comes from the site's listing, or it is {{defaultWindLimitKmh}} km/h when the listing has none. With [wider margins in big mountains](#big-mountains) on, it is {{mountainWindLimitKmh}} km/h there instead. You can set your own limit for each site in Settings, under Favorites. A private site's limit is set on the site itself. Leave it empty there for the usual limit.
 
 In an hour with thermals strong enough to climb in, the gusts are mostly the thermals themselves. So in those hours, only the gusts' top speed counts. Their gap above the average wind doesn't.
 
 ### Big mountains
 
-The same wind is harder to fly in big mountains than over hills or flat land. Valleys make winds of their own. Strong wind over the ridges leaves rough, sinking air behind them, called rotor, which can push a glider into the slope. Landing fields are few and small, and storms build faster over high ground. So SoarCast keeps wider margins there.
+The same wind is harder to fly in big mountains than over hills or flat land. Valleys make winds of their own. Strong wind over the ridges leaves rough, sinking air behind them, called rotor, which can push a glider into the slope. Landing fields are few and small, and storms build faster over high ground. So you can ask SoarCast to keep wider margins there.
 
 SoarCast measures the ground within {{terrainRadiusKm}} km of each launch: how steep it is on average and how much height it spans. A launch is in big mountains when that ground averages {{mountainSlopeDegrees}}° or steeper and spans at least {{mountainReliefM}} m. Ground that spans {{bigReliefM}} m or more counts too, however wide its valleys. Anything else is Hills and plains. The site page shows which one a site is.
 
-At a site in big mountains:
+These margins are a switch in [Settings](/settings#mountain-margins), called Wider margins in big mountains. It is off until you turn it on. When it is off, every site gets the usual rules. These margins hold back some days that most pilots fly. They suit a pilot who wants more room for error in big terrain.
+
+With the switch on, at a site in big mountains:
 
 - The wind limit is {{mountainWindLimitKmh}} km/h, not {{defaultWindLimitKmh}} km/h, unless the listing or you set another.
 - The wind higher up counts too. That is the strongest wind between launch and the top of lift. When the lift tops out less than {{aloftDepthM}} m above launch, SoarCast reads up to {{aloftDepthM}} m instead. That is about where the ridges around a launch are. This wind makes the hour marginal when it is over the limit. It fails the hour when it is more than {{aloftOverLimitKmh}} km/h over.
@@ -73,7 +75,9 @@ At a site in big mountains:
 
 A ridge soaring site keeps the usual wind limit, even in big mountains, and the wind higher up doesn't count there. Ridge soaring needs a good wind onto the slope.
 
-You can change a site's terrain in Settings, under Favorites. A private site's terrain is set on the site itself. Until you choose one, it comes from the map.
+With the switch on, you can change a site's terrain in Settings, under Favorites. A private site's terrain is set on the site itself. Until you choose one, it comes from the map.
+
+The switch also changes the Season card and Favorites on the Planning page. The travel areas on the Planning page are the same for every pilot, so they always use the usual rules.
 
 ### Wind direction
 

@@ -8,7 +8,8 @@ name: Flown-day check
 # at a launch spends Open-Meteo calls. Only main fetches forecasts and saves
 # the cache, so every branch run starts from main's latest forecasts and
 # baseline. Runs here because Open-Meteo is out of reach from Claude's
-# sandbox. Started by hand, no AI.
+# sandbox. With margins ticked it rates with wider margins in big mountains
+# and compares with the baseline, even on main. Started by hand, no AI.
 
 on:
   workflow_dispatch:
@@ -19,6 +20,10 @@ on:
       sites:
         description: 'More pgsites launch ids, comma-separated'
         default: ''
+      margins:
+        description: 'Rate with wider margins in big mountains (the Settings switch)'
+        type: boolean
+        default: false
 
 concurrency:
   group: flown-check
@@ -51,7 +56,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FLOWN_CALL_BUDGET: ${{ github.ref == 'refs/heads/main' && (inputs.budget || '4500') || '0' }}
           FLOWN_SITES: ${{ inputs.sites }}
-          FLOWN_BASELINE: ${{ github.ref == 'refs/heads/main' && 'save' || 'compare' }}
+          FLOWN_BASELINE: ${{ github.ref == 'refs/heads/main' && !inputs.margins && 'save' || 'compare' }}
+          FLOWN_MARGINS: ${{ inputs.margins && '1' || '' }}
         run: |
           npx esbuild scripts/seasons/flown-check.ts --bundle --platform=node --format=esm --outfile=flown-tmp/check.mjs
           node flown-tmp/check.mjs

@@ -1,11 +1,12 @@
 // The sites pilots keep: every followed site and every private site, as the
 // jobs that rate them (the season build, the ensembles). Launches followed
-// by several pilots with the same settings are one job.
+// by several pilots with the same settings are one job. Each is rated with
+// its pilot's choice of wider margins in big mountains.
 
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import * as schema from '../src/db/schema';
-import { customSites, launchSites, userFavoriteSites } from '../src/db/schema';
+import { customSites, launchSites, settings, userFavoriteSites } from '../src/db/schema';
 import { launchSiteToSite } from '../src/lib/launch-sites';
 import { customSiteToSite } from '../src/lib/custom-sites';
 import { jobFor, type Job } from '../src/lib/season-build/core';
@@ -15,22 +16,30 @@ export async function ownJobs(env: JobsEnv): Promise<Job[]> {
   const db = drizzle(env.DB, { schema });
   const [followed, customs] = await Promise.all([
     db
-      .select({ favorite: userFavoriteSites, site: launchSites })
+      .select({
+        favorite: userFavoriteSites,
+        site: launchSites,
+        margins: settings.mountainMargins,
+      })
       .from(userFavoriteSites)
-      .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId)),
-    db.select().from(customSites),
+      .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId))
+      .leftJoin(settings, eq(settings.userId, userFavoriteSites.userId)),
+    db
+      .select({ site: customSites, margins: settings.mountainMargins })
+      .from(customSites)
+      .leftJoin(settings, eq(settings.userId, customSites.userId)),
   ]);
   const jobs = [
     ...followed.map((f) =>
-      jobFor(`pg:${f.site.pgsitesId}`, launchSiteToSite(f.site, f.favorite), {
+      jobFor(`pg:${f.site.pgsitesId}`, launchSiteToSite(f.site, f.favorite, !!f.margins), {
         label: 'followed site',
         name: f.site.name,
         countryCode: f.site.countryCode?.toLowerCase() ?? null,
         destination: null,
       }),
     ),
-    ...customs.map((c) =>
-      jobFor(`custom:${c.id}`, customSiteToSite(c), {
+    ...customs.map(({ site: c, margins }) =>
+      jobFor(`custom:${c.id}`, customSiteToSite(c, !!margins), {
         label: 'your own site',
         name: null,
         countryCode: null,

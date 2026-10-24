@@ -44,6 +44,7 @@ function defaultSettings(userId: string, now: Date): typeof settingsTable.$infer
     morningDigestTime: DEFAULT_DIGEST_TIME,
     timeZone: null,
     showExperiments: false,
+    mountainMargins: false,
     onboardingCompleted: false,
     updatedAt: now,
   };
@@ -131,8 +132,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
         const userSites: Site[] = [
           ...favoriteSitesResult
             .filter((f) => alerting(f.favorite.areaId))
-            .map((f) => launchSiteToSite(f.site, f.favorite)),
-          ...customSitesResult.filter((c) => alerting(c.areaId)).map(customSiteToSite),
+            .map((f) => launchSiteToSite(f.site, f.favorite, userSettings.mountainMargins)),
+          ...customSitesResult
+            .filter((c) => alerting(c.areaId))
+            .map((c) => customSiteToSite(c, userSettings.mountainMargins)),
         ];
         if (userSites.length === 0) continue;
         // Where an alert about each site opens

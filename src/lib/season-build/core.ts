@@ -174,7 +174,11 @@ export async function findDestinationSite(
   return null;
 }
 
-export function siteFromPgRow(row: PgRow): Site {
+/**
+ * A listed launch as the engine rates it by default. `margins`: rate it with
+ * wider margins in big mountains, as a pilot who keeps them would see it.
+ */
+export function siteFromPgRow(row: PgRow, margins = false): Site {
   const wind = {
     windN: row.wind_n,
     windNe: row.wind_ne,
@@ -190,7 +194,7 @@ export function siteFromPgRow(row: PgRow): Site {
     soaring: row.is_soaring,
     xc: row.is_xc,
   });
-  const terrain = terrainFromMeasure(row.terrain_slope, row.terrain_relief);
+  const terrain = margins ? terrainFromMeasure(row.terrain_slope, row.terrain_relief) : null;
   const now = new Date().toISOString();
   return {
     id: row.id,
@@ -209,9 +213,12 @@ export function siteFromPgRow(row: PgRow): Site {
   };
 }
 
-/** The job for a destination, at the listed launch it stands for. */
-export function destinationJob(dest: Destination, row: PgRow): Job {
-  return jobFor(`pg:${row.id}`, siteFromPgRow(row), {
+/**
+ * The job for a destination, at the listed launch it stands for. Everyone
+ * shares these, so they take the usual rules unless a check asks for margins.
+ */
+export function destinationJob(dest: Destination, row: PgRow, margins = false): Job {
+  return jobFor(`pg:${row.id}`, siteFromPgRow(row, margins), {
     label: `destination ${dest.slug} (${row.name})`,
     name: row.name,
     countryCode: row.country_code.toLowerCase(),

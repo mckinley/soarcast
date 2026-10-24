@@ -15,6 +15,7 @@ import {
 import { getPgsitesApiKey } from '~/lib/pgsites-client';
 import { customSites } from '~/db/schema';
 import { terrainFromMeasure } from '~/lib/site-terrain';
+import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
 import {
   customSiteToSite,
   parseCustomSiteForm,
@@ -32,10 +33,14 @@ export function meta({ data }: Route.MetaArgs) {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env as Env;
   const session = await requireAuth(request, env);
-  const row = await findOwnedCustomSite(getDb(env), params.id, session.user.id);
+  const db = getDb(env);
+  const [row, margins] = await Promise.all([
+    findOwnedCustomSite(db, params.id, session.user.id),
+    keepsMountainMargins(db, session.user.id),
+  ]);
   if (!row) throw new Response('Site not found', { status: 404 });
 
-  const site = customSiteToSite(row);
+  const site = customSiteToSite(row, margins);
   const initial: CustomSiteInput = {
     name: site.name,
     latitude: site.latitude,
@@ -60,7 +65,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       : listed
         ? shareProblemMessage({ listed })
         : undefined;
-  return { id: row.id, initial, measuredTerrain, shareError };
+  return { id: row.id, initial, measuredTerrain, margins, shareError };
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -129,7 +134,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 }
 
 export default function EditCustomSitePage() {
-  const { id, initial, measuredTerrain, shareError } = useLoaderData<typeof loader>();
+  const { id, initial, measuredTerrain, margins, shareError } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const siteHref = `/sites/custom/${id}`;
 
@@ -145,6 +150,7 @@ export default function EditCustomSitePage() {
       <CustomSiteForm
         initial={initial}
         measuredTerrain={measuredTerrain}
+        margins={margins}
         errors={actionData?.errors ?? (shareError ? { share: shareError } : undefined)}
         submitLabel="Save changes"
         cancelHref={siteHref}

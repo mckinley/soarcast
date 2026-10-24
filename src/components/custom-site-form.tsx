@@ -97,6 +97,8 @@ interface CustomSiteFormProps {
   initial?: CustomSiteInput;
   /** The terrain measured round the saved pin, when it has been */
   measuredTerrain?: SiteTerrain | null;
+  /** The pilot keeps wider margins in big mountains (Settings), so the terrain counts */
+  margins: boolean;
   errors?: CustomSiteErrors;
   submitLabel: string;
   cancelHref: string;
@@ -105,6 +107,7 @@ interface CustomSiteFormProps {
 export function CustomSiteForm({
   initial,
   measuredTerrain = null,
+  margins,
   errors,
   submitLabel,
   cancelHref,
@@ -367,11 +370,13 @@ export function CustomSiteForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
+        {/* Without the wider margins the terrain changes nothing: keep the saved choice */}
+        {!margins && <input type="hidden" name="terrain" value={ground} />}
+        <div className={margins ? 'grid gap-2' : 'hidden'}>
           <Label htmlFor="terrain">Terrain</Label>
           <select
             id="terrain"
-            name="terrain"
+            name={margins ? 'terrain' : undefined}
             value={ground}
             onChange={(e) => setGround(e.target.value as SiteTerrain | '')}
             className={SELECT_CLASS}
@@ -403,7 +408,7 @@ export function CustomSiteForm({
             max={MAX_WIND_LIMIT}
             value={maxWind}
             placeholder={String(
-              ground || measuredTerrain
+              margins && (ground || measuredTerrain)
                 ? defaultWindLimit(ground || measuredTerrain, kind || null)
                 : DEFAULT_MAX_WIND_KMH,
             )}
@@ -414,8 +419,8 @@ export function CustomSiteForm({
           />
           <p className="text-xs text-muted-foreground">
             Hours with more wind than this at launch height count as unflyable. Leave it empty for
-            the usual limit: {DEFAULT_MAX_WIND_KMH} km/h, or {MOUNTAIN_MAX_WIND_KMH} km/h in big
-            mountains.
+            the usual limit: {DEFAULT_MAX_WIND_KMH} km/h
+            {margins ? `, or ${MOUNTAIN_MAX_WIND_KMH} km/h in big mountains` : ''}.
           </p>
           {shownErrors.maxWindSpeed && (
             <p className="text-sm text-red-500">{shownErrors.maxWindSpeed}</p>

@@ -34,7 +34,11 @@ export interface Site {
   kind?: SiteKind | null;
   /** What the pilot wants from it; absent uses the default for its kind */
   goal?: SiteGoal;
-  /** The ground round it, the pilot's choice or measured; null or absent when unknown */
+  /**
+   * The ground round it that the rating goes by: the pilot's choice or
+   * measured, and only for a pilot who keeps wider margins in big mountains
+   * (Settings). Null or absent: the usual rules.
+   */
   terrain?: SiteTerrain | null;
   notes?: string;
   createdAt: string;
@@ -89,5 +93,7 @@ export interface Settings {
   };
   /** Show the experiments on site pages (the Guide's Experiments page) */
   experiments: boolean;
+  /** Wider margins in big mountains: lower wind limit, wind higher up, storms */
+  mountainMargins: boolean;
   updatedAt: string;
 }

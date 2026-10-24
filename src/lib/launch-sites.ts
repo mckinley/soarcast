@@ -19,15 +19,22 @@ export function launchSiteKind(row: Pick<LaunchSite, 'isThermal' | 'isSoaring' |
   return siteKindFromTags({ thermal: row.isThermal, soaring: row.isSoaring, xc: row.isXc });
 }
 
+/**
+ * A followed listed site as the engine rates it, with the pilot's own
+ * settings; `margins`: the pilot keeps wider margins in big mountains.
+ */
 export function launchSiteToSite(
   row: LaunchSite,
-  favorite?: Pick<
+  favorite: Pick<
     UserFavoriteSite,
     'customMaxWind' | 'customIdealDirections' | 'notes' | 'siteKind' | 'goal' | 'terrain'
   > | null,
+  margins: boolean,
 ): Site {
   const kind: SiteKind | null = favorite?.siteKind ?? launchSiteKind(row);
-  const terrain = siteTerrain(favorite?.terrain, row.terrainSlope, row.terrainRelief);
+  const terrain = margins
+    ? siteTerrain(favorite?.terrain, row.terrainSlope, row.terrainRelief)
+    : null;
   return {
     id: row.id,
     name: row.name,

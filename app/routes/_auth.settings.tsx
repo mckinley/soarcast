@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS = {
   },
   emailDigest: { enabled: false, digestTime: '08:00' },
   experiments: false,
+  mountainMargins: false,
   updatedAt: new Date().toISOString(),
 };
 
@@ -63,6 +64,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .orderBy(asc(customSites.name)),
   ]);
 
+  const margins = dbSettings?.mountainMargins ?? false;
   let appSettings = DEFAULT_SETTINGS;
 
   if (dbSettings) {
@@ -83,6 +85,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         digestTime: dbSettings.morningDigestTime ?? '08:00',
       },
       experiments: dbSettings.showExperiments,
+      mountainMargins: dbSettings.mountainMargins,
       updatedAt: dbSettings.updatedAt.toISOString(),
     };
   }
@@ -117,9 +120,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       longitude: parseFloat(c.longitude),
       elevation: c.elevation,
       customMaxWind: null,
-      defaultMaxWind: customSiteToSite(c).maxWindSpeed,
+      defaultMaxWind: customSiteToSite(c, margins).maxWindSpeed,
       custom: true,
-      goal: customSiteToSite(c).goal!,
+      goal: customSiteToSite(c, margins).goal!,
       kind: c.siteKind,
       terrain: c.terrain,
       measuredTerrain: terrainFromMeasure(c.terrainSlope, c.terrainRelief),
@@ -134,9 +137,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       elevation: f.site.altitude ?? 0,
       customMaxWind: f.favorite.customMaxWind,
       // The limit without the pilot's own: the listing's, or the usual one for its terrain
-      defaultMaxWind: launchSiteToSite(f.site, { ...f.favorite, customMaxWind: null }).maxWindSpeed,
+      defaultMaxWind: launchSiteToSite(f.site, { ...f.favorite, customMaxWind: null }, margins)
+        .maxWindSpeed,
       custom: false,
-      goal: launchSiteToSite(f.site, f.favorite).goal!,
+      goal: launchSiteToSite(f.site, f.favorite, margins).goal!,
       kind: f.favorite.siteKind,
       listedKind: launchSiteKind(f.site),
       terrain: f.favorite.terrain,
@@ -226,6 +230,18 @@ export async function action({ request, context }: Route.ActionArgs) {
             ...(timeZone && { timeZone }),
             updatedAt: new Date(),
           },
+        });
+      return { success: true };
+    }
+
+    case 'toggleMountainMargins': {
+      const mountainMargins = formData.get('enabled') === 'true';
+      await db
+        .insert(settings)
+        .values({ userId, mountainMargins, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: settings.userId,
+          set: { mountainMargins, updatedAt: new Date() },
         });
       return { success: true };
     }

@@ -1,4 +1,4 @@
-import { data, Link, redirect, useActionData } from 'react-router';
+import { data, Link, redirect, useActionData, useLoaderData } from 'react-router';
 import type { Route } from './+types/_auth.sites.custom.new';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
@@ -10,6 +10,7 @@ import {
   syncSharing,
 } from '~/app/lib/custom-sites.server';
 import { getPgsitesApiKey } from '~/lib/pgsites-client';
+import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
 import { customSites } from '~/db/schema';
 import { parseCustomSiteForm, type CustomSiteErrors } from '~/lib/custom-sites';
 import { CustomSiteForm } from '@/components/custom-site-form';
@@ -18,6 +19,12 @@ import { ArrowLeft } from 'lucide-react';
 
 export function meta() {
   return [{ title: 'Add a private site | SoarCast' }];
+}
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = context.cloudflare.env as Env;
+  const session = await requireAuth(request, env);
+  return { margins: await keepsMountainMargins(getDb(env), session.user.id) };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -64,6 +71,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function NewCustomSitePage() {
+  const { margins } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   return (
     <div className="max-w-3xl space-y-6">
@@ -80,7 +88,12 @@ export default function NewCustomSitePage() {
           you share it. SoarCast rates it and sends alerts for it like any site you follow.
         </p>
       </div>
-      <CustomSiteForm errors={actionData?.errors} submitLabel="Add site" cancelHref="/dashboard" />
+      <CustomSiteForm
+        margins={margins}
+        errors={actionData?.errors}
+        submitLabel="Add site"
+        cancelHref="/dashboard"
+      />
     </div>
   );
 }

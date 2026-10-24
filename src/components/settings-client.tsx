@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import type { Settings, SiteGoal, SiteKind, SiteTerrain } from '@/types';
 import { SiteGoalSelect, SiteKindSelect, SiteTerrainSelect } from '@/components/site-goal-picker';
 import { AreaHeader, SiteAreaSelect, type SettingsArea } from '@/components/area-controls';
-import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { DEFAULT_MAX_WIND_KMH, MOUNTAIN_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -309,20 +309,23 @@ export function SettingsClient({
               listedKind={site.listedKind}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Label
-              htmlFor={`terrain-${site.id}`}
-              className="text-sm text-muted-foreground whitespace-nowrap"
-            >
-              Terrain:
-            </Label>
-            <SiteTerrainSelect
-              id={`terrain-${site.id}`}
-              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
-              terrain={site.terrain}
-              measuredTerrain={site.measuredTerrain}
-            />
-          </div>
+          {/* The terrain only changes the rating with wider margins on */}
+          {settings.mountainMargins && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Label
+                htmlFor={`terrain-${site.id}`}
+                className="text-sm text-muted-foreground whitespace-nowrap"
+              >
+                Terrain:
+              </Label>
+              <SiteTerrainSelect
+                id={`terrain-${site.id}`}
+                target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+                terrain={site.terrain}
+                measuredTerrain={site.measuredTerrain}
+              />
+            </div>
+          )}
           {site.custom ? (
             <div className="text-sm text-muted-foreground">
               Wind limit {site.defaultMaxWind} km/h •{' '}
@@ -537,6 +540,45 @@ export function SettingsClient({
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Wider margins in big mountains: a stricter rating there, off by default */}
+      <Card id="mountain-margins" className="scroll-mt-20">
+        <CardHeader>
+          <CardTitle>Big mountains</CardTitle>
+          <CardDescription>
+            Wind, rotor and storms are harder to fly among deep valleys and high ridges. With wider
+            margins on, a site in big mountains gets a wind limit of {MOUNTAIN_MAX_WIND_KMH} km/h,
+            not {DEFAULT_MAX_WIND_KMH} km/h. The wind higher up counts too, and unstable air counts
+            even with no showers near. Ridge soaring sites keep the usual limit.{' '}
+            <Link
+              to="/guide/how-a-day-is-rated#big-mountains"
+              className="underline underline-offset-2"
+            >
+              How it works
+            </Link>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="mountain-margins-switch">Wider margins in big mountains</Label>
+            <Switch
+              id="mountain-margins-switch"
+              checked={settings.mountainMargins}
+              onCheckedChange={(checked) => {
+                setSettings({ ...settings, mountainMargins: checked });
+                save('mountainMargins', {
+                  intent: 'toggleMountainMargins',
+                  enabled: String(checked),
+                });
+              }}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            When it is off, every site gets the usual rules. These margins hold back some days
+            that most pilots fly.
+          </p>
         </CardContent>
       </Card>
 

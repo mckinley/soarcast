@@ -17,8 +17,9 @@ export const MIN_WIND_LIMIT = 10;
 export const MAX_WIND_LIMIT = 80;
 const MAX_ELEVATION = 9000;
 
-export function customSiteToSite(row: CustomSite): Site {
-  const terrain = siteTerrain(row.terrain, row.terrainSlope, row.terrainRelief);
+/** A private site as the engine rates it; `margins`: its owner keeps wider margins in big mountains. */
+export function customSiteToSite(row: CustomSite, margins: boolean): Site {
+  const terrain = margins ? siteTerrain(row.terrain, row.terrainSlope, row.terrainRelief) : null;
   return {
     id: row.id,
     name: row.name,

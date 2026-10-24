@@ -32,6 +32,7 @@ import {
 } from '~/lib/comps';
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { customSiteToSite } from '~/lib/custom-sites';
+import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
 import { getPgsitesApiKey, pgsitesSlug } from '~/lib/pgsites-client';
 import {
   AREAS,
@@ -260,24 +261,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Followed listed sites by pgsites id, with the area each is in
   const followedPgIds = new Map<string, string | null>();
   if (session?.user?.id) {
-    const [followed, customs] = await Promise.all([
+    const [followed, customs, margins] = await Promise.all([
       db
         .select({ favorite: userFavoriteSites, site: launchSites })
         .from(userFavoriteSites)
         .innerJoin(launchSites, eq(launchSites.id, userFavoriteSites.siteId))
         .where(eq(userFavoriteSites.userId, session.user.id)),
       db.select().from(customSites).where(eq(customSites.userId, session.user.id)),
+      keepsMountainMargins(db, session.user.id),
     ]);
     for (const f of followed) followedPgIds.set(f.site.pgsitesId, f.favorite.areaId);
     ownSites = [
       ...followed.map((f) => ({
         siteRef: seasonSiteRef('pgsites', f.site.pgsitesId),
-        site: launchSiteToSite(f.site, f.favorite),
+        site: launchSiteToSite(f.site, f.favorite, margins),
         href: `/sites/${f.site.slug}`,
       })),
       ...customs.map((c) => ({
         siteRef: seasonSiteRef('custom', c.id),
-        site: customSiteToSite(c),
+        site: customSiteToSite(c, margins),
         href: `/sites/custom/${c.id}`,
       })),
     ].sort((a, b) => a.site.name.localeCompare(b.site.name));

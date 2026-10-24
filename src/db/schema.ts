@@ -212,6 +212,9 @@ export const settings = sqliteTable('settings', {
   timeZone: text('time_zone'),
   // Show the experiments (the Guide's Experiments page) on site pages
   showExperiments: integer('show_experiments', { mode: 'boolean' }).notNull().default(false),
+  // Wider margins in big mountains: the lower wind limit, the wind higher up
+  // and the storm rule at sites in big mountains (src/lib/site-terrain.ts)
+  mountainMargins: integer('mountain_margins', { mode: 'boolean' }).notNull().default(false),
   // Unused since the welcome popup was removed; kept so migrations stay additive
   onboardingCompleted: integer('onboarding_completed', { mode: 'boolean' })
     .notNull()

@@ -74,10 +74,13 @@ describe('site converters', () => {
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
     };
-    expect(customSiteToSite(row)).toMatchObject({ terrain: 'mountains', maxWindSpeed: 15 });
-    expect(customSiteToSite({ ...row, maxWindSpeed: 20 }).maxWindSpeed).toBe(20);
-    expect(customSiteToSite({ ...row, terrain: 'hills' }).maxWindSpeed).toBe(25);
-    expect(customSiteToSite({ ...row, siteKind: 'ridge' }).maxWindSpeed).toBe(25);
+    expect(customSiteToSite(row, true)).toMatchObject({ terrain: 'mountains', maxWindSpeed: 15 });
+    expect(customSiteToSite({ ...row, maxWindSpeed: 20 }, true).maxWindSpeed).toBe(20);
+    expect(customSiteToSite({ ...row, terrain: 'hills' }, true).maxWindSpeed).toBe(25);
+    expect(customSiteToSite({ ...row, siteKind: 'ridge' }, true).maxWindSpeed).toBe(25);
+    // A pilot who keeps the usual margins: the usual rules, whatever the ground
+    expect(customSiteToSite(row, false)).toMatchObject({ terrain: null, maxWindSpeed: 25 });
+    expect(customSiteToSite({ ...row, terrain: 'mountains' }, false).terrain).toBeNull();
   });
 
   it('give a listed site the terrain pgsites measured, or the one the pilot chose', () => {
@@ -107,13 +110,21 @@ describe('site converters', () => {
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
     } as unknown as LaunchSite;
-    expect(launchSiteToSite(site, null)).toMatchObject({ terrain: 'hills', maxWindSpeed: 25 });
-    const chosen = launchSiteToSite(site, {
+    expect(launchSiteToSite(site, null, true)).toMatchObject({ terrain: 'hills', maxWindSpeed: 25 });
+    const favorite = {
       siteKind: null,
       goal: null,
       customMaxWind: null,
       terrain: 'mountains',
-    } as never);
-    expect(chosen).toMatchObject({ terrain: 'mountains', maxWindSpeed: 15 });
+    } as never;
+    expect(launchSiteToSite(site, favorite, true)).toMatchObject({
+      terrain: 'mountains',
+      maxWindSpeed: 15,
+    });
+    // The switch off: the usual rules, even where the pilot chose mountains
+    expect(launchSiteToSite(site, favorite, false)).toMatchObject({
+      terrain: null,
+      maxWindSpeed: 25,
+    });
   });
 });

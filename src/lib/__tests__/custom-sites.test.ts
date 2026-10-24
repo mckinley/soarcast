@@ -131,7 +131,7 @@ describe('customSiteToSite', () => {
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
     };
-    const site = customSiteToSite(row);
+    const site = customSiteToSite(row, true);
     expect(site.latitude).toBe(47.4881);
     expect(site.createdAt).toBe('2026-10-19T00:00:00.000Z');
     expect(launchProfileFromSite(site)).toEqual({

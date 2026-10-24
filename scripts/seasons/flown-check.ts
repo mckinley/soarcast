@@ -16,7 +16,9 @@
 // pgsites); FLOWN_CACHE (default .cache/flown-check); FLOWN_CALL_BUDGET
 // (default 4500, under Open-Meteo's 5,000 an hour); FLOWN_MIN_DAYS (default
 // 10 flown days); FLOWN_SITES: more pgsites ids, comma-separated;
-// FLOWN_BASELINE: "save" (on main) or "compare" (on a branch).
+// FLOWN_BASELINE: "save" (on main) or "compare" (on a branch); FLOWN_MARGINS:
+// "1" rates with wider margins in big mountains (a Settings switch, off by
+// default), so a branch run shows what the margins change.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -66,6 +68,7 @@ const EXTRA_SITES = (process.env.FLOWN_SITES ?? '')
   .map((s) => s.trim())
   .filter(Boolean);
 const BASELINE_MODE = process.env.FLOWN_BASELINE === 'save' ? 'save' : 'compare';
+const MARGINS = process.env.FLOWN_MARGINS === '1';
 const BASELINE_FILE = `${CACHE}/baseline.json.gz`;
 const SOARCAST = 'https://soarcast.mckinleyaviation.com';
 
@@ -102,9 +105,9 @@ async function extraJobs(): Promise<Job[]> {
     `SELECT ${PG_COLUMNS} FROM sites WHERE id IN (${EXTRA_SITES.map(() => '?').join(',')})`,
     EXTRA_SITES,
   )) as PgRow[];
-  const measured = await Promise.all(rows.map(withTerrain));
+  const measured = MARGINS ? await Promise.all(rows.map(withTerrain)) : rows;
   return measured.map((row) =>
-    jobFor(`pg:${row.id}`, siteFromPgRow(row), {
+    jobFor(`pg:${row.id}`, siteFromPgRow(row, MARGINS), {
       label: row.name,
       name: row.name,
       countryCode: row.country_code.toLowerCase(),
@@ -508,7 +511,7 @@ async function main() {
     `Flown-day check, ${range.from} to ${range.to}, launches with ${MIN_DAYS}+ flown days`,
   );
 
-  const jobs = [...(await extraJobs()), ...(await destinationJobs())];
+  const jobs = [...(await extraJobs()), ...(await destinationJobs(MARGINS))];
   const withFlown: Array<{ job: Job; flown: FlownDay[] }> = [];
   for (const job of jobs) {
     const flown = await flownDays(job.site.id);

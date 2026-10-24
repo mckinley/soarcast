@@ -4,6 +4,8 @@ import type { Route } from './+types/sites.custom.$id';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
 import { fillCustomTerrain, findOwnedCustomSite } from '~/app/lib/custom-sites.server';
+import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
+import { MountainMarginsNote } from '@/components/mountain-margins-note';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { pgsitesSlug } from '~/lib/pgsites-client';
 import { defaultWindLimit, evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
@@ -63,8 +65,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     throw new Response('Site not found', { status: 404 });
   }
   // A site saved before its terrain was measured gets it now
-  await fillCustomTerrain(db, [customSite]);
-  const site = customSiteToSite(customSite);
+  const [margins] = await Promise.all([
+    keepsMountainMargins(db, session.user.id),
+    fillCustomTerrain(db, [customSite]),
+  ]);
+  const site = customSiteToSite(customSite, margins);
   const ground = siteTerrain(customSite.terrain, customSite.terrainSlope, customSite.terrainRelief);
 
   // Comps held here, fetched while the forecast loads
@@ -133,7 +138,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     site,
     ground,
     // The limit is the usual one for the terrain unless the pilot set one
-    usualWindLimit: customSite.maxWindSpeed > 0 ? null : defaultWindLimit(ground, site.kind),
+    usualWindLimit: customSite.maxWindSpeed > 0 ? null : defaultWindLimit(site.terrain, site.kind),
     // Its listed copy, when its pilot shared it
     sharedSlug: customSite.sharedSiteId
       ? pgsitesSlug(customSite.name, customSite.sharedSiteId)
@@ -329,15 +334,12 @@ export default function CustomSiteDetailPage() {
               <span className="font-medium">Terrain:</span>{' '}
               <span className="text-muted-foreground">
                 {TERRAIN_LABEL[ground]}
-                {ground === 'mountains' && site.kind !== 'ridge' && (
-                  <span className="text-xs">
-                    {' '}
-                    · less wind, wind higher up and storms count more.{' '}
-                    <Link to="/guide/how-a-day-is-rated#big-mountains" className="underline">
-                      Why
-                    </Link>
-                  </span>
-                )}
+                <MountainMarginsNote
+                  ground={ground}
+                  rated={site.terrain === 'mountains'}
+                  ridge={site.kind === 'ridge'}
+                  signedIn
+                />
               </span>
             </div>
           )}

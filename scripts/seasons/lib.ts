@@ -155,7 +155,7 @@ export function merge(parts: OpenMeteoProfileResponse[]): OpenMeteoProfileRespon
   return { ...first, hourly: hourly as unknown as OpenMeteoProfileResponse['hourly'], daily };
 }
 
-export async function destinationJobs(): Promise<Job[]> {
+export async function destinationJobs(margins = false): Promise<Job[]> {
   const query = (sql: string, params: unknown[]) =>
     d1(PGSITES_DB, 'query', sql, params) as Promise<PgRow[]>;
   const jobs: Job[] = [];
@@ -165,7 +165,7 @@ export async function destinationJobs(): Promise<Job[]> {
       console.log(`destination ${dest.slug}: no listed launch found near it`);
       continue;
     }
-    jobs.push(destinationJob(dest, await withTerrain(row)));
+    jobs.push(destinationJob(dest, margins ? await withTerrain(row) : row, margins));
   }
   return jobs;
 }

@@ -9,6 +9,8 @@ import { eq, and } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
 import { evaluateDays, launchProfileFromSite, defaultWindLimit } from '~/lib/forecast-engine';
 import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
+import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
+import { MountainMarginsNote } from '@/components/mountain-margins-note';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
@@ -279,6 +281,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     site = pgSiteToDetailSite(pgSite, slug!);
   }
 
+  // Whether the viewer keeps wider margins in big mountains (Settings)
+  const marginsPromise = keepsMountainMargins(db, session?.user?.id);
+
   // 2. Resolve favorites (needs session + site identity resolved above)
   let favorite: UserFavoriteSite | undefined;
 
@@ -310,8 +315,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   });
   const kind = favorite?.siteKind ?? listedKind;
   const ground = siteTerrain(favorite?.terrain, site.terrainSlope, site.terrainRelief);
+  // Big mountains only change the rating for a pilot who keeps wider margins there
+  const ratedTerrain = (await marginsPromise) ? ground : null;
   // The limit without the pilot's own: the listing's, or the usual one for the terrain
-  const siteMaxWind = site.maxWindSpeed || defaultWindLimit(ground, kind);
+  const siteMaxWind = site.maxWindSpeed || defaultWindLimit(ratedTerrain, kind);
   const engineSite: Site = {
     id: localSiteId || site.id,
     name: site.name,
@@ -323,7 +330,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     maxWindSpeed: customMaxWind || siteMaxWind,
     kind,
     goal: favorite?.goal ?? defaultGoal(kind, site.isHike),
-    terrain: ground,
+    terrain: ratedTerrain,
     createdAt: site.createdAt,
     updatedAt: site.updatedAt,
   };
@@ -405,6 +412,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       favorite && localSiteId ? { siteId: localSiteId, source: 'launch' as const } : undefined,
     customMaxWind,
     siteMaxWind,
+    ground,
     isAuthenticated: !!session?.user?.id,
     scores,
     today,
@@ -571,6 +579,7 @@ export default function SiteDetailPage() {
     goalTarget,
     customMaxWind,
     siteMaxWind,
+    ground,
     isAuthenticated,
     scores,
     today,
@@ -743,20 +752,17 @@ export default function SiteDetailPage() {
                 </div>
               ) : null;
             })()}
-            {engineSite.terrain && (
+            {ground && (
               <div>
                 <span className="font-medium">Terrain:</span>{' '}
                 <span className="text-muted-foreground">
-                  {TERRAIN_LABEL[engineSite.terrain]}
-                  {engineSite.terrain === 'mountains' && engineSite.kind !== 'ridge' && (
-                    <span className="text-xs">
-                      {' '}
-                      · less wind, wind higher up and storms count more.{' '}
-                      <Link to="/guide/how-a-day-is-rated#big-mountains" className="underline">
-                        Why
-                      </Link>
-                    </span>
-                  )}
+                  {TERRAIN_LABEL[ground]}
+                  <MountainMarginsNote
+                    ground={ground}
+                    rated={engineSite.terrain === 'mountains'}
+                    ridge={engineSite.kind === 'ridge'}
+                    signedIn={isAuthenticated}
+                  />
                 </span>
               </div>
             )}

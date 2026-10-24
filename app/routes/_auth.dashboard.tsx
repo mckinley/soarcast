@@ -87,6 +87,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     db.select().from(settings).where(eq(settings.userId, userId)).limit(1),
   ]);
 
+  // Big mountains are rated with wider margins only when the pilot keeps them
+  const margins = userSettings?.mountainMargins ?? false;
+
   // Every saved site sits in an area; new ones join one by distance
   const saved: SavedSite[] = [
     ...favorites.map((f) => ({
@@ -151,7 +154,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       slug: f.site.slug,
       areaId: areaOf.get(savedSiteKey('launch', f.site.id)) ?? null,
     });
-    return launchSiteToSite(refreshedSites[i], f.favorite);
+    return launchSiteToSite(refreshedSites[i], f.favorite, margins);
   });
 
   const shownCustoms = customs.filter((c) => isShown(savedSiteKey('custom', c.id)));
@@ -162,7 +165,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       siteType: 'custom',
       areaId: areaOf.get(savedSiteKey('custom', site.id)) ?? null,
     });
-    return customSiteToSite(site);
+    return customSiteToSite(site, margins);
   });
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];
@@ -253,6 +256,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           digestTime: userSettings.morningDigestTime ?? '08:00',
         },
         experiments: userSettings.showExperiments,
+        mountainMargins: userSettings.mountainMargins,
         updatedAt: userSettings.updatedAt.toISOString(),
       }
     : null;
@@ -288,6 +292,7 @@ export default function DashboardPage() {
     },
     emailDigest: { enabled: false, digestTime: '08:00' },
     experiments: false,
+    mountainMargins: false,
     updatedAt: new Date().toISOString(),
   };
 
