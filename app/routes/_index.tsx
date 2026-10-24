@@ -42,7 +42,7 @@ export default function LandingPage() {
               <Wind className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               <h1 className="text-2xl font-bold tracking-tight">SoarCast</h1>
             </div>
-            <Link to="/auth/signin">
+            <Link to="/login">
               <Button variant="outline">Sign In</Button>
             </Link>
           </div>
@@ -66,7 +66,7 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link to="/auth/signin">
+              <Link to="/login">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto">
                   Get Started Free
                 </Button>

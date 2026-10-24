@@ -1,6 +1,7 @@
 import { getDb } from './db.server';
 import { user, session, account, verification } from '@/db/auth-schema';
 import { settings } from '@/db/schema';
+import { isAdmin } from '@/lib/admin';
 
 // Better Auth is loaded on first use, not when the Worker starts: it is the
 // largest part of a fresh start, and visitors who aren't signed in never
@@ -44,11 +45,16 @@ async function buildAuth(env: Env) {
       expiresIn: 60 * 60 * 24 * 30, // 30 days
       updateAge: 60 * 60 * 24, // refresh when < 1 day remaining
     },
-    trustedOrigins: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://soarcast.mckinleydigital.com',
-    ],
+    user: {
+      additionalFields: {
+        // 'user' or 'admin'. input: false: never settable by the user, or Better
+        // Auth's own POST /api/auth/update-user would accept { role: 'admin' }.
+        // Admins are made with make-admin, then on /admin/users.
+        role: { type: 'string', defaultValue: 'user', input: false },
+      },
+    },
+    // The site's own origin: production, or localhost from .dev.vars
+    trustedOrigins: [new URL(env.BETTER_AUTH_URL).origin],
   });
 }
 
@@ -108,8 +114,15 @@ export async function requireAuth(request: Request, env: Env): Promise<Session> 
   if (!session) {
     throw new Response(null, {
       status: 302,
-      headers: { Location: '/auth/signin' },
+      headers: { Location: '/login' },
     });
   }
+  return session;
+}
+
+/** The signed-in admin's session: signed-out visitors go to /login, other pilots get a 403. */
+export async function requireAdmin(request: Request, env: Env): Promise<Session> {
+  const session = await requireAuth(request, env);
+  if (!isAdmin(session.user)) throw new Response('Forbidden', { status: 403 });
   return session;
 }

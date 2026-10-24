@@ -1,0 +1,44 @@
+name: Make admin
+
+# Gives a user the admin role in production, or lists the admins, with
+# scripts/make-admin.mjs. Run it from the Actions tab. The user must have
+# signed in once. The email is read from the event and masked, so it never
+# shows in the log; in a public repo the admin list is masked too.
+#
+# From the pjmgmt admin-section standard (mckinley/pjmgmt,
+# scripts/automations/templates/make-admin.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Email to make admin. Leave empty to list the admins.'
+        default: ''
+
+jobs:
+  make-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Only wrangler is needed, so skip install scripts (some need .dev.vars)
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Make admin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MASK: ${{ github.event.repository.private && '--no-mask' || '--mask' }}
+        run: |
+          email=$(jq -r '.inputs.email // ""' "$GITHUB_EVENT_PATH")
+          if [ -n "$email" ]; then
+            echo "::add-mask::$email"
+            node scripts/make-admin.mjs "$email" --prod "$MASK"
+          else
+            node scripts/make-admin.mjs --list --prod "$MASK"
+          fi

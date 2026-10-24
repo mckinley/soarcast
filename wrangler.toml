@@ -52,3 +52,8 @@ allowed_sender_addresses = ["soarcast@mckinleyaviation.com"]
 # the Cloudflare dashboard (Workers & Pages > soarcast > Logs).
 [observability]
 enabled = true
+
+# Which deploy is running (id and time), shown on /admin.
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+

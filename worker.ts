@@ -13,7 +13,6 @@ declare module 'react-router' {
 
 // Import the built server bundle directly
 import * as serverBuild from './build/server/index.js';
-import type { AlertsRun, HealthReport } from './app/routes/api.health';
 import {
   serverTimingHeader,
   timedD1,
@@ -23,7 +22,12 @@ import {
   type RequestTiming,
 } from './src/lib/request-timing';
 import { logErrorsAsText } from './src/lib/error-text';
-import { healthState } from './src/lib/health';
+import {
+  HEALTH_REPORT_KEY,
+  healthState,
+  type AlertsRun,
+  type HealthReport,
+} from './src/lib/health';
 
 const requestHandler = createRequestHandler(serverBuild as unknown as ServerBuild, 'production');
 timeOutgoingFetches();
@@ -191,12 +195,18 @@ export default {
     );
 
     const health = await requestHandler(
-      new Request(new URL('/api/health', env.BETTER_AUTH_URL), { headers }),
+      new Request(new URL('/api/admin/health', env.BETTER_AUTH_URL), { headers }),
       context,
     );
     const report = (await health.json().catch(() => null)) as HealthReport | null;
     const healthy = health.ok && report?.ok === true;
     console.log(`Health check: ${health.status} ${JSON.stringify(report)}`);
+    // The public /api/health answers from this report
+    if (report?.checks) {
+      await setState(env.DB, HEALTH_REPORT_KEY, JSON.stringify(report)).catch((error) =>
+        console.error('Could not record the health report:', error),
+      );
+    }
     await notifyHealthChange(env, healthy, report);
 
     if (!alerts.ok) throw new Error(`Alerts check failed: ${alerts.status} ${alertsBody}`);

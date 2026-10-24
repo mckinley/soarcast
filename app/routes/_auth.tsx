@@ -3,7 +3,7 @@ import type { Route } from './+types/_auth';
 import { requireAuth } from '~/app/lib/auth.server';
 
 // Protected layout - all child routes require authentication.
-// If not authenticated, redirects to /auth/signin.
+// If not authenticated, redirects to /login.
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env as Env;

@@ -12,4 +12,4 @@ jobs:
       - name: Health report
         run: |
           curl -sS -w '\nHTTP %{http_code}\n' -H "authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://soarcast.mckinleyaviation.com/api/health
+            https://soarcast.mckinleyaviation.com/api/admin/health

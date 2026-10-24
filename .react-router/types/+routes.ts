@@ -33,6 +33,9 @@ type Pages = {
   "/api/weather/profile": {
     params: {};
   };
+  "/api/admin/health": {
+    params: {};
+  };
   "/api/track-record": {
     params: {};
   };
@@ -94,6 +97,15 @@ type Pages = {
   "/settings": {
     params: {};
   };
+  "/admin": {
+    params: {};
+  };
+  "/admin/users": {
+    params: {};
+  };
+  "/login": {
+    params: {};
+  };
   "/year": {
     params: {};
   };
@@ -102,7 +114,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/admin/health" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/admin" | "/admin/users" | "/login" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -123,6 +135,10 @@ type RouteFiles = {
   "routes/api.weather.profile.tsx": {
     id: "routes/api.weather.profile";
     page: "/api/weather/profile";
+  };
+  "routes/api.admin.health.tsx": {
+    id: "routes/api.admin.health";
+    page: "/api/admin/health";
   };
   "routes/api.track-record.tsx": {
     id: "routes/api.track-record";
@@ -200,6 +216,22 @@ type RouteFiles = {
     id: "routes/_auth.settings";
     page: "/settings";
   };
+  "routes/admin.tsx": {
+    id: "routes/admin";
+    page: "/admin" | "/admin/users";
+  };
+  "routes/admin._index.tsx": {
+    id: "routes/admin._index";
+    page: "/admin";
+  };
+  "routes/admin.users.tsx": {
+    id: "routes/admin.users";
+    page: "/admin/users";
+  };
+  "routes/login.tsx": {
+    id: "routes/login";
+    page: "/login";
+  };
   "routes/year.tsx": {
     id: "routes/year";
     page: "/year";
@@ -213,6 +245,7 @@ type RouteModules = {
   "routes/api.airspace.$z.$x.$y": typeof import("./app/routes/api.airspace.$z.$x.$y.tsx");
   "routes/api.forecasts.refresh": typeof import("./app/routes/api.forecasts.refresh.tsx");
   "routes/api.weather.profile": typeof import("./app/routes/api.weather.profile.tsx");
+  "routes/api.admin.health": typeof import("./app/routes/api.admin.health.tsx");
   "routes/api.track-record": typeof import("./app/routes/api.track-record.tsx");
   "routes/sites.custom.$id": typeof import("./app/routes/sites.custom.$id.tsx");
   "routes/api.flown-days": typeof import("./app/routes/api.flown-days.tsx");
@@ -232,5 +265,9 @@ type RouteModules = {
   "routes/_auth.sites.custom.new": typeof import("./app/routes/_auth.sites.custom.new.tsx");
   "routes/_auth.dashboard": typeof import("./app/routes/_auth.dashboard.tsx");
   "routes/_auth.settings": typeof import("./app/routes/_auth.settings.tsx");
+  "routes/admin": typeof import("./app/routes/admin.tsx");
+  "routes/admin._index": typeof import("./app/routes/admin._index.tsx");
+  "routes/admin.users": typeof import("./app/routes/admin.users.tsx");
+  "routes/login": typeof import("./app/routes/login.tsx");
   "routes/year": typeof import("./app/routes/year.tsx");
 };

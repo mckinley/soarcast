@@ -108,7 +108,7 @@ async function dashboardTabs(page, shoot) {
 function prodPages() {
   return [
     { name: 'home', path: '/' },
-    { name: 'signin', path: '/auth/signin' },
+    { name: 'login', path: '/login' },
     { name: 'dashboard-signed-out', path: '/dashboard' },
     { name: 'browse', path: '/sites/browse', settle: 4000 },
     { name: 'browse-search', path: '/sites/browse?search=chelan', settle: 4000 },

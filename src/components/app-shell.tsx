@@ -13,9 +13,11 @@ import {
   CalendarRange,
   BookOpen,
   Settings as SettingsIcon,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { loader as rootLoader } from '~/app/root';
+import { isAdmin } from '~/lib/admin';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -55,6 +57,14 @@ const footerNav: NavItem[] = [
   { title: 'Guide', href: '/guide', icon: BookOpen },
   { title: 'Settings', href: '/settings', icon: SettingsIcon },
 ];
+
+const adminNav: NavItem = { title: 'Admin', href: '/admin', icon: ShieldCheck };
+
+/** The footer menu, with Admin for admins. */
+function useFooterNav(): NavItem[] {
+  const user = useRouteLoaderData<typeof rootLoader>('root')?.user ?? null;
+  return isAdmin(user) ? [...footerNav, adminNav] : footerNav;
+}
 
 /** Whether a nav item is the current section: its page or a page under it. */
 function isCurrent(pathname: string, href: string): boolean {
@@ -98,7 +108,7 @@ function UserMenu() {
 
   if (!user) {
     return (
-      <Button onClick={() => navigate('/auth/signin')} variant="default" size="sm">
+      <Button onClick={() => navigate('/login')} variant="default" size="sm">
         Sign In
       </Button>
     );
@@ -146,6 +156,14 @@ function UserMenu() {
             Settings
           </Link>
         </DropdownMenuItem>
+        {isAdmin(user) && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin" className="cursor-pointer">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"
@@ -204,6 +222,7 @@ function SidebarNav({
 function AppSidebar() {
   const location = useLocation();
   const pathname = location.pathname;
+  const footerItems = useFooterNav();
 
   return (
     <Sidebar>
@@ -218,7 +237,7 @@ function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t">
-        <SidebarNav items={footerNav} pathname={pathname} quiet />
+        <SidebarNav items={footerItems} pathname={pathname} quiet />
       </SidebarFooter>
     </Sidebar>
   );
@@ -253,6 +272,7 @@ function MobileNav() {
   const [open, setOpen] = React.useState(false);
   const location = useLocation();
   const pathname = location.pathname;
+  const footerItems = useFooterNav();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -277,7 +297,7 @@ function MobileNav() {
           ))}
         </nav>
         <nav className="flex flex-col gap-1 border-t p-4">
-          {footerNav.map((item) => (
+          {footerItems.map((item) => (
             <MobileNavLink
               key={item.href}
               item={item}
