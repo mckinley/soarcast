@@ -192,7 +192,7 @@ Listed sites come from [Paragliding Earth](https://www.paraglidingearth.com), a 
 
 SoarCast uses each site's name and place, its launch and landing heights, and the wind directions its launch works in. It also uses the site's description and its tags for thermals, ridge soaring and cross-country flying.
 
-SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. It also copies each country's full list again every month. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days.
+SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. It also copies each country's full list again every month. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days. When Paragliding Earth is down, SoarCast keeps using its last copy and catches up once it is back.
 
 ### Finding a site
 

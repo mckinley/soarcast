@@ -1,5 +1,5 @@
-import type { EntryContext } from 'react-router';
-import { ServerRouter } from 'react-router';
+import type { EntryContext, HandleErrorFunction } from 'react-router';
+import { isRouteErrorResponse, ServerRouter } from 'react-router';
 import { isbot } from 'isbot';
 import { renderToReadableStream } from 'react-dom/server';
 
@@ -32,3 +32,13 @@ export default async function handleRequest(
     status: responseStatusCode,
   });
 }
+
+/**
+ * Log what went wrong, but not a page that doesn't exist (bots asking for
+ * /.env and the like, hundreds a day) or a request the visitor left.
+ */
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  if (request.signal.aborted) return;
+  if (isRouteErrorResponse(error) && error.status === 404) return;
+  console.error(error);
+};

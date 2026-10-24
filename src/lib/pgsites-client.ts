@@ -1,3 +1,5 @@
+import type { PgsitesSyncRun } from './health';
+
 const BASE_URL = 'https://pgsites.mckinleyaviation.com';
 
 /** Where pgsites got a site (PgSite.source). 'pilot': a private site its pilot shared. */
@@ -340,10 +342,15 @@ export function pgsitesSlug(name: string, id: string): string {
   return `${nameSlug}--${id}`;
 }
 
-/** pgsites' sync progress; `last_modified_check` is the YYYYMMDD of the last daily sync. */
-export async function getSyncStatus(
-  apiKey: string,
-): Promise<{ last_modified_check: string | null; total_sites: number }> {
+/**
+ * pgsites' sync progress; `last_modified_check` is the YYYYMMDD of the last
+ * daily sync that worked, `last_incremental` its newest daily sync, failed or not.
+ */
+export async function getSyncStatus(apiKey: string): Promise<{
+  last_modified_check: string | null;
+  last_incremental?: PgsitesSyncRun | null;
+  total_sites: number;
+}> {
   return fetchApi(apiKey, '/api/sync/status', undefined, { fresh: true });
 }
 

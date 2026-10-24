@@ -22,9 +22,12 @@ import {
   withRequestTiming,
   type RequestTiming,
 } from './src/lib/request-timing';
+import { logErrorsAsText } from './src/lib/error-text';
+import { healthState } from './src/lib/health';
 
 const requestHandler = createRequestHandler(serverBuild as unknown as ServerBuild, 'production');
 timeOutgoingFetches();
+logErrorsAsText();
 
 /** Rows kept in request_timings; older ones are deleted now and then. */
 const TIMINGS_KEPT = 2000;
@@ -89,12 +92,15 @@ async function setState(db: D1Database, key: string, value: string): Promise<voi
 }
 
 /**
- * Email HEALTH_ALERT_TO when the health check turns failing or recovers, not
- * every hour. If the database is down the previous state can't be read, so
- * that outage emails every hour.
+ * Email HEALTH_ALERT_TO when the set of failing checks changes (one starts
+ * failing, or all recover), not every hour. Keyed by the failing checks, a
+ * new problem emails even while an older one still fails. If the database is
+ * down the previous state can't be read, so that outage emails every hour.
  */
 async function notifyHealthChange(env: Env, healthy: boolean, report: HealthReport | null) {
-  const status = healthy ? 'ok' : 'failing';
+  const failedChecks = report?.checks.filter((c) => !c.ok).map((c) => c.name) ?? [];
+  const failing = healthy ? [] : failedChecks.length > 0 ? failedChecks : ['health check'];
+  const status = healthState(failing);
   const previous = await getState(env.DB, 'health_status').catch(() => null);
   await setState(env.DB, 'health_status', status).catch(() => undefined);
   if (status === (previous ?? 'ok')) return;
@@ -103,7 +109,6 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
     console.error(`Health is ${status}, but HEALTH_ALERT_TO is not set, so no email went out`);
     return;
   }
-  const failing = report?.checks.filter((c) => !c.ok).map((c) => c.name) ?? ['health check'];
   const lines = report
     ? report.checks.map((c) => `${c.ok ? 'OK  ' : 'FAIL'} ${c.name}: ${c.detail}`)
     : ['The health check itself failed to answer.'];

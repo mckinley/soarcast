@@ -5,6 +5,7 @@ import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { getPgsitesApiKey, getSyncStatus, searchSites } from '~/lib/pgsites-client';
 import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '~/lib/season-build/run';
 import { NOGA_SYNC_STATE_KEY, type NogaSyncRun } from '~/lib/noga';
+import { syncFailureNote } from '~/lib/health';
 
 // Checks what pilots depend on. The hourly cron (worker.ts) calls this after
 // the alerts run and emails when the result changes; it needs the
@@ -92,7 +93,10 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       if (!status.last_modified_check) throw new Error('the daily sync has never run');
       const age = daysSince(status.last_modified_check, now);
       if (age > PGSITES_MAX_SYNC_AGE_DAYS) {
-        throw new Error(`last daily sync ${status.last_modified_check}, ${age} days ago`);
+        throw new Error(
+          `last daily sync ${status.last_modified_check}, ${age} days ago` +
+            syncFailureNote(status.last_incremental),
+        );
       }
       return `last daily sync ${status.last_modified_check}`;
     }),
