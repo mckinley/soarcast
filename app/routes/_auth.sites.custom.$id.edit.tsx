@@ -7,12 +7,14 @@ import {
   customSiteValues,
   ELEVATION_LOOKUP_ERROR,
   findOwnedCustomSite,
+  measureCustomTerrain,
   resolveElevation,
   shareProblemMessage,
   syncSharing,
 } from '~/app/lib/custom-sites.server';
 import { getPgsitesApiKey } from '~/lib/pgsites-client';
 import { customSites } from '~/db/schema';
+import { terrainFromMeasure } from '~/lib/site-terrain';
 import {
   customSiteToSite,
   parseCustomSiteForm,
@@ -41,12 +43,14 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     elevation: site.elevation,
     goodDirections: site.idealWindDirections,
     okDirections: site.okWindDirections ?? [],
-    maxWindSpeed: site.maxWindSpeed,
+    maxWindSpeed: row.maxWindSpeed,
     kind: row.siteKind,
     goal: row.goal,
+    terrain: row.terrain,
     notes: row.notes,
     share: row.sharedSiteId !== null,
   };
+  const measuredTerrain = terrainFromMeasure(row.terrainSlope, row.terrainRelief);
   // Adding a site sends here when sharing it didn't work
   const url = new URL(request.url);
   const listed = url.searchParams.get('listed');
@@ -56,7 +60,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       : listed
         ? shareProblemMessage({ listed })
         : undefined;
-  return { id: row.id, initial, shareError };
+  return { id: row.id, initial, measuredTerrain, shareError };
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
@@ -89,7 +93,15 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const { input, errors } = parseCustomSiteForm(form);
   if (Object.keys(errors).length > 0) return data({ errors }, { status: 400 });
 
-  const elevation = await resolveElevation(input);
+  // The terrain is measured again when the pin moves
+  const moved =
+    row.terrainSlope == null ||
+    parseFloat(row.latitude) !== input.latitude ||
+    parseFloat(row.longitude) !== input.longitude;
+  const [elevation, terrain] = await Promise.all([
+    resolveElevation(input),
+    moved ? measureCustomTerrain(input.latitude, input.longitude) : null,
+  ]);
   if (elevation === null) {
     return data(
       { errors: { elevation: ELEVATION_LOOKUP_ERROR } as CustomSiteErrors },
@@ -100,7 +112,14 @@ export async function action({ params, request, context }: Route.ActionArgs) {
   const values = customSiteValues(input, elevation);
   await db
     .update(customSites)
-    .set({ ...values, updatedAt: new Date() })
+    .set({
+      ...values,
+      ...(moved && {
+        terrainSlope: terrain?.slope ?? null,
+        terrainRelief: terrain?.relief ?? null,
+      }),
+      updatedAt: new Date(),
+    })
     .where(owned);
   const problem = await syncSharing(db, apiKey, row, { input, elevation });
   if (problem) {
@@ -110,7 +129,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 }
 
 export default function EditCustomSitePage() {
-  const { id, initial, shareError } = useLoaderData<typeof loader>();
+  const { id, initial, measuredTerrain, shareError } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const siteHref = `/sites/custom/${id}`;
 
@@ -125,6 +144,7 @@ export default function EditCustomSitePage() {
       <h1 className="text-3xl font-bold">Edit {initial.name}</h1>
       <CustomSiteForm
         initial={initial}
+        measuredTerrain={measuredTerrain}
         errors={actionData?.errors ?? (shareError ? { share: shareError } : undefined)}
         submitLabel="Save changes"
         cancelHref={siteHref}

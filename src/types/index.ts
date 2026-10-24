@@ -3,6 +3,12 @@
 /** What flying a launch can give: thermals, ridge lift, both, or only a glide down. */
 export type SiteKind = 'thermal' | 'ridge' | 'both' | 'sled';
 
+/**
+ * The ground round a launch: big mountains (deep valleys and high ridges all
+ * round, where wind and storms are harder to fly), or hills and plains.
+ */
+export type SiteTerrain = 'mountains' | 'hills';
+
 /** What a pilot wants from a site before a day counts as worth going. */
 export type SiteGoal = 'launch' | 'soar' | 'great';
 
@@ -28,6 +34,8 @@ export interface Site {
   kind?: SiteKind | null;
   /** What the pilot wants from it; absent uses the default for its kind */
   goal?: SiteGoal;
+  /** The ground round it, the pilot's choice or measured; null or absent when unknown */
+  terrain?: SiteTerrain | null;
   notes?: string;
   createdAt: string;
   updatedAt: string;

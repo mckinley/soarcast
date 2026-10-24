@@ -14,6 +14,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { SettingsClient } from '~/components/settings-client';
 import { isValidTimeZone } from '~/lib/alert-schedule';
 import { isSiteGoal, isSiteKind } from '~/lib/site-goals';
+import { isSiteTerrain, terrainFromMeasure } from '~/lib/site-terrain';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { launchSiteKind, launchSiteToSite } from '~/lib/launch-sites';
 import {
@@ -116,10 +117,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       longitude: parseFloat(c.longitude),
       elevation: c.elevation,
       customMaxWind: null,
-      defaultMaxWind: c.maxWindSpeed,
+      defaultMaxWind: customSiteToSite(c).maxWindSpeed,
       custom: true,
       goal: customSiteToSite(c).goal!,
       kind: c.siteKind,
+      terrain: c.terrain,
+      measuredTerrain: terrainFromMeasure(c.terrainSlope, c.terrainRelief),
     })),
     ...favorites.map((f) => ({
       id: f.site.id,
@@ -130,11 +133,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       longitude: f.site.longitude,
       elevation: f.site.altitude ?? 0,
       customMaxWind: f.favorite.customMaxWind,
-      defaultMaxWind: f.site.maxWindSpeed,
+      // The limit without the pilot's own: the listing's, or the usual one for its terrain
+      defaultMaxWind: launchSiteToSite(f.site, { ...f.favorite, customMaxWind: null }).maxWindSpeed,
       custom: false,
       goal: launchSiteToSite(f.site, f.favorite).goal!,
       kind: f.favorite.siteKind,
       listedKind: launchSiteKind(f.site),
+      terrain: f.favorite.terrain,
+      measuredTerrain: terrainFromMeasure(f.site.terrainSlope, f.site.terrainRelief),
     })),
   ].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -251,16 +257,24 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { success: true };
     }
 
-    // What the pilot wants from a site, and what it gives: saved on their
-    // favorite of a listed site, or on their own site. Empty resets to the default.
+    // What the pilot wants from a site, what it gives and the ground round
+    // it: saved on their favorite of a listed site, or on their own site.
+    // Empty resets to the default.
     case 'updateSiteGoal':
-    case 'updateSiteKind': {
+    case 'updateSiteKind':
+    case 'updateSiteTerrain': {
       const siteId = formData.get('siteId');
       const value = formData.get('value');
       if (typeof siteId !== 'string' || !siteId) return { error: 'Missing site' };
-      const valid = intent === 'updateSiteGoal' ? isSiteGoal(value) : isSiteKind(value);
+      const valid =
+        intent === 'updateSiteGoal'
+          ? isSiteGoal(value)
+          : intent === 'updateSiteKind'
+            ? isSiteKind(value)
+            : isSiteTerrain(value);
       if (value !== '' && !valid) return { error: 'Unknown choice' };
-      const column = intent === 'updateSiteGoal' ? 'goal' : 'siteKind';
+      const column =
+        intent === 'updateSiteGoal' ? 'goal' : intent === 'updateSiteKind' ? 'siteKind' : 'terrain';
       const change = { [column]: value === '' ? null : value };
 
       const custom = formData.get('source') === 'custom';

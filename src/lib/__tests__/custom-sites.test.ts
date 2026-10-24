@@ -44,6 +44,7 @@ describe('parseCustomSiteForm', () => {
       goal: 'launch',
       notes: 'Launch is the open slope below Haystack.',
       share: false,
+      terrain: null, // from the map
     });
   });
 
@@ -71,13 +72,13 @@ describe('parseCustomSiteForm', () => {
     expect(input.goal).toBeNull();
   });
 
-  it('leaves a blank elevation for a terrain lookup and defaults the wind limit', () => {
+  it('leaves a blank elevation for a terrain lookup and the wind limit to the terrain', () => {
     const { input, errors } = parseCustomSiteForm(
       form({ ...valid, elevation: '', maxWindSpeed: '', good: '', ok: '', notes: ' ' }),
     );
     expect(errors).toEqual({});
     expect(input.elevation).toBeNull();
-    expect(input.maxWindSpeed).toBe(25);
+    expect(input.maxWindSpeed).toBe(0); // the usual limit for its terrain
     expect(input.goodDirections).toEqual([]);
     expect(input.notes).toBeNull();
   });
@@ -124,6 +125,9 @@ describe('customSiteToSite', () => {
       goal: null,
       notes: null,
       areaId: null,
+      terrain: null,
+      terrainSlope: null,
+      terrainRelief: null,
       createdAt: new Date('2026-10-19T00:00:00Z'),
       updatedAt: new Date('2026-10-19T00:00:00Z'),
     };
@@ -137,6 +141,7 @@ describe('customSiteToSite', () => {
       maxWindSpeed: 22,
       kind: null,
       goal: 'launch', // a peak the pilot pinned: a safe launch is enough
+      terrain: null,
     });
   });
 });

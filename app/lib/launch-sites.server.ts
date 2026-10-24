@@ -5,13 +5,16 @@ import { getSiteById } from '~/lib/pgsites-client';
 import { launchSiteValuesFromPgSite, SITE_REFRESH_DAYS } from '~/lib/launch-sites';
 
 const REFRESH_AFTER_MS = SITE_REFRESH_DAYS * 24 * 60 * 60 * 1000;
+/** A copy without the terrain pgsites measures is asked again this often, until it has it. */
+const TERRAIN_RETRY_MS = 6 * 60 * 60 * 1000;
 /** Sites refreshed per page load, so one load never waits on many lookups. */
 const MAX_REFRESHES = 5;
 
 /**
  * Brings stale copies of followed sites up to date with pgsites (directions,
- * text, and the tags that say whether a site thermals or ridge soars), and
- * returns the rows with any refreshed values. A failed lookup keeps the copy.
+ * text, the tags that say whether a site thermals or ridge soars, and the
+ * terrain round it), and returns the rows with any refreshed values. A
+ * failed lookup keeps the copy.
  */
 export async function refreshLaunchSites(
   db: Db,
@@ -24,7 +27,9 @@ export async function refreshLaunchSites(
     .filter(
       (r) =>
         r.source === 'pgsites' &&
-        (!r.lastSyncedAt || now.getTime() - r.lastSyncedAt.getTime() > REFRESH_AFTER_MS),
+        (!r.lastSyncedAt ||
+          now.getTime() - r.lastSyncedAt.getTime() >
+            (r.terrainSlope == null ? TERRAIN_RETRY_MS : REFRESH_AFTER_MS)),
     )
     .slice(0, MAX_REFRESHES);
   if (stale.length === 0) return rows;

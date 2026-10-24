@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import type { Settings, SiteGoal, SiteKind } from '@/types';
-import { SiteGoalSelect, SiteKindSelect } from '@/components/site-goal-picker';
+import type { Settings, SiteGoal, SiteKind, SiteTerrain } from '@/types';
+import { SiteGoalSelect, SiteKindSelect, SiteTerrainSelect } from '@/components/site-goal-picker';
 import { AreaHeader, SiteAreaSelect, type SettingsArea } from '@/components/area-controls';
 import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
@@ -32,6 +32,10 @@ interface SettingsSite {
   kind: SiteKind | null;
   /** What the listing says it gives (listed sites) */
   listedKind?: SiteKind | null;
+  /** The pilot's say on the ground round it; null goes by the measure */
+  terrain: SiteTerrain | null;
+  /** The terrain measured from the map, null until it has been */
+  measuredTerrain: SiteTerrain | null;
 }
 
 interface SettingsClientProps {
@@ -303,6 +307,20 @@ export function SettingsClient({
               target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
               kind={site.kind}
               listedKind={site.listedKind}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor={`terrain-${site.id}`}
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              Terrain:
+            </Label>
+            <SiteTerrainSelect
+              id={`terrain-${site.id}`}
+              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+              terrain={site.terrain}
+              measuredTerrain={site.measuredTerrain}
             />
           </div>
           {site.custom ? (

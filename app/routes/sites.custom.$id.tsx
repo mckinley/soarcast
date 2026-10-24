@@ -3,10 +3,11 @@ import { Await, useLoaderData, Link } from 'react-router';
 import type { Route } from './+types/sites.custom.$id';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
-import { findOwnedCustomSite } from '~/app/lib/custom-sites.server';
+import { fillCustomTerrain, findOwnedCustomSite } from '~/app/lib/custom-sites.server';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { pgsitesSlug } from '~/lib/pgsites-client';
-import { evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
+import { defaultWindLimit, evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
+import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
@@ -61,7 +62,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!customSite) {
     throw new Response('Site not found', { status: 404 });
   }
+  // A site saved before its terrain was measured gets it now
+  await fillCustomTerrain(db, [customSite]);
   const site = customSiteToSite(customSite);
+  const ground = siteTerrain(customSite.terrain, customSite.terrainSlope, customSite.terrainRelief);
 
   // Comps held here, fetched while the forecast loads
   const compsPromise = compsAtSite(env, site.latitude, site.longitude);
@@ -127,6 +131,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     : null;
   return {
     site,
+    ground,
+    // The limit is the usual one for the terrain unless the pilot set one
+    usualWindLimit: customSite.maxWindSpeed > 0 ? null : defaultWindLimit(ground, site.kind),
     // Its listed copy, when its pilot shared it
     sharedSlug: customSite.sharedSiteId
       ? pgsitesSlug(customSite.name, customSite.sharedSiteId)
@@ -150,6 +157,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 export default function CustomSiteDetailPage() {
   const {
     site,
+    ground,
+    usualWindLimit,
     sharedSlug,
     scores,
     today,
@@ -315,9 +324,29 @@ export default function CustomSiteDetailPage() {
               <p className="text-muted-foreground whitespace-pre-line">{site.notes}</p>
             </div>
           )}
+          {ground && (
+            <div>
+              <span className="font-medium">Terrain:</span>{' '}
+              <span className="text-muted-foreground">
+                {TERRAIN_LABEL[ground]}
+                {ground === 'mountains' && site.kind !== 'ridge' && (
+                  <span className="text-xs">
+                    {' '}
+                    · less wind, wind higher up and storms count more.{' '}
+                    <Link to="/guide/how-a-day-is-rated#big-mountains" className="underline">
+                      Why
+                    </Link>
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           <div>
             <span className="font-medium">Max Wind Speed:</span>{' '}
-            <span className="text-muted-foreground">{site.maxWindSpeed} km/h</span>
+            <span className="text-muted-foreground">
+              {site.maxWindSpeed} km/h
+              {usualWindLimit && <span className="text-xs"> (the usual limit here)</span>}
+            </span>
           </div>
           <div className="text-xs text-muted-foreground">
             Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°

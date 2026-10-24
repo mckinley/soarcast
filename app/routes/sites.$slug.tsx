@@ -7,7 +7,8 @@ import { getSession } from '~/app/lib/auth.server';
 import { customSites, launchSites, userFavoriteSites, type UserFavoriteSite } from '~/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
-import { evaluateDays, launchProfileFromSite, DEFAULT_MAX_WIND_KMH } from '~/lib/forecast-engine';
+import { evaluateDays, launchProfileFromSite, defaultWindLimit } from '~/lib/forecast-engine';
+import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
 import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
@@ -85,6 +86,9 @@ interface DetailSite {
   isXc: boolean;
   isHike: boolean;
   maxWindSpeed: number | null;
+  /** The ground within 20 km, as pgsites measured it; null until it has */
+  terrainSlope: number | null;
+  terrainRelief: number | null;
   description: string | null;
   landingDescription: string | null;
   pgeLink: string | null;
@@ -146,6 +150,8 @@ function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
     isXc: !!site.is_xc,
     isHike: !!site.is_hike,
     maxWindSpeed: null,
+    terrainSlope: site.terrain_slope ?? null,
+    terrainRelief: site.terrain_relief ?? null,
     description: site.description || null,
     landingDescription: null,
     pgeLink: site.pge_link || null,
@@ -190,6 +196,8 @@ function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSit
     isXc: site.isXc,
     isHike: site.isHike,
     maxWindSpeed: site.maxWindSpeed,
+    terrainSlope: site.terrainSlope,
+    terrainRelief: site.terrainRelief,
     description: site.description || null,
     landingDescription: site.landingDescription || null,
     pgeLink: site.pgeLink || null,
@@ -301,6 +309,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     xc: site.isXc,
   });
   const kind = favorite?.siteKind ?? listedKind;
+  const ground = siteTerrain(favorite?.terrain, site.terrainSlope, site.terrainRelief);
+  // The limit without the pilot's own: the listing's, or the usual one for the terrain
+  const siteMaxWind = site.maxWindSpeed || defaultWindLimit(ground, kind);
   const engineSite: Site = {
     id: localSiteId || site.id,
     name: site.name,
@@ -309,9 +320,10 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     elevation: site.altitude || 0,
     idealWindDirections: favorite?.customIdealDirections || getIdealWindDirections(site),
     okWindDirections: favorite?.customIdealDirections ? [] : getOkWindDirections(site),
-    maxWindSpeed: customMaxWind || site.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
+    maxWindSpeed: customMaxWind || siteMaxWind,
     kind,
     goal: favorite?.goal ?? defaultGoal(kind, site.isHike),
+    terrain: ground,
     createdAt: site.createdAt,
     updatedAt: site.updatedAt,
   };
@@ -392,6 +404,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     goalTarget:
       favorite && localSiteId ? { siteId: localSiteId, source: 'launch' as const } : undefined,
     customMaxWind,
+    siteMaxWind,
     isAuthenticated: !!session?.user?.id,
     scores,
     today,
@@ -557,6 +570,7 @@ export default function SiteDetailPage() {
     isFavorited,
     goalTarget,
     customMaxWind,
+    siteMaxWind,
     isAuthenticated,
     scores,
     today,
@@ -729,22 +743,34 @@ export default function SiteDetailPage() {
                 </div>
               ) : null;
             })()}
+            {engineSite.terrain && (
+              <div>
+                <span className="font-medium">Terrain:</span>{' '}
+                <span className="text-muted-foreground">
+                  {TERRAIN_LABEL[engineSite.terrain]}
+                  {engineSite.terrain === 'mountains' && engineSite.kind !== 'ridge' && (
+                    <span className="text-xs">
+                      {' '}
+                      · less wind, wind higher up and storms count more.{' '}
+                      <Link to="/guide/how-a-day-is-rated#big-mountains" className="underline">
+                        Why
+                      </Link>
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
             <div>
               <span className="font-medium">Max Wind Speed:</span>{' '}
               {customMaxWind ? (
                 <span className="text-muted-foreground">
-                  {customMaxWind} km/h <span className="text-xs">(your limit)</span>
-                  {site.maxWindSpeed && (
-                    <span className="text-xs ml-1 opacity-60">
-                      · site default: {site.maxWindSpeed} km/h
-                    </span>
-                  )}
+                  {customMaxWind} km/h <span className="text-xs">(set in Settings)</span>
+                  <span className="text-xs ml-1 opacity-60">· usual here: {siteMaxWind} km/h</span>
                 </span>
               ) : (
                 <span className="text-muted-foreground">
-                  {site.maxWindSpeed
-                    ? `${site.maxWindSpeed} km/h`
-                    : `${DEFAULT_MAX_WIND_KMH} km/h (default)`}
+                  {siteMaxWind} km/h
+                  {!site.maxWindSpeed && <span className="text-xs"> (the usual limit here)</span>}
                 </span>
               )}
             </div>

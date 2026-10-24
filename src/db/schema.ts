@@ -1,7 +1,7 @@
 import { sql, relations } from 'drizzle-orm';
 import { text, integer, real, sqliteTable, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
-import type { SiteGoal, SiteKind } from '../types';
+import type { SiteGoal, SiteKind, SiteTerrain } from '../types';
 import type { TrackRecord } from '../lib/track-record';
 import type { FlownDay } from '../lib/flown-days';
 
@@ -54,6 +54,10 @@ export const launchSites = sqliteTable('launch_sites', {
   // 'osm' (a takeoff mapped in OpenStreetMap, whose page is source_url)
   origin: text('origin').notNull().default('pge'),
   sourceUrl: text('source_url'),
+  // The ground within 20 km, as pgsites measured it: average steepness
+  // (degrees) and height span (m); null until it has (src/lib/site-terrain.ts)
+  terrainSlope: real('terrain_slope'),
+  terrainRelief: integer('terrain_relief'),
   lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
@@ -101,6 +105,8 @@ export const userFavoriteSites = sqliteTable(
     // null uses the site's tags and the default goal for them
     siteKind: text('site_kind').$type<SiteKind>(),
     goal: text('goal').$type<SiteGoal>(),
+    // The pilot's say on the ground round it; null goes by the measure
+    terrain: text('terrain').$type<SiteTerrain>(),
     notify: integer('notify', { mode: 'boolean' }).notNull().default(false),
     areaId: text('area_id').references(() => siteAreas.id, { onDelete: 'set null' }),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -124,7 +130,7 @@ export const customSites = sqliteTable('custom_sites', {
   latitude: text('latitude').notNull(), // Store as text to preserve precision
   longitude: text('longitude').notNull(),
   elevation: integer('elevation').notNull(), // meters
-  maxWindSpeed: integer('max_wind_speed').notNull(), // km/h
+  maxWindSpeed: integer('max_wind_speed').notNull(), // km/h, 0: the usual limit for its terrain
   // Directions (degrees, 45° steps) the launch works well in, and ones it
   // works in only cross; the same split as launch_sites' 2 and 1 ratings.
   idealWindDirections: text('ideal_wind_directions', { mode: 'json' }).notNull().$type<number[]>(),
@@ -134,6 +140,11 @@ export const customSites = sqliteTable('custom_sites', {
     .$type<number[]>(),
   siteKind: text('site_kind').$type<SiteKind>(), // null: not said
   goal: text('goal').$type<SiteGoal>(), // null: safe launch is enough
+  terrain: text('terrain').$type<SiteTerrain>(), // null: go by the measure
+  // The ground within 20 km (src/lib/site-terrain.ts), measured when the
+  // site is saved; null until it has been
+  terrainSlope: real('terrain_slope'),
+  terrainRelief: integer('terrain_relief'),
   notes: text('notes'),
   // The pgsites site its pilot shared it as (app/lib/custom-sites.server.ts
   // syncSharing); null: private only

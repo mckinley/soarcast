@@ -2,8 +2,8 @@
 // good it is. Every screen and alert goes through evaluateDays, so they
 // cannot disagree about the same day.
 
-import type { DayScore, Site } from '@/types';
-import type { LaunchProfile } from './gates';
+import type { DayScore, Site, SiteKind, SiteTerrain } from '@/types';
+import { DEFAULT_MAX_WIND_KMH, MOUNTAIN_MAX_WIND_KMH, type LaunchProfile } from './gates';
 
 export {
   evaluateDays,
@@ -13,7 +13,7 @@ export {
   RIDGE_MIN_KMH,
   SOAR_MIN_HEIGHT,
 } from './evaluate';
-export { THERMAL_MIN_WSTAR, rainTrust } from './gates';
+export { THERMAL_MIN_WSTAR, DEFAULT_MAX_WIND_KMH, MOUNTAIN_MAX_WIND_KMH, rainTrust } from './gates';
 export type { HourVerdict } from './evaluate';
 export type { LaunchProfile, GateResult, GateStatus, GateName, RainTrust } from './gates';
 export type { LaunchConditions } from './launch-conditions';
@@ -23,20 +23,31 @@ export type { LaunchConditions } from './launch-conditions';
  * season build then rates every season again. 2: storms need showers near,
  * light cross wind with thermals passes, top of lift at high launches.
  * 3: less of the ground-level gust at launches high above the model's ground.
+ * 4: a lower wind limit in big mountains.
  */
-export const ENGINE_VERSION = 3;
+export const ENGINE_VERSION = 4;
 
-/** Paraglider launch limit used when a site has none: most launches top out around 25 km/h. */
-export const DEFAULT_MAX_WIND_KMH = 25;
+/**
+ * The wind limit a site gets when nobody has set one: lower in big
+ * mountains, except at a ridge site, which needs wind to soar.
+ */
+export function defaultWindLimit(
+  terrain: SiteTerrain | null | undefined,
+  kind: SiteKind | null | undefined,
+): number {
+  return terrain === 'mountains' && kind !== 'ridge' ? MOUNTAIN_MAX_WIND_KMH : DEFAULT_MAX_WIND_KMH;
+}
 
 export function launchProfileFromSite(site: Site): LaunchProfile {
   return {
     elevation: site.elevation > 0 ? site.elevation : 0,
     goodDirections: site.idealWindDirections ?? [],
     okDirections: site.okWindDirections ?? [],
-    maxWindSpeed: site.maxWindSpeed > 0 ? site.maxWindSpeed : DEFAULT_MAX_WIND_KMH,
+    maxWindSpeed:
+      site.maxWindSpeed > 0 ? site.maxWindSpeed : defaultWindLimit(site.terrain, site.kind),
     kind: site.kind ?? null,
     goal: site.goal,
+    terrain: site.terrain ?? null,
   };
 }
 

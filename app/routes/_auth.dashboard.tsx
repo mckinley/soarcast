@@ -13,6 +13,7 @@ import type { Site, DayScore } from '~/types';
 import { customSiteToSite } from '~/lib/custom-sites';
 import { launchSiteToSite } from '~/lib/launch-sites';
 import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
+import { fillCustomTerrain } from '~/app/lib/custom-sites.server';
 import { compsWorldwide } from '~/app/lib/comps.server';
 import { addDays } from '~/lib/alert-schedule';
 import { compsAround, type Comp } from '~/lib/comps';
@@ -153,15 +154,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return launchSiteToSite(refreshedSites[i], f.favorite);
   });
 
-  const customSitesAsSites: Site[] = customs
-    .filter((c) => isShown(savedSiteKey('custom', c.id)))
-    .map((site) => {
-      siteMetadata.set(site.id, {
-        siteType: 'custom',
-        areaId: areaOf.get(savedSiteKey('custom', site.id)) ?? null,
-      });
-      return customSiteToSite(site);
+  const shownCustoms = customs.filter((c) => isShown(savedSiteKey('custom', c.id)));
+  // Private sites saved before their terrain was measured get it now
+  await fillCustomTerrain(db, shownCustoms);
+  const customSitesAsSites: Site[] = shownCustoms.map((site) => {
+    siteMetadata.set(site.id, {
+      siteType: 'custom',
+      areaId: areaOf.get(savedSiteKey('custom', site.id)) ?? null,
     });
+    return customSiteToSite(site);
+  });
 
   const allSites = [...customSitesAsSites, ...favoritesAsSites];
 

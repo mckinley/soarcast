@@ -63,6 +63,12 @@ export interface PgSite {
   launch_latitude?: number | null;
   launch_longitude?: number | null;
   launch_altitude?: number | null;
+  /**
+   * The ground within 20 km: its average steepness (degrees) and the height
+   * it spans (m). Null until pgsites has measured it (src/lib/site-terrain.ts).
+   */
+  terrain_slope?: number | null;
+  terrain_relief?: number | null;
 }
 
 /** A place pgsites' search found by name ("Cali"), with the listed sites near it, busiest first. */

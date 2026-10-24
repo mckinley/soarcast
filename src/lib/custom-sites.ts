@@ -4,11 +4,12 @@
 // (place, height, directions and what it gives) that any pilot can follow.
 
 import type { CustomSite } from '@/db/schema';
-import type { Site, SiteGoal, SiteKind } from '@/types';
+import type { Site, SiteGoal, SiteKind, SiteTerrain } from '@/types';
 import type { SharedSiteBody } from '@/lib/pgsites-client';
 import { COMPASS_POINTS } from '@/lib/site-utils';
-import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { defaultWindLimit } from '@/lib/forecast-engine';
 import { defaultGoal, isSiteGoal, isSiteKind } from '@/lib/site-goals';
+import { isSiteTerrain, siteTerrain } from '@/lib/site-terrain';
 
 export const MAX_NAME_LENGTH = 80;
 export const MAX_NOTES_LENGTH = 2000;
@@ -17,6 +18,7 @@ export const MAX_WIND_LIMIT = 80;
 const MAX_ELEVATION = 9000;
 
 export function customSiteToSite(row: CustomSite): Site {
+  const terrain = siteTerrain(row.terrain, row.terrainSlope, row.terrainRelief);
   return {
     id: row.id,
     name: row.name,
@@ -25,10 +27,12 @@ export function customSiteToSite(row: CustomSite): Site {
     elevation: row.elevation,
     idealWindDirections: row.idealWindDirections ?? [],
     okWindDirections: row.okWindDirections ?? [],
-    maxWindSpeed: row.maxWindSpeed,
+    // 0: the usual limit for its terrain
+    maxWindSpeed: row.maxWindSpeed > 0 ? row.maxWindSpeed : defaultWindLimit(terrain, row.siteKind),
     kind: row.siteKind,
     // Pilots pin hike-and-fly peaks they're happy to sled off
     goal: row.goal ?? defaultGoal(row.siteKind, true),
+    terrain,
     notes: row.notes ?? undefined,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -53,9 +57,12 @@ export interface CustomSiteInput {
   elevation: number | null; // null: not entered, look it up from terrain
   goodDirections: number[];
   okDirections: number[];
+  /** km/h; 0 takes the usual limit for the terrain */
   maxWindSpeed: number;
   /** What the launch gives; null when the pilot isn't sure */
   kind: SiteKind | null;
+  /** The ground round it; null goes by the measure */
+  terrain: SiteTerrain | null;
   /** What makes a day worth going; null uses the default */
   goal: SiteGoal | null;
   notes: string | null;
@@ -118,8 +125,8 @@ export function parseCustomSiteForm(form: FormData): {
   }
 
   const windText = text(form, 'maxWindSpeed');
-  const maxWindSpeed = windText === '' ? DEFAULT_MAX_WIND_KMH : Math.round(Number(windText));
-  if (!(maxWindSpeed >= MIN_WIND_LIMIT && maxWindSpeed <= MAX_WIND_LIMIT)) {
+  const maxWindSpeed = windText === '' ? 0 : Math.round(Number(windText));
+  if (windText !== '' && !(maxWindSpeed >= MIN_WIND_LIMIT && maxWindSpeed <= MAX_WIND_LIMIT)) {
     errors.maxWindSpeed = `The wind limit must be between ${MIN_WIND_LIMIT} and ${MAX_WIND_LIMIT} km/h.`;
   }
 
@@ -146,6 +153,7 @@ export function parseCustomSiteForm(form: FormData): {
       okDirections,
       maxWindSpeed,
       kind: isSiteKind(text(form, 'kind')) ? (text(form, 'kind') as SiteKind) : null,
+      terrain: isSiteTerrain(text(form, 'terrain')) ? (text(form, 'terrain') as SiteTerrain) : null,
       goal: isSiteGoal(text(form, 'goal')) ? (text(form, 'goal') as SiteGoal) : null,
       notes: notes || null,
       share,

@@ -7,7 +7,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { GOAL_HINT, GOAL_LABEL, SITE_GOALS, SITE_KIND_LABEL, SITE_KINDS } from '@/lib/site-goals';
-import type { SiteGoal, SiteKind } from '@/types';
+import { SITE_TERRAINS, TERRAIN_LABEL } from '@/lib/site-terrain';
+import type { SiteGoal, SiteKind, SiteTerrain } from '@/types';
 
 /** A site the pilot follows or pinned, whose goal and kind they can change. */
 export interface GoalTarget {
@@ -19,7 +20,10 @@ export interface GoalTarget {
  * Saves a site goal or kind on the settings route, which every page's
  * loader then reflects: a day turns green when it meets the new goal.
  */
-function useSiteSetting(target: GoalTarget, intent: 'updateSiteGoal' | 'updateSiteKind') {
+function useSiteSetting(
+  target: GoalTarget,
+  intent: 'updateSiteGoal' | 'updateSiteKind' | 'updateSiteTerrain',
+) {
   const fetcher = useFetcher({ key: `${intent}:${target.siteId}` });
   const pending = fetcher.formData?.get('value');
   const save = (value: string) =>
@@ -87,6 +91,43 @@ export function SiteKindSelect({
         {SITE_KINDS.map((k) => (
           <SelectItem key={k} value={k}>
             {SITE_KIND_LABEL[k]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** The ground round the site; "map" goes by the terrain measured from the map. */
+export function SiteTerrainSelect({
+  target,
+  terrain,
+  measuredTerrain,
+  id,
+}: {
+  target: GoalTarget;
+  /** The pilot's own choice, null when they haven't made one */
+  terrain: SiteTerrain | null;
+  /** What the map says, null until it has been measured */
+  measuredTerrain: SiteTerrain | null;
+  id?: string;
+}) {
+  const { pending, save } = useSiteSetting(target, 'updateSiteTerrain');
+  const value = pending !== undefined ? pending || 'map' : (terrain ?? 'map');
+  return (
+    <Select value={value} onValueChange={(v) => save(v === 'map' ? '' : v)}>
+      <SelectTrigger id={id} size="sm" className="w-[264px] max-w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="map">
+          {measuredTerrain
+            ? `From the map: ${TERRAIN_LABEL[measuredTerrain]}`
+            : 'From the map: not measured yet'}
+        </SelectItem>
+        {SITE_TERRAINS.map((t) => (
+          <SelectItem key={t} value={t}>
+            {TERRAIN_LABEL[t]}
           </SelectItem>
         ))}
       </SelectContent>

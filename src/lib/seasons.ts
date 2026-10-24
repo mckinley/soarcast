@@ -487,6 +487,8 @@ export function launchProfileKey(launch: LaunchProfile): string {
     [...launch.okDirections].sort((a, b) => a - b),
     launch.maxWindSpeed,
     launch.kind ?? null,
+    // Big mountains hold gusts to a different limit
+    ...(launch.terrain === 'mountains' ? ['mountains'] : []),
   ]);
   // FNV-1a, 32 bit
   let hash = 0x811c9dc5;

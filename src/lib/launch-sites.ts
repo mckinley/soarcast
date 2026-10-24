@@ -6,9 +6,10 @@ import type { LaunchSite, NewLaunchSite, UserFavoriteSite } from '@/db/schema';
 import type { Site, SiteKind } from '@/types';
 import type { PgSite } from '@/lib/pgsites-client';
 import { pgsitesSlug, siteOrigin } from '@/lib/pgsites-client';
-import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { defaultWindLimit } from '@/lib/forecast-engine';
 import { getIdealWindDirections, getOkWindDirections } from '@/lib/site-utils';
 import { defaultGoal, siteKindFromTags } from '@/lib/site-goals';
+import { siteTerrain } from '@/lib/site-terrain';
 
 /** A followed site's copy is refreshed from pgsites once it is this many days old. */
 export const SITE_REFRESH_DAYS = 7;
@@ -22,10 +23,11 @@ export function launchSiteToSite(
   row: LaunchSite,
   favorite?: Pick<
     UserFavoriteSite,
-    'customMaxWind' | 'customIdealDirections' | 'notes' | 'siteKind' | 'goal'
+    'customMaxWind' | 'customIdealDirections' | 'notes' | 'siteKind' | 'goal' | 'terrain'
   > | null,
 ): Site {
   const kind: SiteKind | null = favorite?.siteKind ?? launchSiteKind(row);
+  const terrain = siteTerrain(favorite?.terrain, row.terrainSlope, row.terrainRelief);
   return {
     id: row.id,
     name: row.name,
@@ -34,9 +36,10 @@ export function launchSiteToSite(
     elevation: row.altitude || 0,
     idealWindDirections: favorite?.customIdealDirections || getIdealWindDirections(row),
     okWindDirections: favorite?.customIdealDirections ? [] : getOkWindDirections(row),
-    maxWindSpeed: favorite?.customMaxWind || row.maxWindSpeed || DEFAULT_MAX_WIND_KMH,
+    maxWindSpeed: favorite?.customMaxWind || row.maxWindSpeed || defaultWindLimit(terrain, kind),
     kind,
     goal: favorite?.goal ?? defaultGoal(kind, row.isHike),
+    terrain,
     notes: favorite?.notes ?? undefined,
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
@@ -75,6 +78,8 @@ export function launchSiteValuesFromPgSite(
     pgeLink: pgSite.pge_link,
     origin: siteOrigin(pgSite.source),
     sourceUrl: pgSite.source_url ?? null,
+    terrainSlope: pgSite.terrain_slope ?? null,
+    terrainRelief: pgSite.terrain_relief ?? null,
     lastSyncedAt: new Date(),
   };
 }

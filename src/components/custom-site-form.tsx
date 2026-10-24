@@ -11,7 +11,12 @@ import {
 } from '@/components/launch-direction-picker';
 import type { MapFocus } from '@/components/map-picker';
 import { COMPASS_POINTS } from '@/lib/site-utils';
-import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import {
+  DEFAULT_MAX_WIND_KMH,
+  MOUNTAIN_MAX_WIND_KMH,
+  defaultWindLimit,
+} from '@/lib/forecast-engine';
+import { SITE_TERRAINS, TERRAIN_LABEL } from '@/lib/site-terrain';
 import {
   MAX_NAME_LENGTH,
   MAX_NOTES_LENGTH,
@@ -30,7 +35,7 @@ import {
   SITE_KINDS,
   defaultGoal,
 } from '@/lib/site-goals';
-import type { SiteGoal, SiteKind } from '@/types';
+import type { SiteGoal, SiteKind, SiteTerrain } from '@/types';
 
 const SELECT_CLASS =
   'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring dark:bg-input/30';
@@ -90,12 +95,20 @@ type TerrainState =
 interface CustomSiteFormProps {
   /** Saved values when editing; omit to add a new site */
   initial?: CustomSiteInput;
+  /** The terrain measured round the saved pin, when it has been */
+  measuredTerrain?: SiteTerrain | null;
   errors?: CustomSiteErrors;
   submitLabel: string;
   cancelHref: string;
 }
 
-export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: CustomSiteFormProps) {
+export function CustomSiteForm({
+  initial,
+  measuredTerrain = null,
+  errors,
+  submitLabel,
+  cancelHref,
+}: CustomSiteFormProps) {
   const navigation = useNavigation();
   const submitting = navigation.state === 'submitting';
   const editing = initial !== undefined;
@@ -115,7 +128,9 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
   const [ratings, setRatings] = useState<Ratings>(
     ratingsFrom(initial?.goodDirections ?? [], initial?.okDirections ?? []),
   );
-  const [maxWind, setMaxWind] = useState(String(initial?.maxWindSpeed ?? DEFAULT_MAX_WIND_KMH));
+  // Empty: the usual limit for the terrain
+  const [maxWind, setMaxWind] = useState(initial?.maxWindSpeed ? String(initial.maxWindSpeed) : '');
+  const [ground, setGround] = useState<SiteTerrain | ''>(initial?.terrain ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [share, setShare] = useState(initial?.share ?? false);
   const [kind, setKind] = useState<SiteKind | ''>(initial?.kind ?? '');
@@ -351,27 +366,61 @@ export function CustomSiteForm({ initial, errors, submitLabel, cancelHref }: Cus
         </div>
       </div>
 
-      <div className="grid gap-2 sm:max-w-xs">
-        <Label htmlFor="maxWindSpeed">Wind limit (km/h)</Label>
-        <Input
-          id="maxWindSpeed"
-          name="maxWindSpeed"
-          type="number"
-          inputMode="numeric"
-          min={MIN_WIND_LIMIT}
-          max={MAX_WIND_LIMIT}
-          value={maxWind}
-          onChange={(e) => {
-            clearError('maxWindSpeed');
-            setMaxWind(e.target.value);
-          }}
-        />
-        <p className="text-xs text-muted-foreground">
-          Hours with more wind than this at launch height count as unflyable.
-        </p>
-        {shownErrors.maxWindSpeed && (
-          <p className="text-sm text-red-500">{shownErrors.maxWindSpeed}</p>
-        )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="terrain">Terrain</Label>
+          <select
+            id="terrain"
+            name="terrain"
+            value={ground}
+            onChange={(e) => setGround(e.target.value as SiteTerrain | '')}
+            className={SELECT_CLASS}
+          >
+            <option value="">
+              {measuredTerrain
+                ? `From the map: ${TERRAIN_LABEL[measuredTerrain]}`
+                : 'Find it from the map'}
+            </option>
+            {SITE_TERRAINS.map((t) => (
+              <option key={t} value={t}>
+                {TERRAIN_LABEL[t]}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            In big mountains SoarCast wants less wind, counts the wind higher up too, and gives
+            storms a wider margin.
+          </p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="maxWindSpeed">Wind limit (km/h)</Label>
+          <Input
+            id="maxWindSpeed"
+            name="maxWindSpeed"
+            type="number"
+            inputMode="numeric"
+            min={MIN_WIND_LIMIT}
+            max={MAX_WIND_LIMIT}
+            value={maxWind}
+            placeholder={String(
+              ground || measuredTerrain
+                ? defaultWindLimit(ground || measuredTerrain, kind || null)
+                : DEFAULT_MAX_WIND_KMH,
+            )}
+            onChange={(e) => {
+              clearError('maxWindSpeed');
+              setMaxWind(e.target.value);
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Hours with more wind than this at launch height count as unflyable. Leave it empty for
+            the usual limit: {DEFAULT_MAX_WIND_KMH} km/h, or {MOUNTAIN_MAX_WIND_KMH} km/h in big
+            mountains.
+          </p>
+          {shownErrors.maxWindSpeed && (
+            <p className="text-sm text-red-500">{shownErrors.maxWindSpeed}</p>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

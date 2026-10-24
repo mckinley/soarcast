@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { customSites, type CustomSite } from '~/db/schema';
 import type { Db } from './db.server';
 import { fetchElevations } from '~/lib/terrain';
+import { measureTerrainAt, type TerrainMeasure } from '~/lib/site-terrain';
 import { sharedSiteBody, sharedSiteRef, type CustomSiteInput } from '~/lib/custom-sites';
 import { shareSite, unshareSite } from '~/lib/pgsites-client';
 
@@ -30,6 +31,47 @@ export async function resolveElevation(input: CustomSiteInput): Promise<number |
   }
 }
 
+/** Each read of heights for the terrain gives up after this long (ms). */
+const TERRAIN_TIMEOUT_MS = 8_000;
+
+/**
+ * The ground round a pin (src/lib/site-terrain.ts), or null when the
+ * heights can't be read now: the site is then measured on a later load.
+ */
+export async function measureCustomTerrain(
+  latitude: number,
+  longitude: number,
+): Promise<TerrainMeasure | null> {
+  try {
+    return await measureTerrainAt(latitude, longitude, (url, init) =>
+      fetch(url, { ...init, signal: AbortSignal.timeout(TERRAIN_TIMEOUT_MS) }),
+    );
+  } catch (error) {
+    console.error('Terrain lookup failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Measures and stores the terrain of private sites saved before it was
+ * measured, and sets it on the rows given, so the caller rates them with it.
+ */
+export async function fillCustomTerrain(db: Db, rows: CustomSite[]): Promise<void> {
+  const missing = rows.filter((row) => row.terrainSlope == null);
+  await Promise.all(
+    missing.map(async (row) => {
+      const m = await measureCustomTerrain(parseFloat(row.latitude), parseFloat(row.longitude));
+      if (!m) return;
+      row.terrainSlope = m.slope;
+      row.terrainRelief = m.relief;
+      await db
+        .update(customSites)
+        .set({ terrainSlope: m.slope, terrainRelief: m.relief })
+        .where(eq(customSites.id, row.id));
+    }),
+  );
+}
+
 export function customSiteValues(input: CustomSiteInput, elevation: number) {
   return {
     name: input.name,
@@ -41,6 +83,7 @@ export function customSiteValues(input: CustomSiteInput, elevation: number) {
     okWindDirections: input.okDirections,
     siteKind: input.kind,
     goal: input.goal,
+    terrain: input.terrain,
     notes: input.notes,
   };
 }

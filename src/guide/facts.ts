@@ -33,8 +33,16 @@ import {
   XC_MIN_HOURS,
   XC_MIN_WSTAR,
 } from '@/lib/forecast-engine/evaluate';
-import { DEFAULT_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { DEFAULT_MAX_WIND_KMH, MOUNTAIN_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { ALOFT_OVER_LIMIT_KMH } from '@/lib/forecast-engine/gates';
 import {
+  BIG_RELIEF_M,
+  MOUNTAIN_RELIEF_M,
+  MOUNTAIN_SLOPE_DEGREES,
+  TERRAIN_RADIUS_M,
+} from '@/lib/site-terrain';
+import {
+  ALOFT_MIN_DEPTH_M,
   GUST_FADE_FULL_M,
   GUST_FADE_SHARE,
   GUST_FADE_START_M,
@@ -134,6 +142,13 @@ export const GUIDE_FACTS: Record<string, string | number> = {
   // How a day is rated
   windowHours: MIN_WINDOW_HOURS,
   defaultWindLimitKmh: DEFAULT_MAX_WIND_KMH,
+  mountainWindLimitKmh: MOUNTAIN_MAX_WIND_KMH,
+  terrainRadiusKm: TERRAIN_RADIUS_M / 1000,
+  mountainSlopeDegrees: MOUNTAIN_SLOPE_DEGREES,
+  mountainReliefM: meters(MOUNTAIN_RELIEF_M),
+  bigReliefM: meters(BIG_RELIEF_M),
+  aloftDepthM: ALOFT_MIN_DEPTH_M,
+  aloftOverLimitKmh: ALOFT_OVER_LIMIT_KMH,
   windNearLimitPercent: Math.round(WIND_NEAR_LIMIT * 100),
   gustOverLimitKmh: GUST_OVER_LIMIT_KMH,
   gustSpreadFailKmh: GUST_SPREAD_FAIL_KMH,

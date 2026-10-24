@@ -13,7 +13,7 @@ import {
   interpolateAtHeight,
   topOfLiftAtLaunch,
 } from '../launch-conditions';
-import { directionGate, daylightGate, gustGate, stormGate } from '../gates';
+import { directionGate, daylightGate, gustGate, stormGate, windGate } from '../gates';
 
 const DATE = '2026-07-18';
 const MODEL_ELEVATION = 200;
@@ -154,6 +154,16 @@ describe('deriveLaunchConditions', () => {
     expect(c.windSpeed).toBe(5);
   });
 
+  it('finds the strongest wind from launch to the top of the lift', () => {
+    const hour = hourAt(13, { windSpeed: 5, windAloft: 30 });
+    expect(deriveLaunchConditions(hour, MODEL_ELEVATION, 150).windAloft).toBe(30);
+    // With no lift, the wind up to the ridges round the launch still counts
+    const night = hourAt(3, { windSpeed: 5, windAloft: 30 });
+    expect(deriveLaunchConditions(night, MODEL_ELEVATION, 150).windAloft).toBe(30);
+    // The model has no winds that high
+    expect(deriveLaunchConditions(night, MODEL_ELEVATION, 5300).windAloft).toBeNull();
+  });
+
   it('carries the surface gust spread up to a launch near the model ground', () => {
     // 290 m above the model ground: wind 18.5 km/h there, plus the whole 12 km/h spread
     const hour = hourAt(13, { windSpeed: 10, windAloft: 20, gusts: 22 });
@@ -251,6 +261,53 @@ describe('gates', () => {
     expect(daylightGate({ ...base, hour: 20 }, `${DATE}T05:30`, `${DATE}T21:00`).status).toBe(
       'pass',
     );
+  });
+});
+
+describe('big mountains', () => {
+  const base = deriveLaunchConditions(hourAt(13), MODEL_ELEVATION, 600);
+  const mountains: LaunchProfile = { ...swLaunch, maxWindSpeed: 15, terrain: 'mountains' };
+
+  it('counts the wind higher up against the limit', () => {
+    expect(windGate({ ...base, windSpeed: 8, windAloft: 14 }, mountains).status).toBe('pass');
+    expect(windGate({ ...base, windSpeed: 8, windAloft: 20 }, mountains)).toEqual({
+      gate: 'wind',
+      status: 'marginal',
+      reason: 'Wind 20 km/h higher up, over the 15 km/h limit',
+    });
+    expect(windGate({ ...base, windSpeed: 8, windAloft: 26 }, mountains).status).toBe('fail');
+    // Not in hills, nor at a ridge site, which needs the wind to soar
+    expect(windGate({ ...base, windSpeed: 8, windAloft: 26 }, swLaunch).status).toBe('pass');
+    const ridge: LaunchProfile = { ...mountains, kind: 'ridge', maxWindSpeed: 25 };
+    expect(windGate({ ...base, windSpeed: 8, windAloft: 26 }, ridge).status).toBe('pass');
+  });
+
+  it('holds thermal gusts to the usual limit, not the lower one', () => {
+    const gusty = { ...base, windSpeed: 8, wStar: 2.2 };
+    expect(gustGate({ ...gusty, windGust: 22 }, mountains).status).toBe('pass');
+    expect(gustGate({ ...gusty, windGust: 30 }, mountains).status).toBe('marginal');
+  });
+
+  it('gives unstable air a wider margin', () => {
+    const unstable = { ...base, liftedIndex: -3, cape: 600 };
+    expect(stormGate(unstable, 'trusted', 'mountains')).toEqual({
+      gate: 'storm',
+      status: 'marginal',
+      reason: 'Unstable air, storms can build over the mountains',
+    });
+    expect(stormGate({ ...unstable, rainSoonMm: 0.5 }, 'trusted', 'mountains').status).toBe('fail');
+    expect(stormGate(base, 'trusted', 'mountains').status).toBe('pass');
+    expect(stormGate(unstable, 'trusted', 'hills').status).toBe('pass');
+  });
+
+  it('holds back a day with strong wind over the ridges', () => {
+    // A light wind at launch, 22 km/h from there to the top of the lift
+    const windyAloft = profile(() => ({ windSpeed: 8, windAloft: 22 }));
+    const atGround = { ...swLaunch, elevation: 0 };
+    expect(today(windyAloft, atGround).verdict).toBe('go');
+    const day = today(windyAloft, { ...atGround, maxWindSpeed: 15, terrain: 'mountains' });
+    expect(day.verdict).toBe('marginal');
+    expect(day.limitingFactor).toMatch(/^Wind 22 km\/h higher up, over the 15 km\/h limit/);
   });
 });
 
@@ -526,6 +583,25 @@ describe('launchProfileFromSite', () => {
     });
     expect(launch.maxWindSpeed).toBe(25);
     expect(launch.okDirections).toEqual([]);
+  });
+
+  it('gives big mountains a lower limit, except at a ridge site or one the pilot set', () => {
+    const peak = {
+      id: 'x',
+      name: 'Peak',
+      latitude: 47.5,
+      longitude: -121.7,
+      elevation: 1200,
+      idealWindDirections: [270],
+      maxWindSpeed: 0,
+      terrain: 'mountains' as const,
+      createdAt: '',
+      updatedAt: '',
+    };
+    expect(launchProfileFromSite(peak).maxWindSpeed).toBe(15);
+    expect(launchProfileFromSite({ ...peak, kind: 'ridge' }).maxWindSpeed).toBe(25);
+    expect(launchProfileFromSite({ ...peak, maxWindSpeed: 20 }).maxWindSpeed).toBe(20);
+    expect(launchProfileFromSite({ ...peak, terrain: 'hills' }).maxWindSpeed).toBe(25);
   });
 });
 

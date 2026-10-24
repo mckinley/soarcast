@@ -13,6 +13,12 @@ export interface LaunchConditions {
   windSpeed: number; // km/h at launch altitude
   windDirection: number; // degrees, where the wind comes from
   windGust: number; // km/h at launch altitude
+  /**
+   * The strongest wind (km/h) from launch up to the top of the lift, where
+   * a pilot flies, and at least ALOFT_MIN_DEPTH_M above launch, where the
+   * ridges around it are. Null when the model has no winds that high.
+   */
+  windAloft: number | null;
   temperature: number; // °C at launch altitude
   precipitation: number | null; // mm in the hour
   precipitationProbability: number; // %
@@ -111,6 +117,13 @@ export function topOfLiftAtLaunch(
  * above. Checked against days pilots flew at 41 launches: the days this
  * lets through were flown about as often as Go days in the same month.
  */
+/**
+ * The wind higher up counts to at least this far above launch (m), lift or
+ * not: about where the ridges and peaks round a mountain launch are, whose
+ * lee a pilot flies in on the way down too.
+ */
+export const ALOFT_MIN_DEPTH_M = 500;
+
 export const GUST_FADE_START_M = 300;
 export const GUST_FADE_FULL_M = 1000;
 export const GUST_FADE_SHARE = 0.5;
@@ -120,6 +133,15 @@ export function gustShareAtLaunch(aboveModelGround: number): number {
   if (aboveModelGround <= GUST_FADE_START_M) return 1;
   const along = (aboveModelGround - GUST_FADE_START_M) / (GUST_FADE_FULL_M - GUST_FADE_START_M);
   return Math.max(GUST_FADE_SHARE, 1 - along * (1 - GUST_FADE_SHARE));
+}
+
+/** The strongest wind between two heights, from the samples inside and both ends. */
+export function strongestWindBetween(samples: WindSample[], from: number, to: number): number {
+  const ends = [interpolateAtHeight(samples, from), interpolateAtHeight(samples, to)];
+  return Math.max(
+    ...ends.map((s) => s.speed),
+    ...samples.filter((s) => s.height > from && s.height < to).map((s) => s.speed),
+  );
 }
 
 /**
@@ -165,6 +187,20 @@ export function deriveLaunchConditions(
 
   const cloudBaseMsl =
     derived.estimatedCloudBase !== null ? modelElevation + derived.estimatedCloudBase : null;
+  const topOfLiftMsl = topOfLiftAtLaunch(
+    derived.estimatedTopOfLift,
+    modelElevation,
+    launchElevation,
+    cloudBaseMsl,
+  );
+  // Where a pilot flies and the ridges round the launch are: from launch to
+  // the top of the lift, and at least ALOFT_MIN_DEPTH_M up, when the model
+  // has winds that high
+  const launchHeight = Math.max(launchElevation, surfaceHeight);
+  const aloftTop = Math.max(topOfLiftMsl ?? 0, launchHeight + ALOFT_MIN_DEPTH_M);
+  const windAloft = samples.some((s) => s.height >= aloftTop)
+    ? Math.round(strongestWindBetween(samples, launchHeight, aloftTop))
+    : null;
 
   return {
     time: hour.time,
@@ -173,6 +209,7 @@ export function deriveLaunchConditions(
     windSpeed: Math.round(atLaunch.speed),
     windDirection: Math.round(atLaunch.direction),
     windGust: Math.round(atLaunch.speed + gustSpread),
+    windAloft,
     temperature: Math.round(atLaunch.temperature * 10) / 10,
     precipitation: surface.precipitation ?? null,
     precipitationProbability: surface.precipitationProbability ?? 0,
@@ -184,12 +221,7 @@ export function deriveLaunchConditions(
     cape: surface.cape ?? 0,
     liftedIndex: surface.liftedIndex,
     wStar: derived.wStar,
-    topOfLiftMsl: topOfLiftAtLaunch(
-      derived.estimatedTopOfLift,
-      modelElevation,
-      launchElevation,
-      cloudBaseMsl,
-    ),
+    topOfLiftMsl,
     odPotential: derived.odPotential,
     windShearMax: derived.windShearMax,
     freezingLevelMsl: derived.freezingLevel,

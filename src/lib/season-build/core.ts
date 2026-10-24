@@ -3,11 +3,12 @@
 // a site's time zone, the listed launch each destination stands for, and
 // rating a site's past days through the forecast engine.
 
-import { DEFAULT_MAX_WIND_KMH, evaluateDays, launchProfileFromSite } from '../forecast-engine';
+import { defaultWindLimit, evaluateDays, launchProfileFromSite } from '../forecast-engine';
 import { deriveLaunchConditions } from '../forecast-engine/launch-conditions';
 import { WIND_FIRST_HOUR, WIND_LAST_HOUR, type DayWinds, type HourWind } from '../flown-winds';
 import { defaultGoal, siteKindFromTags } from '../site-goals';
 import { getIdealWindDirections, getOkWindDirections } from '../site-utils';
+import { terrainFromMeasure } from '../site-terrain';
 import type { Destination } from '../destinations';
 import {
   launchProfileKey,
@@ -124,11 +125,13 @@ export type PgRow = {
   is_soaring: number;
   is_xc: number;
   is_hike: number;
+  terrain_slope: number | null;
+  terrain_relief: number | null;
 };
 
 export const PG_COLUMNS = `id, name, country_code, latitude, longitude, altitude,
   wind_n, wind_ne, wind_e, wind_se, wind_s, wind_sw, wind_w, wind_nw,
-  is_thermal, is_soaring, is_xc, is_hike`;
+  is_thermal, is_soaring, is_xc, is_hike, terrain_slope, terrain_relief`;
 
 /** Runs a read on pgsites' sites table: D1's HTTP API in scripts, a binding in a Worker. */
 export type PgQuery = (sql: string, params: unknown[]) => Promise<PgRow[]>;
@@ -187,6 +190,7 @@ export function siteFromPgRow(row: PgRow): Site {
     soaring: row.is_soaring,
     xc: row.is_xc,
   });
+  const terrain = terrainFromMeasure(row.terrain_slope, row.terrain_relief);
   const now = new Date().toISOString();
   return {
     id: row.id,
@@ -196,9 +200,10 @@ export function siteFromPgRow(row: PgRow): Site {
     elevation: row.altitude || 0,
     idealWindDirections: getIdealWindDirections(wind),
     okWindDirections: getOkWindDirections(wind),
-    maxWindSpeed: DEFAULT_MAX_WIND_KMH,
+    maxWindSpeed: defaultWindLimit(terrain, kind),
     kind,
     goal: defaultGoal(kind, !!row.is_hike),
+    terrain,
     createdAt: now,
     updatedAt: now,
   };
@@ -276,8 +281,12 @@ export function launchWinds(
     for (const hour of profile.hours) {
       const c = deriveLaunchConditions(hour, profile.elevation, elevation > 0 ? elevation : 0);
       if (c.hour < WIND_FIRST_HOUR || c.hour > WIND_LAST_HOUR) continue;
-      if (!days.has(c.date)) days.set(c.date, Array(WIND_LAST_HOUR - WIND_FIRST_HOUR + 1).fill(null));
-      days.get(c.date)![c.hour - WIND_FIRST_HOUR] = { speed: c.windSpeed, direction: c.windDirection };
+      if (!days.has(c.date))
+        days.set(c.date, Array(WIND_LAST_HOUR - WIND_FIRST_HOUR + 1).fill(null));
+      days.get(c.date)![c.hour - WIND_FIRST_HOUR] = {
+        speed: c.windSpeed,
+        direction: c.windDirection,
+      };
     }
   }
   return [...days].map(([date, hours]) => ({ date, hours }));

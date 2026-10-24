@@ -2,7 +2,7 @@
 // unflyable, whatever the thermals look like; a marginal gate means a
 // careful pilot could still go.
 
-import type { SiteGoal, SiteKind } from '@/types';
+import type { SiteGoal, SiteKind, SiteTerrain } from '@/types';
 import type { LaunchConditions } from './launch-conditions';
 
 export type GateStatus = 'pass' | 'marginal' | 'fail';
@@ -36,7 +36,18 @@ export interface LaunchProfile {
   kind?: SiteKind | null;
   /** What the pilot wants from it; absent uses the default for its kind */
   goal?: SiteGoal;
+  /** The ground round it; in big mountains the wind and storm checks are stricter */
+  terrain?: SiteTerrain | null;
 }
+
+/** Paraglider launch limit used when a site has none: most launches top out around 25 km/h. */
+export const DEFAULT_MAX_WIND_KMH = 25;
+/**
+ * The limit in big mountains when the pilot hasn't set one. Valley winds,
+ * rough air behind ridges and hard landings in narrow valleys make wind
+ * there much harder to fly than over hills or plains.
+ */
+export const MOUNTAIN_MAX_WIND_KMH = 15;
 
 /** Thermals a paraglider can climb in: about its own sink rate. */
 export const THERMAL_MIN_WSTAR = 1.0; // m/s
@@ -50,6 +61,8 @@ export const LIGHT_CROSS_KMH = 12;
 export const WIND_NEAR_LIMIT = 0.8;
 /** Gusts this far over the wind limit fail the hour. */
 export const GUST_OVER_LIMIT_KMH = 10;
+/** In big mountains, wind higher up this far over the limit fails the hour; less over it makes it marginal. */
+export const ALOFT_OVER_LIMIT_KMH = 10;
 /** Without thermals, gusts this far over the mean wind fail the hour, or make it marginal. */
 export const GUST_SPREAD_FAIL_KMH = 25;
 export const GUST_SPREAD_MARGINAL_KMH = 15;
@@ -98,10 +111,28 @@ export function directionGate(c: LaunchConditions, launch: LaunchProfile): GateR
   return { gate: 'direction', status: 'fail', reason: `${reason}, off the launch` };
 }
 
+/** Whether the big-mountain wind rules apply: not at a ridge site, which needs wind to soar. */
+function mountainWind(launch: LaunchProfile): boolean {
+  return launch.terrain === 'mountains' && launch.kind !== 'ridge';
+}
+
+/**
+ * The wind at launch against the limit. In big mountains the wind higher
+ * up counts too, from launch to the top of the lift: strong wind over the
+ * ridges makes rough air behind them and pins a glider against them.
+ */
 export function windGate(c: LaunchConditions, launch: LaunchProfile): GateResult {
   const limit = launch.maxWindSpeed;
+  const aloft = mountainWind(launch) ? c.windAloft : null;
   if (c.windSpeed > limit) {
     return { gate: 'wind', status: 'fail', reason: `Wind ${c.windSpeed} km/h (limit ${limit})` };
+  }
+  if (aloft !== null && aloft > limit + ALOFT_OVER_LIMIT_KMH) {
+    return {
+      gate: 'wind',
+      status: 'fail',
+      reason: `Wind ${aloft} km/h higher up (limit ${limit})`,
+    };
   }
   if (c.windSpeed > WIND_NEAR_LIMIT * limit) {
     return {
@@ -110,22 +141,38 @@ export function windGate(c: LaunchConditions, launch: LaunchProfile): GateResult
       reason: `Wind ${c.windSpeed} km/h, near the ${limit} km/h limit`,
     };
   }
+  if (aloft !== null && aloft > limit) {
+    return {
+      gate: 'wind',
+      status: 'marginal',
+      reason: `Wind ${aloft} km/h higher up, over the ${limit} km/h limit`,
+    };
+  }
   return { gate: 'wind', status: 'pass' };
+}
+
+/**
+ * The limit gusts are held to. In big mountains it stays at least the usual
+ * limit: there the lower limit is for the wind, and thermals make most of
+ * the gusts.
+ */
+export function gustLimit(launch: LaunchProfile): number {
+  return launch.terrain === 'mountains'
+    ? Math.max(launch.maxWindSpeed, DEFAULT_MAX_WIND_KMH)
+    : launch.maxWindSpeed;
 }
 
 export function gustGate(c: LaunchConditions, launch: LaunchProfile): GateResult {
   const spread = c.windGust - c.windSpeed;
+  const limit = gustLimit(launch);
   // In an hour with climbable thermals the model's gusts are mostly the
   // thermals themselves, which pilots fly in: only how strong the gusts get
   // counts then, not how far they run over the mean wind.
   const thermic = (c.wStar ?? 0) >= THERMAL_MIN_WSTAR;
-  if (
-    c.windGust > launch.maxWindSpeed + GUST_OVER_LIMIT_KMH ||
-    (!thermic && spread > GUST_SPREAD_FAIL_KMH)
-  ) {
+  if (c.windGust > limit + GUST_OVER_LIMIT_KMH || (!thermic && spread > GUST_SPREAD_FAIL_KMH)) {
     return { gate: 'gusts', status: 'fail', reason: `Gusts to ${c.windGust} km/h` };
   }
-  if (c.windGust > launch.maxWindSpeed || (!thermic && spread > GUST_SPREAD_MARGINAL_KMH)) {
+  if (c.windGust > limit || (!thermic && spread > GUST_SPREAD_MARGINAL_KMH)) {
     return { gate: 'gusts', status: 'marginal', reason: `Gusty, to ${c.windGust} km/h` };
   }
   return { gate: 'gusts', status: 'pass' };
@@ -231,24 +278,38 @@ export const RAIN_SOON_HOURS = 2;
  * can be trusted there. Without showers, very unstable air still makes the
  * hour marginal, and plain unstable air passes. At 42 well-flown launches
  * over two years, pilots flew the days this let through as often as Go
- * days in the same month.
+ * days in the same month. Big mountains set storms off themselves, and a
+ * storm there leaves fewer ways out: unstable air makes the hour marginal
+ * without showers, and fails it with them.
  */
-export function stormGate(c: LaunchConditions, trust: RainTrust = 'trusted'): GateResult {
+export function stormGate(
+  c: LaunchConditions,
+  trust: RainTrust = 'trusted',
+  terrain: SiteTerrain | null = null,
+): GateResult {
   const li = c.liftedIndex;
   const unstable = (li !== null && li <= STORM_RISK_LI) || c.cape >= STORM_RISK_CAPE;
   if (!unstable) return { gate: 'storm', status: 'pass' };
   const severe = (li !== null && li <= STORM_SEVERE_LI) || c.cape >= STORM_SEVERE_CAPE;
+  const mountains = terrain === 'mountains';
   const showersSoon =
     trust === 'low'
       ? (c.rainSoonMm ?? 0) >= RAIN_FAIL_MM
       : (c.rainSoonMm ?? 0) > 0 || c.rainSoonChance >= RAIN_MARGINAL_CHANCE;
   if (showersSoon) {
-    return severe
+    return severe || mountains
       ? { gate: 'storm', status: 'fail', reason: 'Thunderstorms likely' }
       : { gate: 'storm', status: 'marginal', reason: 'Thunderstorm risk' };
   }
   if (severe) {
     return { gate: 'storm', status: 'marginal', reason: 'Very unstable air, storms can build' };
+  }
+  if (mountains) {
+    return {
+      gate: 'storm',
+      status: 'marginal',
+      reason: 'Unstable air, storms can build over the mountains',
+    };
   }
   return { gate: 'storm', status: 'pass' };
 }
@@ -290,7 +351,7 @@ export function evaluateGates(
   return [
     daylightGate(c, sunrise, sunset),
     rainGate(c, trust),
-    stormGate(c, trust),
+    stormGate(c, trust, launch.terrain ?? null),
     cloudGate(c, launch),
     visibilityGate(c),
     windGate(c, launch),

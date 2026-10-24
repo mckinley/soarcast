@@ -5,6 +5,7 @@ import { requireAuth } from '~/app/lib/auth.server';
 import {
   customSiteValues,
   ELEVATION_LOOKUP_ERROR,
+  measureCustomTerrain,
   resolveElevation,
   syncSharing,
 } from '~/app/lib/custom-sites.server';
@@ -25,7 +26,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const { input, errors } = parseCustomSiteForm(await request.formData());
   if (Object.keys(errors).length > 0) return data({ errors }, { status: 400 });
 
-  const elevation = await resolveElevation(input);
+  const [elevation, terrain] = await Promise.all([
+    resolveElevation(input),
+    measureCustomTerrain(input.latitude, input.longitude),
+  ]);
   if (elevation === null) {
     return data(
       { errors: { elevation: ELEVATION_LOOKUP_ERROR } as CustomSiteErrors },
@@ -36,7 +40,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   const db = getDb(env);
   const [site] = await db
     .insert(customSites)
-    .values({ userId: session.user.id, ...customSiteValues(input, elevation) })
+    .values({
+      userId: session.user.id,
+      ...customSiteValues(input, elevation),
+      terrainSlope: terrain?.slope ?? null,
+      terrainRelief: terrain?.relief ?? null,
+    })
     .returning({ id: customSites.id });
   if (input.share) {
     const problem = await syncSharing(

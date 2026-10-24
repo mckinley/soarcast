@@ -50,6 +50,7 @@ covers:
   - src/components/data-credits.tsx
   - src/lib/custom-sites.ts
   - app/lib/custom-sites.server.ts
+  - src/lib/site-terrain.ts
 ---
 
 SoarCast does not make its own weather forecasts or write its own site guide. It brings together data from the public sources below. Each section says what SoarCast uses, how often it updates and what it can't tell you.
@@ -135,7 +136,7 @@ The flying areas on the Planning page are SoarCast's own list of places pilots t
 ### What a season can't tell you
 
 - ERA5 describes the weather over squares about 30 km wide. That is coarser than a forecast, so peaks, ridges and valleys get smoothed out even more.
-- SoarCast reads its wind near the ground and 100 m above it, but nothing higher up. At a launch high above ERA5's ground, the wind at launch height is a guess.
+- SoarCast reads its wind near the ground and 100 m above it, but nothing higher up. At a launch high above ERA5's ground, the wind at launch height is a guess. In big mountains, the wind higher up never holds a past day back.
 - The copy SoarCast reads has no measure of storms or fog. So storms and fog never hold a past day back, and a season can show Go on days a forecast would have held back.
 - Some hours are missing from the copy. A day with too few hours left isn't rated.
 
@@ -193,6 +194,12 @@ Listed sites come from [Paragliding Earth](https://www.paraglidingearth.com), a 
 SoarCast uses each site's name and place, its launch and landing heights, and the wind directions its launch works in. It also uses the site's description and its tags for thermals, ridge soaring and cross-country flying.
 
 SoarCast keeps a copy of every Paragliding Earth site and checks for changes every day. It also copies each country's full list again every month. A site in Favorites has its details refreshed from that copy every {{siteRefreshDays}} days. When Paragliding Earth is down, SoarCast keeps using its last copy and catches up once it is back.
+
+### The ground around a launch
+
+SoarCast measures the ground within {{terrainRadiusKm}} km of every launch, listed or private. It finds how steep that ground is on average and how much height it spans. This tells whether the launch is in big mountains, where [the rating keeps wider margins](/guide/how-a-day-is-rated#big-mountains). The heights come from the European Union's [Copernicus elevation map](https://registry.opendata.aws/copernicus-dem/), read at about 240 m detail from its open copy. Heights © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under Copernicus by the European Union and ESA.
+
+The measure is a rough guide. A launch on the edge of a big range can come out as Hills and plains, or the other way round. You can choose the terrain yourself in Settings.
 
 ### Finding a site
 
