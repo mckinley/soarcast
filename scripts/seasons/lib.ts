@@ -4,8 +4,10 @@
 
 import type { OpenMeteoProfileResponse } from '../../src/lib/weather-profile';
 import { DESTINATIONS } from '../../src/lib/destinations';
+import { measureTerrainAt } from '../../src/lib/site-terrain';
 import {
   destinationJob,
+  errorText,
   fetchRetrying,
   findDestinationSite,
   ymd,
@@ -163,7 +165,19 @@ export async function destinationJobs(): Promise<Job[]> {
       console.log(`destination ${dest.slug}: no listed launch found near it`);
       continue;
     }
-    jobs.push(destinationJob(dest, row));
+    jobs.push(destinationJob(dest, await withTerrain(row)));
   }
   return jobs;
+}
+
+/** A launch pgsites hasn't measured the terrain of yet, measured here the same way. */
+export async function withTerrain(row: PgRow): Promise<PgRow> {
+  if (row.terrain_slope != null && row.terrain_relief != null) return row;
+  try {
+    const m = await measureTerrainAt(row.latitude, row.longitude);
+    return { ...row, terrain_slope: m.slope, terrain_relief: m.relief };
+  } catch (error) {
+    console.log(`${row.name}: terrain lookup failed, ${errorText(error)}`);
+    return row;
+  }
 }

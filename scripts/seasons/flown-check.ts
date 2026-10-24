@@ -53,6 +53,7 @@ import {
   merge,
   seasonRange,
   siteFromPgRow,
+  withTerrain,
   type Job,
   type PgRow,
 } from './lib';
@@ -101,7 +102,8 @@ async function extraJobs(): Promise<Job[]> {
     `SELECT ${PG_COLUMNS} FROM sites WHERE id IN (${EXTRA_SITES.map(() => '?').join(',')})`,
     EXTRA_SITES,
   )) as PgRow[];
-  return rows.map((row) =>
+  const measured = await Promise.all(rows.map(withTerrain));
+  return measured.map((row) =>
     jobFor(`pg:${row.id}`, siteFromPgRow(row), {
       label: row.name,
       name: row.name,
@@ -537,7 +539,7 @@ async function main() {
   );
 
   // Per launch
-  console.log('LAUNCHES (as a launch: Go when safe to launch)');
+  console.log('LAUNCHES (as a launch: Go when safe to launch; ^ in big mountains)');
   console.log(
     `${'launch'.padEnd(32)} flown | Go  Marg  No  | Go flown  No flown | soaring  expected`,
   );
@@ -547,7 +549,7 @@ async function main() {
     const rated = (s: DayStatus) => l.days.filter((d) => d.status === s);
     const soaring = flownDays.filter((d) => soaringDay(d.flown!));
     console.log(
-      `${(l.job.name ?? '').slice(0, 32).padEnd(32)} ${String(flownDays.length).padStart(5)} | ` +
+      `${`${l.job.site.terrain === 'mountains' ? '^ ' : ''}${l.job.name ?? ''}`.slice(0, 32).padEnd(32)} ${String(flownDays.length).padStart(5)} | ` +
         `${String(by('go')).padStart(3)} ${String(by('marginal')).padStart(4)} ${String(by('no')).padStart(4)} | ` +
         `${pct(rated('go').filter((d) => d.flown).length, rated('go').length).padStart(8)} ${pct(rated('no').filter((d) => d.flown).length, rated('no').length).padStart(9)} | ` +
         `${String(soaring.length).padStart(7)} ${pct(soaring.filter(expectsSoaring).length, soaring.length).padStart(9)}`,
