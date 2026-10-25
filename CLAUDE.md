@@ -87,7 +87,7 @@ CLOUDFLARE_ACCOUNT_ID=7c0ef4ee4d820ffe791557c534882957 npx wrangler deploy
 
 Or push to main — GitHub Actions auto-deploys.
 
-Staging ([docs/staging.md](docs/staging.md), pjmgmt's staging standard): https://staging.soarcast.mckinleyaviation.com, behind Cloudflare Access, with fake data and test users at `/dev/login`. A push to a pull request deploys it, and so does Actions → Staging → Run workflow (tick "reset" to reload the data). It is `env.staging` in `wrangler.toml`: Worker `soarcast-staging`, D1 `soarcast-staging-db`, no email, no crons, no Syncing Pilots, and pgsites' staging copy over the `PGSITES` service binding (`configurePgsites` in `src/lib/pgsites-client.ts`). `scripts/staging-seed.mjs` is the fake data (add to it when you add a table), and `test/staging-config.test.mjs` (`npm run test:staging`, in CI) keeps it apart from production. `DEV_AUTH` is set only there.
+Staging is optional (work goes straight to `main` by default) ([docs/staging.md](docs/staging.md), pjmgmt's staging standard): https://staging.soarcast.mckinleyaviation.com, behind Cloudflare Access, with fake data and test users at `/dev/login`. A push to a pull request deploys it, and so does Actions → Staging → Run workflow (tick "reset" to reload the data). It is `env.staging` in `wrangler.toml`: Worker `soarcast-staging`, D1 `soarcast-staging-db`, no email, no crons, no Syncing Pilots, and pgsites' staging copy over the `PGSITES` service binding (`configurePgsites` in `src/lib/pgsites-client.ts`). `scripts/staging-seed.mjs` is the fake data (add to it when you add a table), and `test/staging-config.test.mjs` (`npm run test:staging`, in CI) keeps it apart from production. `DEV_AUTH` is set only there.
 
 ## Environment Variables
 

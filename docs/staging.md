@@ -2,6 +2,8 @@
 
 **https://staging.soarcast.mckinleyaviation.com** is a private copy of SoarCast, with fake data, for checking a branch before it reaches production. It follows pjmgmt's staging standard (mckinley/pjmgmt, `hq/standards/staging.md`).
 
+It's optional. Changes normally go straight to `main` and production. Use staging only when a change needs clicking through first (a risky migration, a new flow) or the owner asks for it.
+
 ## Using it
 
 1. Deploy a branch there. Every push to a pull request does it, and so does Actions → **Staging** → **Run workflow** on any branch (`.github/workflows/staging.yml`). It takes a few minutes. There is one staging site, so the most recent deploy is what it shows.
