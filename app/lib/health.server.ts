@@ -4,7 +4,12 @@ import { getAtmosphericProfile, setProfileDb } from '~/lib/weather-profile';
 import { getPgsitesApiKey, getSyncStatus, searchSites } from '~/lib/pgsites-client';
 import { SEASON_BUILD_STATE_KEY, type SeasonBuildRun } from '~/lib/season-build/run';
 import { NOGA_SYNC_STATE_KEY, type NogaSyncRun } from '~/lib/noga';
-import { syncFailureNote, type AlertsRun, type HealthCheck, type HealthReport } from '~/lib/health';
+import {
+  pgsitesSyncVerdict,
+  type AlertsRun,
+  type HealthCheck,
+  type HealthReport,
+} from '~/lib/health';
 
 // Checks what pilots depend on. The hourly cron (worker.ts) runs them through
 // /api/admin/health after the alerts run, keeps the report for /api/health and
@@ -14,7 +19,6 @@ import { syncFailureNote, type AlertsRun, type HealthCheck, type HealthReport } 
 // North Bend, WA: SoarCast must always be able to forecast here.
 const PROBE = { latitude: 47.49, longitude: -121.79 };
 const ALERTS_MAX_AGE_MS = 2 * 60 * 60 * 1000;
-const PGSITES_MAX_SYNC_AGE_DAYS = 2;
 // The season build runs twice a day; most runs find nothing due and end at once
 const SEASON_BUILD_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 // The NOGA copy runs on Mondays; two missed weeks fail
@@ -27,13 +31,6 @@ async function check(name: string, run: () => Promise<string>): Promise<HealthCh
     const detail = error instanceof Error ? error.message : String(error);
     return { name, ok: false, detail: detail.slice(0, 300) };
   }
-}
-
-/** Whole days between a YYYYMMDD date and now (UTC). */
-function daysSince(yyyymmdd: string, now: Date): number {
-  const date = Date.UTC(+yyyymmdd.slice(0, 4), +yyyymmdd.slice(4, 6) - 1, +yyyymmdd.slice(6, 8));
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  return Math.round((today - date) / 86_400_000);
 }
 
 /** Runs every check, each with its own error, and never throws. */
@@ -68,14 +65,9 @@ export async function runHealthChecks(env: Env): Promise<HealthReport> {
     check('pgsites sync', async () => {
       const status = await getSyncStatus(apiKey);
       if (!status.last_modified_check) throw new Error('the daily sync has never run');
-      const age = daysSince(status.last_modified_check, now);
-      if (age > PGSITES_MAX_SYNC_AGE_DAYS) {
-        throw new Error(
-          `last daily sync ${status.last_modified_check}, ${age} days ago` +
-            syncFailureNote(status.last_incremental),
-        );
-      }
-      return `last daily sync ${status.last_modified_check}`;
+      const verdict = pgsitesSyncVerdict(status.last_modified_check, status.last_incremental, now);
+      if (!verdict.ok) throw new Error(verdict.detail);
+      return verdict.detail;
     }),
     check('alerts', async () => {
       const [row] = await db.select().from(appState).where(eq(appState.key, 'alerts_last_run'));

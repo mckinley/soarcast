@@ -71,6 +71,47 @@ export function syncFailureNote(run: PgsitesSyncRun | null | undefined): string 
   return `. The run at ${at} UTC failed: ${run.error_message ?? 'no reason given'}`;
 }
 
+/** pgsites' daily sync runs at 3:00 UTC; two missed days fail. */
+export const PGSITES_MAX_SYNC_AGE_DAYS = 2;
+/**
+ * Unless Paragliding Earth itself is down (it answered 5xx to a daily sync
+ * that did run): pgsites' copy may then age this long, so an outage of
+ * theirs doesn't fail the check until it is long enough to need another
+ * source. pgsites' own check (`dailySyncVerdict`) uses the same rule.
+ */
+export const PGSITES_SOURCE_DOWN_MAX_AGE_DAYS = 14;
+
+/** Whole days between a YYYYMMDD date and now (UTC). */
+export function daysSince(yyyymmdd: string, now: Date): number {
+  const date = Date.UTC(+yyyymmdd.slice(0, 4), +yyyymmdd.slice(4, 6) - 1, +yyyymmdd.slice(6, 8));
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((today - date) / 86_400_000);
+}
+
+/**
+ * The pgsites sync check, given pgsites' `last_modified_check` (the date of
+ * its last good daily sync) and its newest run: the detail, and whether it passes.
+ */
+export function pgsitesSyncVerdict(
+  last: string,
+  run: PgsitesSyncRun | null | undefined,
+  now: Date,
+): { ok: boolean; detail: string } {
+  const age = daysSince(last, now);
+  if (age <= PGSITES_MAX_SYNC_AGE_DAYS) return { ok: true, detail: `last daily sync ${last}` };
+  const ranLately =
+    run?.status === 'failed' &&
+    now.getTime() / 1000 - run.started_at <= PGSITES_MAX_SYNC_AGE_DAYS * 86_400;
+  if (ranLately && (run.status_code ?? 0) >= 500 && age <= PGSITES_SOURCE_DOWN_MAX_AGE_DAYS) {
+    const at = new Date(run.started_at * 1000).toISOString().slice(0, 16).replace('T', ' ');
+    return {
+      ok: true,
+      detail: `Paragliding Earth answered ${run.status_code} at ${at} UTC, so pgsites serves its copy from ${last} (${age} days old)`,
+    };
+  }
+  return { ok: false, detail: `last daily sync ${last}, ${age} days ago` + syncFailureNote(run) };
+}
+
 /**
  * The state worker.ts keeps and emails on when it changes: "ok", or the
  * failing checks by name. A new problem then emails even while another one

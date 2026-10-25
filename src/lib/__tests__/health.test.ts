@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { healthState, publicHealth, syncFailureNote, type HealthReport } from '../health';
+import {
+  healthState,
+  pgsitesSyncVerdict,
+  publicHealth,
+  syncFailureNote,
+  type HealthReport,
+  type PgsitesSyncRun,
+} from '../health';
 import { errorText, logErrorsAsText } from '../error-text';
 
 describe('syncFailureNote', () => {
@@ -40,6 +47,49 @@ describe('syncFailureNote', () => {
     ).toBe('');
     expect(syncFailureNote(undefined)).toBe('');
     expect(syncFailureNote(null)).toBe('');
+  });
+});
+
+describe('pgsitesSyncVerdict', () => {
+  const now = new Date('2026-10-25T19:00:00Z');
+  const peDown: PgsitesSyncRun = {
+    status: 'failed',
+    started_at: Date.parse('2026-10-25T03:00:50Z') / 1000,
+    status_code: 503,
+    error_message: 'PE API error 503',
+  };
+
+  it('passes while the last good sync is two days old or less', () => {
+    expect(pgsitesSyncVerdict('20261023', peDown, now)).toEqual({
+      ok: true,
+      detail: 'last daily sync 20261023',
+    });
+  });
+
+  it('passes for two weeks while Paragliding Earth answers 5xx to a run that did happen', () => {
+    expect(pgsitesSyncVerdict('20261021', peDown, now)).toEqual({
+      ok: true,
+      detail:
+        'Paragliding Earth answered 503 at 2026-10-25 03:00 UTC, so pgsites serves its copy from 20261021 (4 days old)',
+    });
+    expect(pgsitesSyncVerdict('20261011', peDown, now).ok).toBe(true);
+    expect(pgsitesSyncVerdict('20261010', peDown, now)).toEqual({
+      ok: false,
+      detail:
+        'last daily sync 20261010, 15 days ago. Paragliding Earth answered 503 at 2026-10-25 03:00 UTC, so pgsites keeps its last copy',
+    });
+  });
+
+  it('fails when the run failed on its own, or pgsites stopped running it', () => {
+    const own = { ...peDown, status_code: null, error_message: 'D1_ERROR: busy' };
+    expect(pgsitesSyncVerdict('20261021', own, now).ok).toBe(false);
+    expect(pgsitesSyncVerdict('20261021', { ...peDown, status_code: 404 }, now).ok).toBe(false);
+    const old = { ...peDown, started_at: Date.parse('2026-10-22T03:00:50Z') / 1000 };
+    expect(pgsitesSyncVerdict('20261021', old, now).ok).toBe(false);
+    expect(pgsitesSyncVerdict('20261021', undefined, now)).toEqual({
+      ok: false,
+      detail: 'last daily sync 20261021, 4 days ago',
+    });
   });
 });
 
