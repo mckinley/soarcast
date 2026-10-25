@@ -21,7 +21,13 @@
 //     staging Worker and database, and deploy it (an app built without
 //     @cloudflare/vite-plugin, whose wrangler config names its own entry, is
 //     built as usual and deployed with `wrangler deploy --env staging`);
-//  5. the first time only, give the Worker a random BETTER_AUTH_SECRET.
+//  5. the first time only, give the Worker a random BETTER_AUTH_SECRET; and
+//     every time, set each STAGING_SECRET_<NAME> in the environment as the
+//     Worker secret <NAME> (the workflow passes them from repository secrets,
+//     such as a Stripe test key).
+//
+// `npm run staging:build` replaces `npm run build` when the app has it (an
+// OpenNext app builds its Worker with `opennextjs-cloudflare build`).
 //
 // It refuses to touch any database or Worker whose name doesn't end in
 // -staging / -staging-db, so production is out of reach whatever the config says.
@@ -69,7 +75,10 @@ export function stagingTarget(prod, staging) {
     (!/-staging(-db)?$/.test(db.database_name) || db.database_name === prodDb?.database_name)
   )
     return { error: `The staging database is "${db.database_name}"; it must end in -staging-db.` };
-  const url = staging.vars?.BETTER_AUTH_URL ?? null;
+  const route = (staging.routes ?? [])[0];
+  const host = typeof route === 'string' ? route : route?.pattern;
+  const url =
+    staging.vars?.BETTER_AUTH_URL ?? (host ? `https://${host.replace(/\/\*$/, '')}` : null);
   return { worker: staging.name, db: db?.database_name ?? null, url };
 }
 
@@ -191,7 +200,19 @@ function vitePluginBuild() {
   return '@cloudflare/vite-plugin' in { ...pkg.dependencies, ...pkg.devDependencies };
 }
 
+/** STAGING_SECRET_<NAME> values in the environment, as { NAME: value }. */
+export function stagingSecrets(env) {
+  return Object.fromEntries(
+    Object.entries(env)
+      .filter(([k, v]) => k.startsWith('STAGING_SECRET_') && v)
+      .map(([k, v]) => [k.slice('STAGING_SECRET_'.length), v]),
+  );
+}
+
 function ensureSecrets(worker) {
+  // Given on stdin, never on the command line or in the log
+  for (const [name, value] of Object.entries(stagingSecrets(process.env)))
+    wrangler(['secret', 'put', name, '--name', worker], { input: value });
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
   if (!('better-auth' in { ...pkg.dependencies, ...pkg.devDependencies })) return;
   const names = new Set(
@@ -241,7 +262,9 @@ async function main() {
       wrangler(['d1', 'migrations', 'apply', target.db, ...onStaging]);
       if (opts.reset || userCount(target.db) === 0) seeded = loadFakeData(target.db);
     }
-    run('npm', ['run', 'build'], { env: { CLOUDFLARE_ENV: ENV } });
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    const build = pkg.scripts?.['staging:build'] ? 'staging:build' : 'build';
+    run('npm', ['run', build], { env: { CLOUDFLARE_ENV: ENV } });
     if (vitePluginBuild()) {
       assertStagingBuild(target);
       wrangler(['deploy']);

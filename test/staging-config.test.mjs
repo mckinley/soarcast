@@ -5,7 +5,7 @@
 // From the pjmgmt staging standard (mckinley/pjmgmt,
 // scripts/automations/templates/staging/staging-config.test.mjs).
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { unstable_readConfig } from 'wrangler';
@@ -17,20 +17,25 @@ const file = ['wrangler.jsonc', 'wrangler.json', 'wrangler.toml'].find((f) =>
 const config = join(root, file);
 const prod = unstable_readConfig({ config });
 const staging = unstable_readConfig({ config, env: 'staging' });
-const host = staging.vars?.BETTER_AUTH_URL ? new URL(staging.vars.BETTER_AUTH_URL).host : null;
+const hosts = (staging.routes ?? []).map((r) =>
+  (typeof r === 'string' ? r : r.pattern).replace(/\/\*$/, ''),
+);
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const usesAuth = 'better-auth' in { ...pkg.dependencies, ...pkg.devDependencies };
 
 test('staging is its own Worker', () => {
   assert.match(staging.name, /-staging$/);
   assert.notEqual(staging.name, prod.name);
 });
 
-test('serves only the staging hostname, never workers.dev', () => {
-  assert.ok(host?.startsWith('staging.'), 'BETTER_AUTH_URL is https://staging.<production host>');
-  assert.ok(staging.routes?.length > 0);
-  for (const r of staging.routes) {
-    const pattern = typeof r === 'string' ? r : r.pattern;
-    assert.equal(pattern.replace(/\/\*$/, ''), host);
-  }
+test('serves only staging hostnames, never workers.dev', () => {
+  assert.ok(hosts.length > 0);
+  for (const h of hosts) assert.match(h, /^staging\./, `${h} is staging.<production host>`);
+  if (staging.vars?.BETTER_AUTH_URL)
+    assert.ok(
+      hosts.includes(new URL(staging.vars.BETTER_AUTH_URL).host),
+      'BETTER_AUTH_URL is a staging host',
+    );
   assert.equal(staging.workers_dev, false);
   assert.equal(staging.preview_urls, false);
 });
@@ -71,7 +76,7 @@ test('sends no email and runs only the crons it declares', () => {
 });
 
 test('turns on /dev/login for staging only', () => {
-  assert.equal(staging.vars?.DEV_AUTH, 'true');
+  if (usesAuth) assert.equal(staging.vars?.DEV_AUTH, 'true');
   assert.equal(staging.vars?.APP_ENV, 'staging');
   assert.equal(prod.vars?.DEV_AUTH, undefined);
   assert.equal(prod.vars?.APP_ENV, undefined);
