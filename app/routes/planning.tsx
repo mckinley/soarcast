@@ -52,6 +52,7 @@ import { PlanningMapWrapper } from '@/components/planning-map-wrapper';
 import type { PlanningMapPoint, PlanningMapProps } from '@/components/planning-map';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, MapPin, Star, Trophy } from 'lucide-react';
+import { launchSiteSlug } from '~/lib/site-address';
 
 /** How many years ahead the start month can be. */
 const YEARS_AHEAD = 5;
@@ -275,7 +276,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ...followed.map((f) => ({
         siteRef: seasonSiteRef('pgsites', f.site.pgsitesId),
         site: launchSiteToSite(f.site, f.favorite, margins),
-        href: `/sites/${f.site.slug}`,
+        href: `/sites/${launchSiteSlug(f.site)}`,
       })),
       ...customs.map((c) => ({
         siteRef: seasonSiteRef('custom', c.id),

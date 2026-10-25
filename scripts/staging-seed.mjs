@@ -37,12 +37,12 @@ function insert(table, rows) {
     .join('\n');
 }
 
-/** pgsitesSlug in src/lib/pgsites-client.ts */
+/** siteSlug in src/lib/site-slug.ts, which gives the same for these plain names */
 const slug = (name, id) =>
   `${name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')}--${id}`;
+    .replace(/^-|-$/g, '')}-${id.slice(0, 8)}`;
 
 // [id, name, role, time zone, morning digest, wider margins in big mountains]
 const USERS = [

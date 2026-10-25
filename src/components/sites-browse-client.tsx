@@ -143,7 +143,7 @@ export function SitesBrowseClient({
       return;
     }
     const params = new URLSearchParams(urlSearchParams);
-    params.set('search', q);
+    params.set('q', q);
     startTransition(() => navigate(`/sites/browse?${params}`));
   };
 

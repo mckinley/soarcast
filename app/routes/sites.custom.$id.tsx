@@ -51,6 +51,8 @@ export function meta({ data }: Route.MetaArgs) {
   return [
     { title: `${data.site.name} | SoarCast` },
     { name: 'description', content: `7-day flying forecast for ${data.site.name}.` },
+    // A private site is its owner's alone
+    { name: 'robots', content: 'noindex' },
   ];
 }
 

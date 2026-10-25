@@ -6,7 +6,7 @@ import { Button } from '~/components/ui/button';
 import { Wind } from 'lucide-react';
 
 export function meta() {
-  return [{ title: 'Sign In | SoarCast' }];
+  return [{ title: 'Sign In | SoarCast' }, { name: 'robots', content: 'noindex' }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

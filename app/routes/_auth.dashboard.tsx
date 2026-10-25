@@ -19,6 +19,7 @@ import { addDays } from '~/lib/alert-schedule';
 import { compsAround, type Comp } from '~/lib/comps';
 import { AREA_JOIN_KM, nearestArea } from '~/lib/site-areas';
 import { requestPlace, savedSiteKey, syncAreas, type SavedSite } from '~/app/lib/site-areas.server';
+import { launchSiteSlug } from '~/lib/site-address';
 
 export interface SiteForecastData {
   site: Site;
@@ -151,7 +152,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const favoritesAsSites: Site[] = shownFavorites.map((f, i) => {
     siteMetadata.set(f.site.id, {
       siteType: 'launch',
-      slug: f.site.slug,
+      slug: launchSiteSlug(f.site),
       areaId: areaOf.get(savedSiteKey('launch', f.site.id)) ?? null,
     });
     return launchSiteToSite(refreshedSites[i], f.favorite, margins);

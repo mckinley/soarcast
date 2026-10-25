@@ -23,6 +23,7 @@ import {
 } from './src/lib/request-timing';
 import { logErrorsAsText } from './src/lib/error-text';
 import { configurePgsites } from './src/lib/pgsites-client';
+import { canonicalRedirect } from './src/lib/canonical-url';
 import {
   HEALTH_REPORT_KEY,
   healthState,
@@ -137,6 +138,9 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // One page, one address (pjmgmt's canonical-urls standard): /Sites/ is /sites
+    const moved = canonicalRedirect(request);
+    if (moved) return moved;
     const cf = request.cf as IncomingRequestCfProperties | undefined;
     configurePgsites(env);
     return withRequestTiming(async (timing) => {

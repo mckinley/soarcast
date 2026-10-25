@@ -4,8 +4,14 @@ import type { Route } from './+types/sites.$slug';
 import type { DayScore, Site } from '~/types';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
-import { customSites, launchSites, userFavoriteSites, type UserFavoriteSite } from '~/db/schema';
-import { eq, and } from 'drizzle-orm';
+import {
+  customSites,
+  launchSites,
+  userFavoriteSites,
+  type LaunchSite,
+  type UserFavoriteSite,
+} from '~/db/schema';
+import { eq, and, gte, lt } from 'drizzle-orm';
 import { getIdealWindDirections, getOkWindDirections, getOrientations } from '~/lib/site-utils';
 import { evaluateDays, launchProfileFromSite, defaultWindLimit } from '~/lib/forecast-engine';
 import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
@@ -33,6 +39,15 @@ import {
 } from '~/lib/pgsites-client';
 import { launchSiteValuesFromPgSite } from '~/lib/launch-sites';
 import { refreshLaunchSites } from '~/app/lib/launch-sites.server';
+import {
+  launchSiteSlug,
+  matchNameInResults,
+  matchSlugInResults,
+  pgSiteSlug,
+  pickLaunchSite,
+  readSiteAddress,
+  slugName,
+} from '~/lib/site-address';
 import { defaultGoal, siteKindFromTags, SITE_KIND_LABEL } from '~/lib/site-goals';
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
@@ -109,19 +124,6 @@ const WIND_SOURCE: Record<Exclude<SiteOrigin, 'pge'>, string> = {
   osm: 'These are the directions mapped in OpenStreetMap.',
   pilot: 'These are the directions set by the pilot who shared it.',
 };
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Extract the pgsites UUID from a slug. Supports both formats:
- *  - New: "site-name--uuid-here" (double-dash separator)
- *  - Legacy local: slugs from local launch_sites table */
-function extractPgsitesId(slug: string): string | null {
-  const doubleDash = slug.indexOf('--');
-  if (doubleDash !== -1) {
-    return slug.slice(doubleDash + 2);
-  }
-  return null;
-}
 
 /** Map a PgSite from the API to the DetailSite shape. */
 function pgSiteToDetailSite(site: PgSite, slug: string): DetailSite {
@@ -226,59 +228,88 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env as Env;
   const db = getDb(env);
   const apiKey = getPgsitesApiKey(env);
-  const { slug } = params;
+  const ref = params.slug!;
+  const { search } = new URL(request.url);
+  /** A 301 to the site's one address, keeping the view in the query */
+  const moved = (slug: string) => redirect(`/sites/${slug}${search}`, 301);
+  const notFound = () => new Response('Site not found', { status: 404 });
 
   // 1. Kick off session + local DB lookup in parallel — neither depends on the other.
-  const [localSite, session] = await Promise.all([
-    db.query.launchSites.findFirst({ where: eq(launchSites.slug, slug!) }),
+  const [stored, session] = await Promise.all([
+    db.query.launchSites.findFirst({ where: eq(launchSites.slug, ref) }),
     getSession(request, env),
   ]);
 
+  // 2. Any other address: an older form, a stale name or a site nobody follows yet
+  let localSite: LaunchSite | null = stored ?? null;
+  let pgSite: PgSite | null = null;
+  if (!localSite) {
+    const address = readSiteAddress(ref);
+    if (!address) throw notFound();
+    if (address.kind === 'uuid') {
+      const [byId, byPgsitesId, custom] = await Promise.all([
+        db.query.launchSites.findFirst({ where: eq(launchSites.id, address.id) }),
+        db.query.launchSites.findFirst({ where: eq(launchSites.pgsitesId, address.id) }),
+        db.query.customSites.findFirst({ where: eq(customSites.id, address.id) }),
+      ]);
+      if (custom) throw redirect(`/sites/custom/${custom.id}`, 301);
+      localSite = byId ?? byPgsitesId ?? null;
+      if (!localSite) pgSite = await getSiteById(apiKey, address.id);
+    } else if (address.kind === 'legacy') {
+      localSite =
+        (await db.query.launchSites.findFirst({
+          where: eq(launchSites.pgsitesId, address.pgsitesId),
+        })) ?? null;
+      if (!localSite) pgSite = await getSiteById(apiKey, address.pgsitesId);
+    } else if (address.kind === 'slug') {
+      // The 8 characters are the key: a range on the pgsites ID's unique index
+      const rows = await db
+        .select()
+        .from(launchSites)
+        .where(
+          and(
+            gte(launchSites.pgsitesId, `${address.id8}-`),
+            lt(launchSites.pgsitesId, `${address.id8}.`),
+          ),
+        )
+        .limit(20);
+      localSite = pickLaunchSite(rows, address.slug);
+      if (!localSite) {
+        pgSite = await getSiteById(apiKey, address.slug).catch(() => null);
+        // pgsites' staging copy may only find a site by its UUID: search its name
+        if (!pgSite) {
+          const results = await searchSites(apiKey, slugName(address.slug), 20).catch(() => []);
+          pgSite = matchSlugInResults(results, address.id8);
+        }
+      }
+    } else {
+      const results = await searchSites(apiKey, address.name, 10).catch(() => []);
+      pgSite = matchNameInResults(results, address.name);
+    }
+    if (!localSite && !pgSite) throw notFound();
+  }
+
   let site: DetailSite;
   let localSiteId: string | null = null;
-
   if (localSite) {
     // A followed site's copy picks up pgsites changes, like what the site gives
     const [fresh] = await refreshLaunchSites(db, apiKey, [localSite]);
-    site = localSiteToDetailSite(fresh);
+    const slug = launchSiteSlug(fresh);
+    if (fresh.slug !== slug) {
+      // A copy made before the shared slug: give it the slug alerts now link to
+      await db
+        .update(launchSites)
+        .set({ slug })
+        .where(eq(launchSites.id, fresh.id))
+        .catch((error) => console.error(`Updating the slug of ${fresh.name} failed:`, error));
+    }
+    if (ref !== slug) throw moved(slug);
+    site = localSiteToDetailSite({ ...fresh, slug });
     localSiteId = localSite.id;
   } else {
-    // Alerts sent before they linked by slug point at /sites/<id>
-    if (UUID.test(slug!)) {
-      const [byId, custom] = await Promise.all([
-        db.query.launchSites.findFirst({ where: eq(launchSites.id, slug!) }),
-        db.query.customSites.findFirst({ where: eq(customSites.id, slug!) }),
-      ]);
-      if (byId) throw redirect(`/sites/${byId.slug}`);
-      if (custom) throw redirect(`/sites/custom/${custom.id}`);
-    }
-
-    // 2. Not found locally — extract pgsites UUID from slug and do direct API lookup
-    const pgsitesId = extractPgsitesId(slug!);
-    let pgSite: PgSite | null = null;
-
-    if (pgsitesId) {
-      pgSite = await getSiteById(apiKey, pgsitesId);
-    }
-
-    // Fallback: search by the name portion of the slug
-    if (!pgSite) {
-      const nameQuery = slug!.split('--')[0].replace(/-/g, ' ');
-      if (nameQuery) {
-        try {
-          const results = await searchSites(apiKey, nameQuery, 5);
-          if (results.length > 0) pgSite = results[0];
-        } catch {
-          // search failed
-        }
-      }
-    }
-
-    if (!pgSite) {
-      throw new Response('Site not found', { status: 404 });
-    }
-
-    site = pgSiteToDetailSite(pgSite, slug!);
+    const slug = pgSiteSlug(pgSite!);
+    if (ref !== slug) throw moved(slug);
+    site = pgSiteToDetailSite(pgSite!, slug);
   }
 
   // Whether the viewer keeps wider margins in big mountains (Settings)

@@ -40,8 +40,8 @@ export async function refreshLaunchSites(
       try {
         const pgSite = await getSiteById(apiKey, row.pgsitesId);
         if (!pgSite) return;
-        // The slug stays: alerts and bookmarks link to it
-        const changes = { ...launchSiteValuesFromPgSite(pgSite), slug: row.slug, updatedAt: now };
+        // The slug follows the name: the site page sends an older slug to it
+        const changes = { ...launchSiteValuesFromPgSite(pgSite), updatedAt: now };
         await db.update(launchSites).set(changes).where(eq(launchSites.id, row.id));
         refreshed.set(row.id, { ...row, ...changes });
       } catch (error) {

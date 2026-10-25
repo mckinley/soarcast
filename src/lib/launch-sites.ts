@@ -59,7 +59,7 @@ export function launchSiteValuesFromPgSite(
 ): Omit<NewLaunchSite, 'id' | 'source' | 'pgsitesId'> {
   return {
     name: pgSite.name,
-    slug: pgsitesSlug(pgSite.name, pgSite.id),
+    slug: pgSite.slug ?? pgsitesSlug(pgSite.name, pgSite.id),
     countryCode: pgSite.country_code,
     latitude: pgSite.latitude,
     longitude: pgSite.longitude,

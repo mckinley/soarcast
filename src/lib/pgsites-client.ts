@@ -1,4 +1,5 @@
 import type { PgsitesSyncRun } from './health';
+import { siteSlug } from './site-slug';
 
 const PRODUCTION_URL = 'https://pgsites.mckinleyaviation.com';
 
@@ -7,16 +8,26 @@ const PRODUCTION_URL = 'https://pgsites.mckinleyaviation.com';
  * env names another one. The staging copy (docs/staging.md) sets PGSITES_URL
  * to pgsites' staging site and binds its Worker as PGSITES, which it calls
  * directly, since Cloudflare Access stands in front of that hostname.
+ *
+ * Kept on globalThis: worker.ts and the server build it imports each bundle
+ * their own copy of this module, and the build's copy must see what worker.ts set.
  */
-let pgsites: { baseUrl: string; fetch: typeof fetch } = {
+interface PgsitesTarget {
+  baseUrl: string;
+  fetch: typeof fetch;
+}
+const TARGET = Symbol.for('soarcast.pgsites');
+const PRODUCTION: PgsitesTarget = {
   baseUrl: PRODUCTION_URL,
   fetch: (input, init) => fetch(input, init),
 };
+const store = globalThis as { [TARGET]?: PgsitesTarget };
+const pgsites = (): PgsitesTarget => store[TARGET] ?? PRODUCTION;
 
 /** Points this Worker's pgsites calls where its env says (worker.ts, on every request). */
 export function configurePgsites(env: { PGSITES_URL?: string; PGSITES?: Fetcher }): void {
   const binding = env.PGSITES;
-  pgsites = {
+  store[TARGET] = {
     baseUrl: env.PGSITES_URL || PRODUCTION_URL,
     fetch: binding
       ? (input, init) => binding.fetch(input, init)
@@ -36,6 +47,8 @@ export interface PgSite {
   id: string;
   pge_site_id: number;
   name: string;
+  /** The site's slug in every paragliding app (src/lib/site-slug.ts); pgsites' staging copy may not send it yet */
+  slug?: string;
   country_code: string;
   latitude: number;
   longitude: number;
@@ -123,7 +136,7 @@ async function fetchApi<T>(
   params?: Record<string, string | number>,
   { fresh = false }: { fresh?: boolean } = {},
 ): Promise<T> {
-  const url = new URL(path, pgsites.baseUrl);
+  const url = new URL(path, pgsites().baseUrl);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
@@ -138,7 +151,7 @@ async function fetchApi<T>(
   const hit = await cache?.match(cacheKey).catch(() => undefined);
   if (hit) return hit.json() as Promise<T>;
 
-  const response = await pgsites.fetch(url.toString(), {
+  const response = await pgsites().fetch(url.toString(), {
     headers: { 'X-API-Key': apiKey },
   });
 
@@ -243,7 +256,7 @@ export async function shareSite(
   ref: string,
   site: SharedSiteBody,
 ): Promise<ShareResult> {
-  const response = await pgsites.fetch(new URL(`/api/shared-sites/${ref}`, pgsites.baseUrl), {
+  const response = await pgsites().fetch(new URL(`/api/shared-sites/${ref}`, pgsites().baseUrl), {
     method: 'PUT',
     headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify(site),
@@ -259,7 +272,7 @@ export async function shareSite(
 
 /** Takes a shared site back. Throws when pgsites fails. */
 export async function unshareSite(apiKey: string, ref: string): Promise<void> {
-  const response = await pgsites.fetch(new URL(`/api/shared-sites/${ref}`, pgsites.baseUrl), {
+  const response = await pgsites().fetch(new URL(`/api/shared-sites/${ref}`, pgsites().baseUrl), {
     method: 'DELETE',
     headers: { 'X-API-Key': apiKey },
   });
@@ -361,13 +374,12 @@ export async function compsNear(
   return result.comps;
 }
 
-/** The site page slug for a pgsites site: name, then `--` and its UUID (see sites.$slug). */
+/**
+ * The site page slug for a pgsites site, `tiger-mountain-22ee6c89`: the slug
+ * pgsites gives the site in every app (see sites.$slug).
+ */
 export function pgsitesSlug(name: string, id: string): string {
-  const nameSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `${nameSlug}--${id}`;
+  return siteSlug(name, id);
 }
 
 /**

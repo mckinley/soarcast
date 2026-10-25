@@ -21,6 +21,7 @@ Short notes here. The long notes on each feature are in `docs/agents/`: open the
 - **Copy:** name pages, nav items, card titles and labels neutrally (Planning, This week, Favorites, Private site), never "Your …" or "My …". All text pilots read (screens, emails, alerts, the Guide) follows the writing rules in `src/guide/README.md`.
 - **Guide:** `/guide` explains SoarCast to pilots. Pages are Markdown in `src/guide/pages/` with front matter (title, summary, order, `covers`: the code each page describes), rendered by `app/lib/guide.server.ts`. A number the code decides is a `{{name}}` placeholder from `src/guide/facts.ts`, which imports the code's own constant. `src/guide/__tests__/guide.test.ts` checks the rules a machine can (dashes, semicolons, sentence length, internal words, facts, covers).
 - **Windgram:** D3 SVG chart (`src/components/windgram/windgram-d3.tsx`) — do NOT revert to canvas
+- **Site addresses:** a listed site's page is `/sites/<slug>`, the slug pgsites gives it in every paragliding app (`tiger-mountain-22ee6c89`, `src/lib/site-slug.ts`, a copy of pgsites' `app/lib/site-slug.ts`: change it there first). `src/lib/site-address.ts` reads the older forms (`--<uuid>`, a UUID, a stale name, a bare name), which the page 301s to the slug. `worker.ts` 301s capitals and trailing slashes (`src/lib/canonical-url.ts`, from pjmgmt), `root.tsx` writes the canonical tag, and `/sitemap.xml` lists the public pages, the Guide and followed sites. Searches are `?q=`.
 - **Maps:** Leaflet via react-leaflet, use `React.lazy` + `Suspense` (no SSR). Layers are one panel, `MapLayers`. Details: `docs/agents/site-pages.md`.
 - **Email:** Cloudflare Email Sending through the `EMAIL` `send_email` binding (`src/emails/send.ts`, template `src/emails/morning-digest.tsx`), from `soarcast@mckinleyaviation.com`. No API key. Local dev simulates sends (the binding has no `remote = true`).
 - **Push notifications:** VAPID keys; send with `sendPush` (`src/lib/push-send.ts`). Never call web-push's `sendNotification`: it uses node:https, which Workers don't implement.
@@ -43,6 +44,7 @@ Short notes here. The long notes on each feature are in `docs/agents/`: open the
 - Keep migrations additive.
 - The flown-days and up-now answer shapes match Syncing Pilots' `app/lib/flown-days.ts` and `app/lib/up-now.ts`: change both together.
 - Change the make-admin script and workflow in pjmgmt, not here.
+- `worker.ts` and the server build each bundle their own copy of any module both import, so state `worker.ts` sets for the app (like `configurePgsites`) lives on `globalThis`.
 - Never call web-push's `sendNotification`. Use `sendPush`.
 - Do NOT revert the windgram to canvas.
 

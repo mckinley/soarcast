@@ -31,6 +31,7 @@ import type { Site } from '~/types';
 import webpush from 'web-push';
 import { sendPush } from '~/lib/push-send';
 import { mutedAreaIds } from '~/app/lib/site-areas.server';
+import { launchSiteSlug } from '~/lib/site-address';
 
 /** The settings a pilot has before saving any: the schema's column defaults. */
 function defaultSettings(userId: string, now: Date): typeof settingsTable.$inferSelect {
@@ -140,7 +141,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
         if (userSites.length === 0) continue;
         // Where an alert about each site opens
         const siteUrls = new Map<string, string>([
-          ...favoriteSitesResult.map((f) => [f.site.id, `/sites/${f.site.slug}`] as const),
+          ...favoriteSitesResult.map(
+            (f) => [f.site.id, `/sites/${launchSiteSlug(f.site)}`] as const,
+          ),
           ...customSitesResult.map((s) => [s.id, `/sites/custom/${s.id}`] as const),
         ]);
 

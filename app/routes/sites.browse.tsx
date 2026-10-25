@@ -1,4 +1,4 @@
-import { useLoaderData } from 'react-router';
+import { redirect, useLoaderData } from 'react-router';
 import type { Route } from './+types/sites.browse';
 import { getDb } from '~/app/lib/db.server';
 import { getSession } from '~/app/lib/auth.server';
@@ -63,8 +63,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = getDb(env);
   const apiKey = getPgsitesApiKey(env);
   const url = new URL(request.url);
+  // Searches were ?search= before pjmgmt's url-format named it q
+  const old = url.searchParams.get('search');
+  if (old !== null) {
+    url.searchParams.delete('search');
+    if (old && !url.searchParams.has('q')) url.searchParams.set('q', old);
+    throw redirect(`${url.pathname}${url.search}`, 301);
+  }
 
-  const search = url.searchParams.get('search') ?? '';
+  const search = url.searchParams.get('q') ?? '';
 
   // Fetch sites server-side so the map is populated on first paint.
   // Search → use the search API. Default → pre-load the Tiger Mountain area

@@ -7,10 +7,12 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteError,
   useRouteLoaderData,
 } from 'react-router';
 import type { Route } from './+types/root';
 import { getSession } from './lib/auth.server';
+import { canonicalHref } from '~/lib/canonical-url';
 import { ThemeProvider } from '~/components/theme-provider';
 import { TooltipProvider } from '~/components/ui/tooltip';
 import { AppShell } from '~/components/app-shell';
@@ -20,8 +22,11 @@ import './globals.css';
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env as Env;
   const session = await getSession(request, env);
+  const url = new URL(request.url);
   return {
     user: session?.user ?? null,
+    // The page's one address for search engines (pjmgmt's canonical-urls standard)
+    canonical: canonicalHref(url.origin, url.pathname),
     // The map's Airspace layer shows only once openAIP's key is set
     airspace: Boolean(env.OPENAIP_API_KEY),
     // The staging copy (docs/staging.md) says so on every page
@@ -31,6 +36,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
+  // An error page names no address
+  const error = useRouteError();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -41,6 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+        {data?.canonical && !error && <link rel="canonical" href={data.canonical} />}
         <Meta />
         <Links />
       </head>
