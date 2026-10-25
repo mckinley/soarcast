@@ -79,7 +79,12 @@ export function stagingTarget(prod, staging) {
   const host = typeof route === 'string' ? route : route?.pattern;
   const url =
     staging.vars?.BETTER_AUTH_URL ?? (host ? `https://${host.replace(/\/\*$/, '')}` : null);
-  return { worker: staging.name, db: db?.database_name ?? null, url };
+  return {
+    worker: staging.name,
+    db: db?.database_name ?? null,
+    url,
+    devAuth: staging.vars?.DEV_AUTH === 'true',
+  };
 }
 
 function run(cmd, args, { input, env, capture } = {}) {
@@ -226,6 +231,16 @@ function ensureSecrets(worker) {
     });
 }
 
+/** Whether the app has /dev/login: better-auth with DEV_AUTH on staging. */
+function hasDevLogin(target) {
+  const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  return Boolean(
+    target.url &&
+    target.devAuth &&
+    'better-auth' in { ...pkg.dependencies, ...pkg.devDependencies },
+  );
+}
+
 function summary(lines) {
   console.log(lines.join('\n'));
   if (process.env.GITHUB_STEP_SUMMARY)
@@ -277,8 +292,12 @@ async function main() {
       `### Staging: ${target.url ?? target.worker}`,
       '',
       `- Code: ${process.env.GITHUB_SHA ?? 'this checkout'}`,
-      `- Data: ${seeded ? 'fake data loaded fresh' : 'kept from the last deploy (Run workflow → reset to reload it)'}`,
-      ...(target.url ? [`- Sign in as a test user: ${target.url}/dev/login`] : []),
+      ...(target.db
+        ? [
+            `- Data: ${seeded ? 'fake data loaded fresh' : 'kept from the last deploy (Run workflow → reset to reload it)'}`,
+          ]
+        : []),
+      ...(hasDevLogin(target) ? [`- Sign in as a test user: ${target.url}/dev/login`] : []),
     ]);
   } finally {
     restore();
