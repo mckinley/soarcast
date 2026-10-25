@@ -75,7 +75,7 @@ jobs:
       - name: Live page timings from this runner
         run: |
           B=https://soarcast.mckinleyaviation.com
-          for u in / /guide /planning /sites/browse /sites/tiger-mountain; do
+          for u in / /guide /planning /sites/browse /sites/tiger-mountain-22ee6c89; do
             for i in 1 2 3; do curl -s -o /dev/null -w "$u new-conn tls=%{time_appconnect} ttfb=%{time_starttransfer}\n" "$B$u"; done
           done
           curl -s $B/cdn-cgi/trace | grep colo

@@ -54,10 +54,14 @@ jobs:
           test "$status" = 200
           grep -q '"sunriseByDay"' body.json
 
-      # A site page must render a verdict, not "Forecast unavailable".
+      # A site page must render a verdict, not "Forecast unavailable", and an
+      # older address of it must 301 to its slug.
       - name: Smoke test a site page
         run: |
-          status=$(curl -sS -o page.html -w '%{http_code}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain")
+          moved=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain")
+          echo "Old address: $moved"
+          test "$moved" = "301 https://soarcast.mckinleyaviation.com/sites/tiger-mountain-22ee6c89"
+          status=$(curl -sS -o page.html -w '%{http_code}' "https://soarcast.mckinleyaviation.com/sites/tiger-mountain-22ee6c89")
           echo "HTTP $status"
           grep -oE '>(Launch window|Marginal|Not flyable)[^<]{0,100}' page.html | head -3 || true
           test "$status" = 200
