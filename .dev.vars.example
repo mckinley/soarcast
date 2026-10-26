@@ -1,8 +1,9 @@
-# Copy to .dev.vars (gitignored) for `npm run dev`. Production values are
-# Worker secrets: `npx wrangler secret put <NAME>`.
+# Copy to .dev.vars (gitignored) for `npm run dev` and the scripts, and fill in; the values are
+# in 1Password. Production values are Worker secrets: `npx wrangler secret put <NAME>`.
 
 # Better Auth. BETTER_AUTH_URL is a [vars] entry in wrangler.toml for production.
-BETTER_AUTH_SECRET=generate-with-openssl-rand-base64-32
+# A local signing secret: openssl rand -base64 32
+BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:6712
 
 # OAuth apps. Callback: {BETTER_AUTH_URL}/api/auth/callback/github (or /google)
@@ -26,3 +27,6 @@ HEALTH_ALERT_TO=
 
 # Optional: openAIP API key for the map's Airspace layer (openaip.net, API Clients)
 OPENAIP_API_KEY=
+
+# Scripts only (scripts/seasons, scripts/staging.mjs): the Cloudflare API token
+CLOUDFLARE_API_TOKEN=

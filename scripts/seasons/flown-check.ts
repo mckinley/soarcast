@@ -505,7 +505,7 @@ function baseline(launches: Launch[]) {
 
 async function main() {
   if (!ACCOUNT || !TOKEN)
-    throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed');
+    throw new Error('CLOUDFLARE_API_TOKEN is needed (in the environment or .dev.vars)');
   const range = seasonRange();
   console.log(
     `Flown-day check, ${range.from} to ${range.to}, launches with ${MIN_DAYS}+ flown days`,

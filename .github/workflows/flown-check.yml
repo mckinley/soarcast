@@ -53,7 +53,7 @@ jobs:
       - name: Check ratings against flown days
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: 7c0ef4ee4d820ffe791557c534882957
           FLOWN_CALL_BUDGET: ${{ github.ref == 'refs/heads/main' && (inputs.budget || '4500') || '0' }}
           FLOWN_SITES: ${{ inputs.sites }}
           FLOWN_BASELINE: ${{ github.ref == 'refs/heads/main' && !inputs.margins && 'save' || 'compare' }}

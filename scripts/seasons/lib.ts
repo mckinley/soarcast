@@ -15,6 +15,7 @@ import {
   type Job,
   type PgRow,
 } from '../../src/lib/season-build/core';
+import { secret } from '../lib/secrets.mjs';
 
 export {
   cleanProfile,
@@ -30,8 +31,10 @@ export {
   type PgRow,
 } from '../../src/lib/season-build/core';
 
-export const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
-export const TOKEN = process.env.CLOUDFLARE_API_TOKEN ?? '';
+// The McKinley Digital account (account_id in wrangler.toml), and the API token from the
+// environment or .dev.vars.
+export const ACCOUNT = secret('CLOUDFLARE_ACCOUNT_ID') ?? '7c0ef4ee4d820ffe791557c534882957';
+export const TOKEN = secret('CLOUDFLARE_API_TOKEN') ?? '';
 export const SOARCAST_DB = 'e92d8ad3-7ca9-47aa-b26b-e2288ec3b963';
 export const PGSITES_DB = 'b7a6fb40-1aa2-4824-b589-2243c38487fc';
 

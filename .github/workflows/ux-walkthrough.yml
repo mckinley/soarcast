@@ -43,7 +43,7 @@ jobs:
       - name: Copy test sites from pgsites
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: 7c0ef4ee4d820ffe791557c534882957
         run: |
           mkdir -p ux-tmp/pg
           cat > ux-tmp/pg/wrangler.toml <<'EOF'
