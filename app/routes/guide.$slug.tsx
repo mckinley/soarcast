@@ -44,9 +44,11 @@ export default function GuidePageRoute() {
         <ChevronLeft className="h-4 w-4" />
         Guide
       </Link>
-      <h1 className="text-3xl font-bold">{page.title}</h1>
+      <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+        {page.title}
+      </h1>
       <div
-        className="prose prose-neutral max-w-none dark:prose-invert prose-a:underline-offset-2 prose-headings:scroll-mt-20 prose-table:my-0"
+        className="prose prose-neutral max-w-none dark:prose-invert prose-a:underline-offset-2 prose-headings:scroll-mt-20 prose-headings:tracking-tight prose-table:my-0 prose-th:align-bottom [&_td:first-child]:font-medium [&_td:first-child]:text-foreground [&_td:first-child]:min-w-24"
         onClick={followLink}
         dangerouslySetInnerHTML={{ __html: page.html }}
       />

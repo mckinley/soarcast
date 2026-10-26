@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Form, Link, useFetcher, useLoaderData } from 'react-router';
 import type { Route } from './+types/planning';
 import { eq } from 'drizzle-orm';
@@ -144,12 +145,12 @@ function addMonths(month: string, n: number): string {
   return d.toISOString().slice(0, 7);
 }
 
-/** "Nov 2026", or "Nov 2026 – Jan 2027". */
+/** "Nov 2026", or "Nov 2026 to Jan 2027". */
 function windowLabel(months: string[]): string {
   const first = monthLabel(months[0], { year: true });
   return months.length === 1
     ? first
-    : `${first} – ${monthLabel(months[months.length - 1], { year: true })}`;
+    : `${first} to ${monthLabel(months[months.length - 1], { year: true })}`;
 }
 
 /** A comp in the calendar, with the favorite site it's held at, if any. */
@@ -601,7 +602,49 @@ function uniqueComps(comps: Comp[]): Comp[] {
   return [...new Map(comps.map((c) => [c.id, c])).values()];
 }
 
-/** One row of filter chips; each chip is a link, so filters work before the page hydrates. */
+/** The page's three views, as a segmented switch. Each is a link, like the filters. */
+function ViewTabs({ value, query }: { value: View; query: Query }) {
+  return (
+    <nav
+      aria-label="Views"
+      className="flex w-full rounded-xl bg-muted p-1 sm:inline-flex sm:w-auto"
+    >
+      {(Object.entries(VIEWS) as Array<[View, string]>).map(([key, label]) => {
+        const active = key === value;
+        return (
+          <Link
+            key={key}
+            to={planningHref(query, { view: key })}
+            preventScrollReset
+            className={`flex-1 rounded-lg px-4 py-1.5 text-center text-sm font-medium whitespace-nowrap transition-colors sm:flex-none ${
+              active
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            aria-current={active ? 'page' : undefined}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** A filter with its name: beside it on a computer, above it on a phone. */
+function FilterRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5 sm:grid-cols-[6rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+      <span className="text-xs font-medium text-muted-foreground sm:text-sm">{label}</span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * One row of filter chips; each chip is a link, so filters work before the
+ * page hydrates. On a phone the row scrolls sideways instead of wrapping.
+ */
 function FilterChips<T extends string>({
   name,
   options,
@@ -614,7 +657,7 @@ function FilterChips<T extends string>({
   query: Query;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       {(Object.entries(options) as Array<[T, string | { label: string }]>).map(([key, option]) => {
         const active = key === value;
         return (
@@ -622,10 +665,10 @@ function FilterChips<T extends string>({
             key={key}
             to={planningHref(query, { [name]: key })}
             preventScrollReset
-            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
               active
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border hover:bg-accent'
+                ? 'border-foreground bg-foreground text-background'
+                : 'bg-background hover:bg-accent'
             }`}
             aria-current={active ? 'true' : undefined}
           >
@@ -659,9 +702,9 @@ function WindowPicker({
     (_, i) => Number(firstMonth.slice(0, 4)) + i,
   );
   const arrow =
-    'inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors';
+    'inline-flex size-9 items-center justify-center rounded-lg border bg-background transition-colors';
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
       <div className="flex items-center gap-1">
         {prev ? (
           <Link
@@ -696,7 +739,7 @@ function WindowPicker({
             name="from"
             defaultValue={from}
             key={from}
-            className="h-8 rounded-md border bg-background px-2 text-sm"
+            className="h-9 rounded-lg border bg-background px-2.5 text-sm font-medium"
           >
             {years.map((y) => (
               <optgroup key={y} label={String(y)}>
@@ -711,7 +754,7 @@ function WindowPicker({
             ))}
           </select>
           <noscript>
-            <button type="submit" className="ml-1 h-8 rounded-md border px-2 text-sm">
+            <button type="submit" className="ml-1 h-9 rounded-lg border px-2.5 text-sm">
               Show
             </button>
           </noscript>
@@ -738,7 +781,7 @@ function WindowPicker({
 
 /** Go share as a heat cell: one green, darker for more go days. */
 function shareCell(share: number): string {
-  if (share >= 0.5) return 'bg-green-700 text-white dark:bg-green-500 dark:text-green-950';
+  if (share >= 0.5) return 'bg-go text-go-foreground';
   if (share >= 0.3) return 'bg-green-500/60 text-green-950 dark:text-green-50';
   if (share >= 0.15) return 'bg-green-500/35 text-green-950 dark:text-green-50';
   if (share > 0) return 'bg-green-500/15 text-foreground';
@@ -767,8 +810,8 @@ function ShareLegend({ pending = false }: { pending?: boolean }) {
       <li>Share of days a go:</li>
       {[
         [0.6, '50% or more'],
-        [0.4, '30–50%'],
-        [0.2, '15–30%'],
+        [0.4, '30 to 50%'],
+        [0.2, '15 to 30%'],
         [0.05, 'under 15%'],
         [0, 'never'],
       ].map(([share, label]) => (
@@ -829,14 +872,14 @@ function PartsLine({ parts }: { parts: NonNullable<PlaceRow['parts']> }) {
 function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
   let rank = 0;
   return (
-    <ol className="divide-y">
+    <ol className="divide-y rounded-2xl border bg-card px-3 sm:px-5">
       {rows.map((row) => {
         const share = row.shares?.[0];
         if (share != null) rank++;
         return (
           <li
             key={row.key}
-            className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:gap-4"
+            className="flex flex-col gap-1.5 py-3 sm:flex-row sm:items-center sm:gap-4"
           >
             <div className="flex min-w-0 flex-1 items-baseline gap-2">
               <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
@@ -865,7 +908,7 @@ function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
               <div className="flex items-center gap-2 pl-7 sm:w-64 sm:pl-0">
                 <div className="h-2.5 flex-1 rounded-full bg-muted" aria-hidden>
                   <div
-                    className="h-full rounded-full bg-green-700 dark:bg-green-500"
+                    className="h-full rounded-full bg-go"
                     style={{ width: `${Math.round(share * 100)}%` }}
                   />
                 </div>
@@ -894,11 +937,11 @@ function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
 /** Places by month across the window, with the window's mean first. */
 function PlaceGrid({ rows, months, label }: { rows: PlaceRow[]; months: string[]; label: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="w-fit max-w-full overflow-x-auto rounded-2xl border bg-card p-1.5 sm:p-3">
       <table className="border-separate border-spacing-[2px] text-xs">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 w-36 min-w-36 bg-background px-2 py-1 text-left font-medium sm:w-56 sm:min-w-56">
+            <th className="sticky left-0 z-10 w-36 min-w-36 bg-card px-2 py-1 text-left font-medium sm:w-56 sm:min-w-56">
               {label}
             </th>
             <th className="w-12 min-w-12 py-1 font-medium">Avg</th>
@@ -917,7 +960,7 @@ function PlaceGrid({ rows, months, label }: { rows: PlaceRow[]; months: string[]
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
-              <td className="sticky left-0 z-10 w-36 min-w-36 max-w-36 bg-background px-2 py-1 sm:w-56 sm:min-w-56 sm:max-w-56">
+              <td className="sticky left-0 z-10 w-36 min-w-36 max-w-36 bg-card px-2 py-1 sm:w-56 sm:min-w-56 sm:max-w-56">
                 <PlaceName row={row} />
               </td>
               {row.shares ? (
@@ -1069,39 +1112,73 @@ export default function PlanningPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Planning</h1>
-        <p className="mt-1 text-muted-foreground">
-          Where and when the flying is good, and the comps to plan trips around, for any months
-          ahead.
-        </p>
-      </div>
+      <header className="space-y-4">
+        <div>
+          <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+            Planning
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-muted-foreground">
+            Where and when the flying is good, and the comps to plan trips around, for any months
+            ahead.
+          </p>
+        </div>
+        <ViewTabs value={view} query={query} />
+      </header>
 
-      <div className="space-y-3">
-        <FilterChips name="view" options={VIEWS} value={view} query={query} />
-        <WindowPicker
-          query={query}
-          from={from}
-          span={span}
-          firstMonth={firstMonth}
-          lastMonth={lastMonth}
-        />
-      </div>
+      <section aria-label="Filters" className="space-y-3.5 rounded-2xl border bg-card p-4">
+        <FilterRow label="When">
+          <WindowPicker
+            query={query}
+            from={from}
+            span={span}
+            firstMonth={firstMonth}
+            lastMonth={lastMonth}
+          />
+        </FilterRow>
+        {view === 'where' && (
+          <>
+            <FilterRow label="Go means">
+              <FilterChips name="goal" options={GOALS} value={filters.goal} query={query} />
+            </FilterRow>
+            <FilterRow label="Rank by">
+              <FilterChips name="sort" options={SORTS} value={filters.sort} query={query} />
+            </FilterRow>
+            {!opened && (
+              <>
+                <FilterRow label="Show">
+                  <FilterChips name="by" options={GROUPS} value={filters.by} query={query} />
+                </FilterRow>
+                <FilterRow label="Region">
+                  <FilterChips
+                    name="region"
+                    options={REGIONS}
+                    value={filters.region}
+                    query={query}
+                  />
+                </FilterRow>
+              </>
+            )}
+          </>
+        )}
+        {view === 'comps' && (
+          <>
+            <FilterRow label="Type">
+              <FilterChips name="kind" options={KINDS} value={filters.kind} query={query} />
+            </FilterRow>
+            <FilterRow label="Level">
+              <FilterChips name="level" options={LEVELS} value={filters.level} query={query} />
+            </FilterRow>
+            <FilterRow label="Region">
+              <FilterChips name="region" options={REGIONS} value={filters.region} query={query} />
+            </FilterRow>
+          </>
+        )}
+      </section>
 
       {view === 'where' && (
         <>
-          <div className="space-y-2">
-            <FilterChips name="goal" options={GOALS} value={filters.goal} query={query} />
-            <FilterChips name="sort" options={SORTS} value={filters.sort} query={query} />
-            {!opened && (
-              <>
-                <FilterChips name="by" options={GROUPS} value={filters.by} query={query} />
-                <FilterChips name="region" options={REGIONS} value={filters.region} query={query} />
-              </>
-            )}
-          </div>
-          <div className="space-y-2">
-            <div className="h-64 overflow-hidden rounded-md border sm:h-80">
+          <div className="space-y-2.5">
+            <div className="h-72 overflow-hidden rounded-2xl border sm:h-96">
               <PlanningMapWrapper
                 points={mapPoints}
                 extents={mapExtents}
@@ -1134,7 +1211,7 @@ export default function PlanningPage() {
                     <ChevronLeft className="h-4 w-4" />
                     All {filters.by === 'country' ? 'countries' : 'areas'}
                   </Link>
-                  <h2 className="text-xl font-semibold">{opened.name}</h2>
+                  <h2 className="mt-1 text-xl font-semibold tracking-tight">{opened.name}</h2>
                   {opened.save && <SaveArea save={opened.save} signedIn={signedIn} />}
                 </div>
               )}
@@ -1232,11 +1309,6 @@ export default function PlanningPage() {
             Enter on each comp&apos;s own page. Comps are usually listed up to a year or so ahead,
             so later months fill in as they&apos;re announced.
           </p>
-          <div className="space-y-2">
-            <FilterChips name="kind" options={KINDS} value={filters.kind} query={query} />
-            <FilterChips name="level" options={LEVELS} value={filters.level} query={query} />
-            <FilterChips name="region" options={REGIONS} value={filters.region} query={query} />
-          </div>
           {/* The months at a glance; each jumps to its comps */}
           {months.length > 1 && !failed && (
             <nav aria-label="Months" className="grid grid-cols-6 gap-1 sm:grid-cols-12">
@@ -1256,13 +1328,13 @@ export default function PlanningPage() {
                   </>
                 );
                 const className =
-                  'flex flex-col items-center rounded-md border px-1 py-1.5 transition-colors';
+                  'flex flex-col items-center rounded-lg border bg-card px-1 py-1.5 transition-colors';
                 return count ? (
                   <a key={month} href={`#${month}`} className={`${className} hover:bg-accent`}>
                     {body}
                   </a>
                 ) : (
-                  <div key={month} className={`${className} border-dashed`}>
+                  <div key={month} className={`${className} border-dashed bg-transparent`}>
                     {body}
                   </div>
                 );
@@ -1279,7 +1351,7 @@ export default function PlanningPage() {
           )}
 
           {failed ? (
-            <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-200">
+            <div className="rounded-2xl border border-marginal-border bg-marginal p-4 text-marginal-foreground">
               <p className="font-medium">Comps unavailable right now</p>
               <p className="text-sm">
                 The site database didn&apos;t answer. Reload the page in a minute.
@@ -1293,11 +1365,11 @@ export default function PlanningPage() {
             months
               .filter((month) => byMonth.has(month))
               .map((month) => (
-                <section key={month} id={month} className="scroll-mt-16">
-                  <h2 className="border-b pb-1 text-lg font-semibold">
+                <section key={month} id={month} className="scroll-mt-16 space-y-2">
+                  <h2 className="text-lg font-semibold tracking-tight">
                     {monthLabel(month, { year: true, long: true })}
                   </h2>
-                  <ul className="divide-y">
+                  <ul className="divide-y rounded-2xl border bg-card px-4 [&>li]:py-3">
                     {byMonth.get(month)!.map((comp) => (
                       <CompRow key={comp.id} comp={comp}>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">

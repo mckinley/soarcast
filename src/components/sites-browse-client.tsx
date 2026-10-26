@@ -12,7 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Search, SlidersHorizontal, X, Loader2, Mountain } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Loader2, Mountain, Heart, MapPinPlus } from 'lucide-react';
 import { SitesBrowseMapWrapper } from '@/components/sites-browse-map-wrapper';
 import { getOrientations } from '@/lib/site-utils';
 import { PlacesCredit } from '@/components/data-credits';
@@ -56,6 +56,7 @@ interface SitesBrowseClientProps {
 }
 
 const ORIENTATIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const PHONE_PAGE = 25;
 
 export function SitesBrowseClient({
   initialSites,
@@ -73,6 +74,8 @@ export function SitesBrowseClient({
   const [searchValue, setSearchValue] = useState(searchParams.search ?? '');
   const [selectedOrientations, setSelectedOrientations] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // A phone lists the busiest sites first, a page at a time
+  const [phoneCount, setPhoneCount] = useState(PHONE_PAGE);
 
   // Preloaded sites arrive from the server — use them immediately, no loading state.
   // Map pans will replace them with fresh near-API results.
@@ -160,17 +163,33 @@ export function SitesBrowseClient({
   const hasActiveFilters = selectedOrientations.length > 0;
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Browse sites</h1>
+          <p className="text-[15px] text-muted-foreground">
+            Find a launch by name or town, or move the map.
+          </p>
+        </div>
+        <Button variant="outline" asChild className="hidden shrink-0 sm:inline-flex">
+          <Link to="/sites/custom/new">
+            <MapPinPlus className="size-4" />
+            Add a private site
+          </Link>
+        </Button>
+      </div>
+
       {/* ── Search bar ── */}
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
-            placeholder="Search by site name, country, or region…"
+            placeholder="Search a site or a town"
+            aria-label="Search a site or a town"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            className="pl-9 h-10"
+            className="h-11 bg-card pl-9 text-base md:text-sm"
           />
           {searchValue && (
             <button
@@ -183,15 +202,19 @@ export function SitesBrowseClient({
           )}
         </div>
 
-        <Button type="submit" className="h-10 px-4 shrink-0">
+        <Button type="submit" className="h-11 shrink-0 px-4">
           Search
         </Button>
 
         <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="h-10 px-4 shrink-0 relative">
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              Filters
+            <Button
+              variant="outline"
+              className="relative h-11 shrink-0 px-3 sm:px-4"
+              aria-label="Filters"
+            >
+              <SlidersHorizontal className="size-4" />
+              <span className="hidden sm:inline">Filters</span>
               {hasActiveFilters && (
                 <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
                   {selectedOrientations.length}
@@ -202,7 +225,7 @@ export function SitesBrowseClient({
           <SheetContent className="w-full sm:max-w-sm overflow-y-auto">
             <SheetHeader>
               <SheetTitle>Filters</SheetTitle>
-              <SheetDescription>Narrow down sites in the current map view</SheetDescription>
+              <SheetDescription>Show only some of the sites in view</SheetDescription>
             </SheetHeader>
             <div className="space-y-6 px-4 pb-4">
               {/* Wind orientations */}
@@ -231,7 +254,7 @@ export function SitesBrowseClient({
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Show only sites that fly in these wind directions
+                  Show only sites that fly in these wind directions.
                 </p>
               </div>
 
@@ -289,10 +312,7 @@ export function SitesBrowseClient({
       )}
 
       {/* ── Main: map + site list ── */}
-      <div
-        className="flex gap-0 border rounded-lg overflow-hidden"
-        style={{ height: '72vh', minHeight: '400px' }}
-      >
+      <div className="flex h-[52vh] min-h-[340px] overflow-hidden rounded-2xl border bg-card md:h-[72vh] md:min-h-[420px]">
         {/* Map */}
         <div className="flex-1 relative min-w-0">
           <SitesBrowseMapWrapper
@@ -303,7 +323,7 @@ export function SitesBrowseClient({
 
           {/* Loading indicator overlay */}
           {isLoading && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-background/90 border rounded-full px-3 py-1.5 flex items-center gap-2 shadow-sm text-sm">
+            <div className="absolute top-3 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full border bg-card/95 px-3 py-1.5 text-sm shadow-sm">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading sites…
             </div>
@@ -311,11 +331,12 @@ export function SitesBrowseClient({
         </div>
 
         {/* ── Desktop side panel ── */}
-        <div className="hidden md:flex flex-col w-72 border-l bg-background shrink-0">
+        <div className="hidden w-80 shrink-0 flex-col border-l bg-card md:flex">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0">
-            <span className="text-sm font-medium">
+          <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+            <span className="text-sm font-semibold">
               {displaySites.length} site{displaySites.length !== 1 ? 's' : ''}
+              {isSearchMode ? '' : ' in view'}
             </span>
             {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           </div>
@@ -355,35 +376,51 @@ export function SitesBrowseClient({
         </div>
       </div>
 
-      {/* ── Mobile site list below map ── */}
+      {/* ── Phone: the sites under the map, busiest first ── */}
       <div className="md:hidden">
-        <p className="text-sm text-muted-foreground mb-3">
+        <p className="mb-2 text-sm font-semibold">
           {isLoading
             ? 'Loading sites…'
-            : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''} in view`}
+            : `${displaySites.length} site${displaySites.length !== 1 ? 's' : ''}${isSearchMode ? '' : ' in view'}`}
         </p>
         {displaySites.length === 0 && !isLoading ? (
-          <div className="text-sm text-muted-foreground text-center py-8 space-y-2">
+          <div className="space-y-2 rounded-2xl border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
             <p>
-              {isSearchMode ? 'No sites match your search' : 'Pan or zoom the map to explore sites'}
+              {isSearchMode ? 'No sites match the search.' : 'Pan or zoom the map to find sites.'}
             </p>
             <Link to="/sites/custom/new" className="inline-block underline hover:text-primary">
               Not listed? Add a private site
             </Link>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {displaySites.map((site) => (
-              <SiteCard key={site.id} site={site} isFavorited={favoriteSiteIds.has(site.id)} />
+          <div className="divide-y overflow-hidden rounded-2xl border bg-card">
+            {displaySites.slice(0, phoneCount).map((site) => (
+              <SiteListItem key={site.id} site={site} isFavorited={favoriteSiteIds.has(site.id)} />
             ))}
+            {displaySites.length > phoneCount && (
+              <button
+                type="button"
+                onClick={() => setPhoneCount((n) => n + PHONE_PAGE)}
+                className="w-full px-4 py-3.5 text-sm font-medium text-primary hover:bg-accent"
+              >
+                Show more ({displaySites.length - phoneCount} left)
+              </button>
+            )}
           </div>
         )}
+        <Link
+          to="/sites/custom/new"
+          className="mt-4 flex items-center justify-center gap-2 rounded-xl border bg-card px-4 py-3 text-[15px] font-medium hover:bg-accent sm:hidden"
+        >
+          <MapPinPlus className="size-4" />
+          Add a private site
+        </Link>
       </div>
     </div>
   );
 }
 
-// ── Compact list item for desktop sidebar ──
+// ── One site in the list: its name, then where, how high and how busy ──
 function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: boolean }) {
   const orientations = getOrientations(site);
   const activeOrientations = Object.entries(orientations)
@@ -393,56 +430,26 @@ function SiteListItem({ site, isFavorited }: { site: BrowseSite; isFavorited: bo
   return (
     <Link
       to={`/sites/${site.slug}`}
-      className="flex flex-col gap-1 px-3 py-3 hover:bg-muted/50 transition-colors"
+      className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-accent/60"
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium leading-tight line-clamp-2">{site.name}</span>
-        {isFavorited && <span className="text-red-500 shrink-0 text-xs">♥</span>}
+        <span className="line-clamp-2 text-[15px] leading-tight font-semibold">{site.name}</span>
+        {isFavorited && (
+          <Heart
+            className="mt-0.5 size-3.5 shrink-0 fill-current text-primary"
+            aria-label="In Favorites"
+          />
+        )}
       </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
         {site.countryCode && <span>{site.countryCode}</span>}
-        {site.altitude && <span>{site.altitude}m</span>}
+        {site.altitude ? <span>{site.altitude.toLocaleString('en-US')} m</span> : null}
         {site.flownPilots ? <FlownPilots count={site.flownPilots} /> : null}
         {site.origin && site.origin !== 'pge' && <UnlistedOrigin origin={site.origin} />}
-        {activeOrientations.length > 0 && (
-          <span className="text-muted-foreground/80">{activeOrientations.join(' ')}</span>
-        )}
       </div>
-    </Link>
-  );
-}
-
-// ── Card for mobile grid ──
-function SiteCard({ site, isFavorited }: { site: BrowseSite; isFavorited: boolean }) {
-  const orientations = getOrientations(site);
-  const activeOrientations = Object.entries(orientations)
-    .filter(([, r]) => r >= 1)
-    .map(([dir]) => dir);
-
-  return (
-    <Link
-      to={`/sites/${site.slug}`}
-      className="border rounded-lg p-4 hover:border-primary/50 transition-colors block"
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="font-semibold text-sm leading-tight">{site.name}</h3>
-        {isFavorited && <span className="text-red-500 text-xs shrink-0">♥</span>}
-      </div>
-      <div className="text-xs text-muted-foreground space-y-0.5">
-        {site.countryCode && <p>{site.countryCode}</p>}
-        {site.altitude && <p>{site.altitude}m elevation</p>}
-        {site.flownPilots ? (
-          <p>
-            <FlownPilots count={site.flownPilots} />
-          </p>
-        ) : null}
-        {site.origin && site.origin !== 'pge' && (
-          <p>
-            <UnlistedOrigin origin={site.origin} />
-          </p>
-        )}
-        {activeOrientations.length > 0 && <p>Wind: {activeOrientations.join(', ')}</p>}
-      </div>
+      {activeOrientations.length > 0 && (
+        <div className="text-xs text-muted-foreground">Wind: {activeOrientations.join(', ')}</div>
+      )}
     </Link>
   );
 }

@@ -2,6 +2,19 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
 
+/** A small link back to the page this one came from. */
+export function BackLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="-ml-1 inline-flex items-center gap-0.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground"
+    >
+      <ChevronLeft className="size-4" />
+      {children}
+    </Link>
+  );
+}
+
 /** The top of a site page: a link back, the name, a line of facts and the page's buttons. */
 export function SiteHeader({
   back,
@@ -21,13 +34,7 @@ export function SiteHeader({
   const shown = facts.filter((f) => f != null && f !== false && f !== '');
   return (
     <header className="space-y-2">
-      <Link
-        to={back.to}
-        className="-ml-1 inline-flex items-center gap-0.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" />
-        {back.label}
-      </Link>
+      <BackLink to={back.to}>{back.label}</BackLink>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1.5">
           <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">

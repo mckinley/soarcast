@@ -213,12 +213,13 @@ function localSiteToDetailSite(site: typeof launchSites.$inferSelect): DetailSit
 }
 
 export function meta({ data }: Route.MetaArgs) {
-  if (!data?.site) return [{ title: 'Site Not Found | SoarCast' }];
+  if (!data?.site) return [{ title: 'Site not found | SoarCast' }];
+  const place = [data.site.region, data.site.countryCode].filter(Boolean).join(', ');
   return [
     { title: `${data.site.name} | SoarCast` },
     {
       name: 'description',
-      content: `${data.site.name} - ${data.site.region ? `${data.site.region}, ` : ''}${data.site.countryCode || 'Launch Site'}`,
+      content: `${data.site.name}, a paragliding launch${place ? ` in ${place}` : ''}. Which days are flyable this week and when, with a windgram and the season.`,
     },
   ];
 }

@@ -1,4 +1,4 @@
-import { data, Link, redirect, useActionData, useLoaderData } from 'react-router';
+import { data, redirect, useActionData, useLoaderData } from 'react-router';
 import type { Route } from './+types/_auth.sites.custom.new';
 import { getDb } from '~/app/lib/db.server';
 import { requireAuth } from '~/app/lib/auth.server';
@@ -14,8 +14,7 @@ import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
 import { customSites } from '~/db/schema';
 import { parseCustomSiteForm, type CustomSiteErrors } from '~/lib/custom-sites';
 import { CustomSiteForm } from '@/components/custom-site-form';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { BackLink } from '@/components/site-page';
 
 export function meta() {
   return [{ title: 'Add a private site | SoarCast' }];
@@ -75,15 +74,12 @@ export default function NewCustomSitePage() {
   const actionData = useActionData<typeof action>();
   return (
     <div className="max-w-3xl space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/dashboard">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </Button>
-      <div>
-        <h1 className="text-3xl font-bold">Add a private site</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="space-y-2">
+        <BackLink to="/dashboard">Dashboard</BackLink>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+          Add a private site
+        </h1>
+        <p className="text-muted-foreground">
           Pin a launch that isn&apos;t listed, like a hike-and-fly peak. Only you can see it unless
           you share it. SoarCast rates it and sends alerts for it like any site you follow.
         </p>

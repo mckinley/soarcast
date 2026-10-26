@@ -53,7 +53,7 @@ On Planning, open a flying area in Where to fly. Save this area adds its launche
 
 ## Alerts
 
-Alerts and the morning digest leave out every site in an area with alerts off. Each site also has its own alerts switch. A site sends alerts only when both are on.
+Alerts and the morning email leave out every site in an area with alerts off. Each site also has its own alerts switch. A site sends alerts only when both are on.
 
 ## What areas can't do
 

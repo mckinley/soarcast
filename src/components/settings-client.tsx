@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Link, useSubmit } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,8 @@ import type { Settings, SiteGoal, SiteKind, SiteTerrain } from '@/types';
 import { SiteGoalSelect, SiteKindSelect, SiteTerrainSelect } from '@/components/site-goal-picker';
 import { AreaHeader, SiteAreaSelect, type SettingsArea } from '@/components/area-controls';
 import { DEFAULT_MAX_WIND_KMH, MOUNTAIN_MAX_WIND_KMH } from '@/lib/forecast-engine';
+import { EVENING_ALERT_HOUR } from '@/lib/alert-schedule';
+import { heightText } from '@/components/site-page';
 import { Bell, BellOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -44,6 +46,66 @@ interface SettingsClientProps {
   /** The places sites are grouped by, the one first saved in first */
   areas?: SettingsArea[];
   vapidPublicKey?: string;
+}
+
+/** "6 PM": when the evening alerts go out, in each pilot's own time. */
+const EVENING_TIME = new Date(Date.UTC(2000, 0, 1, EVENING_ALERT_HOUR)).toLocaleTimeString(
+  'en-US',
+  { hour: 'numeric', timeZone: 'UTC' },
+);
+
+/**
+ * One setting: its name with its control on the right, and a line on what it
+ * does. The line runs under both on a phone, under the name on a computer.
+ */
+function SettingRow({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-3.5 first:pt-0 last:pb-0">
+      {htmlFor ? (
+        <Label htmlFor={htmlFor} className="text-[15px] font-medium">
+          {label}
+        </Label>
+      ) : (
+        <p className="text-[15px] font-medium">{label}</p>
+      )}
+      <div className="col-start-2 row-start-1 sm:row-span-2">{children}</div>
+      {hint && <p className="col-span-2 text-sm text-muted-foreground sm:col-span-1">{hint}</p>}
+    </div>
+  );
+}
+
+/** One of a favorite site's choices, its name above it. */
+function SiteField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      {htmlFor ? (
+        <Label htmlFor={htmlFor} className="text-xs font-medium text-muted-foreground">
+          {label}
+        </Label>
+      ) : (
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      )}
+      {children}
+    </div>
+  );
 }
 
 // Sent with digest changes so the digest arrives at the user's local time.
@@ -258,19 +320,21 @@ export function SettingsClient({
     // A site alerts when both its own switch and its area's are on
     const isEnabled = settings.notifications.sitePreferences[site.id] ?? true;
     const alerting = isEnabled && areaAlertsOn;
+    const target = { siteId: site.id, source: site.custom ? 'custom' : 'launch' } as const;
     return (
-      <div key={site.id} className="rounded-lg border p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div key={site.id} className="space-y-4 rounded-xl border bg-background p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {alerting ? (
-              <Bell className="h-5 w-5 text-primary" />
+              <Bell className="size-5 shrink-0 text-primary" />
             ) : (
-              <BellOff className="h-5 w-5 text-muted-foreground" />
+              <BellOff className="size-5 shrink-0 text-muted-foreground" />
             )}
-            <div>
-              <div className="font-medium">{site.name}</div>
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{site.name}</div>
               <div className="text-sm text-muted-foreground">
-                {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)} • {site.elevation}m
+                {site.custom ? 'Private site · ' : ''}
+                {heightText(site.elevation)}
               </div>
             </div>
           </div>
@@ -281,64 +345,45 @@ export function SettingsClient({
             onCheckedChange={(checked) => handleToggleSiteNotifications(site.id, checked)}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-4 sm:pl-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <Label
-              htmlFor={`goal-${site.id}`}
-              className="text-sm text-muted-foreground whitespace-nowrap"
-            >
-              Worth going when:
-            </Label>
-            <SiteGoalSelect
-              id={`goal-${site.id}`}
-              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
-              goal={site.goal}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Label
-              htmlFor={`kind-${site.id}`}
-              className="text-sm text-muted-foreground whitespace-nowrap"
-            >
-              What it gives:
-            </Label>
+        <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <SiteField label="Worth going when" htmlFor={`goal-${site.id}`}>
+            <SiteGoalSelect id={`goal-${site.id}`} target={target} goal={site.goal} />
+          </SiteField>
+          <SiteField label="What it gives" htmlFor={`kind-${site.id}`}>
             <SiteKindSelect
               id={`kind-${site.id}`}
-              target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+              target={target}
               kind={site.kind}
               listedKind={site.listedKind}
             />
-          </div>
+          </SiteField>
           {/* The terrain only changes the rating with wider margins on */}
           {settings.mountainMargins && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Label
-                htmlFor={`terrain-${site.id}`}
-                className="text-sm text-muted-foreground whitespace-nowrap"
-              >
-                Terrain:
-              </Label>
+            <SiteField label="Terrain" htmlFor={`terrain-${site.id}`}>
               <SiteTerrainSelect
                 id={`terrain-${site.id}`}
-                target={{ siteId: site.id, source: site.custom ? 'custom' : 'launch' }}
+                target={target}
                 terrain={site.terrain}
                 measuredTerrain={site.measuredTerrain}
               />
-            </div>
+            </SiteField>
           )}
           {site.custom ? (
-            <div className="text-sm text-muted-foreground">
-              Wind limit {site.defaultMaxWind} km/h •{' '}
-              <Link to={`/sites/custom/${site.id}/edit`} className="underline">
-                Edit site
-              </Link>
-            </div>
+            <SiteField label="Wind limit">
+              <p className="flex h-8 items-center text-sm">
+                {site.defaultMaxWind} km/h ·{' '}
+                <Link
+                  to={`/sites/custom/${site.id}/edit`}
+                  className="ml-1 font-medium text-primary hover:underline"
+                >
+                  Edit site
+                </Link>
+              </p>
+            </SiteField>
           ) : (
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground whitespace-nowrap">
-                Wind limit (km/h):
-              </Label>
+            <SiteField label="Wind limit (km/h)" htmlFor={`wind-${site.id}`}>
               <Input
+                id={`wind-${site.id}`}
                 type="number"
                 min="10"
                 max="100"
@@ -355,25 +400,19 @@ export function SettingsClient({
                 }
                 onBlur={() => commitCustomWind(site.id)}
                 onKeyDown={(e) => e.key === 'Enter' && commitCustomWind(site.id)}
-                className="w-[80px] h-8"
+                className="h-8 w-24"
               />
-            </div>
+            </SiteField>
           )}
           {areas.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Label
-                htmlFor={`area-${site.id}`}
-                className="text-sm text-muted-foreground whitespace-nowrap"
-              >
-                Area:
-              </Label>
+            <SiteField label="Area" htmlFor={`area-${site.id}`}>
               <SiteAreaSelect
                 id={`area-${site.id}`}
                 siteKey={site.key}
                 areaId={site.areaId}
                 areas={areas}
               />
-            </div>
+            </SiteField>
           )}
         </div>
       </div>
@@ -381,141 +420,85 @@ export function SettingsClient({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="mt-2 text-muted-foreground">
-          When and how SoarCast tells you a site is flyable.
+    <div className="max-w-3xl space-y-6">
+      <header>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">Settings</h1>
+        <p className="mt-1.5 text-muted-foreground">
+          When SoarCast alerts you, and how it rates each favorite site.
         </p>
-      </div>
+      </header>
 
-      {/* Push Notifications */}
-      <Card>
+      {/* Alerts: push on this device, the morning email, the hour and how far ahead */}
+      <Card id="alerts" className="scroll-mt-20">
         <CardHeader>
-          <CardTitle>Push Notifications</CardTitle>
+          <CardTitle>Alerts</CardTitle>
           <CardDescription>
-            Receive browser notifications when good flying conditions are forecasted.
+            A push or an email when a favorite site has a go day coming. A go means flyable, with
+            the flight you want from that site. Set what each site is worth going for under
+            Favorites.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           {pushError && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="mb-3">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{pushError}</AlertDescription>
             </Alert>
           )}
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Push Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                {pushEnabled
-                  ? 'On for this browser. Alerts come at your digest time and at 6 PM, your time.'
-                  : 'Get a notification on this device when a favorite site looks flyable.'}
-              </p>
-            </div>
-            {pushEnabled ? (
-              <Button
-                onClick={handleDisablePushNotifications}
-                disabled={pushLoading}
-                variant="outline"
-              >
-                {pushLoading ? 'Disabling...' : 'Disable'}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleEnablePushNotifications}
-                disabled={pushLoading || !swRegistration}
-              >
-                {pushLoading ? 'Enabling...' : 'Enable'}
-              </Button>
-            )}
-          </div>
-
-          {pushEnabled && (
-            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-              <p>
-                ✓ Push notifications are on. You&apos;ll get an alert when a day is a go at one of
-                your sites. Each site&apos;s goal is set below.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Global Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-          <CardDescription>How far ahead to look for days worth an alert.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-sm text-muted-foreground">
-            Alerts come for days that are a go at a site. A go means flyable, with the flight you
-            want from it. Set what each site is worth going for under Favorites below.
-          </p>
-
-          {/* Days Ahead Window */}
-          <div className="space-y-2">
-            <Label htmlFor="daysAhead">
-              Notification Window
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                (1-7 days, default: 2)
-              </span>
-            </Label>
-            <Input
-              id="daysAhead"
-              type="number"
-              min="1"
-              max="7"
-              inputMode="numeric"
-              value={daysAheadInput}
-              onChange={(e) => setDaysAheadInput(e.target.value)}
-              onBlur={commitDaysAhead}
-              onKeyDown={(e) => e.key === 'Enter' && commitDaysAhead()}
-              className="max-w-xs"
-            />
-            <p className="text-sm text-muted-foreground">
-              How many days ahead to check. For example, 2 means today and tomorrow.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Email Morning Digest */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Morning Digest</CardTitle>
-          <CardDescription>An email each morning, at the hour you choose.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="email-digest">Enable Email Digest</Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                It lists which favorite sites are flyable today, and when.
-              </p>
-            </div>
-            <Switch
-              id="email-digest"
-              checked={settings.emailDigest.enabled}
-              onCheckedChange={(checked) => {
-                setSettings({
-                  ...settings,
-                  emailDigest: { ...settings.emailDigest, enabled: checked },
-                });
-                save('digest', {
-                  intent: 'toggleEmailDigest',
-                  enabled: String(checked),
-                  timeZone: browserTimeZone(),
-                });
-              }}
-            />
-          </div>
-          {settings.emailDigest.enabled && (
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="digest-time">Delivery Time</Label>
+          <div className="divide-y">
+            <SettingRow
+              label="Push notifications"
+              hint={
+                pushEnabled
+                  ? 'On for this browser.'
+                  : 'A notification on this device when a favorite site has a go day.'
+              }
+            >
+              {pushEnabled ? (
+                <Button
+                  onClick={handleDisablePushNotifications}
+                  disabled={pushLoading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {pushLoading ? 'Turning off' : 'Turn off'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleEnablePushNotifications}
+                  disabled={pushLoading || !swRegistration}
+                  size="sm"
+                >
+                  {pushLoading ? 'Turning on' : 'Turn on'}
+                </Button>
+              )}
+            </SettingRow>
+            <SettingRow
+              label="Morning email"
+              htmlFor="email-digest"
+              hint="Lists which favorite sites are flyable today, and when."
+            >
+              <Switch
+                id="email-digest"
+                checked={settings.emailDigest.enabled}
+                onCheckedChange={(checked) => {
+                  setSettings({
+                    ...settings,
+                    emailDigest: { ...settings.emailDigest, enabled: checked },
+                  });
+                  save('digest', {
+                    intent: 'toggleEmailDigest',
+                    enabled: String(checked),
+                    timeZone: browserTimeZone(),
+                  });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label="Morning alerts at"
+              htmlFor="digest-time"
+              hint={`Your local time. The morning push and email go out at the start of that hour. Evening alerts come at ${EVENING_TIME}.`}
+            >
               <Input
                 id="digest-time"
                 type="time"
@@ -533,13 +516,28 @@ export function SettingsClient({
                     timeZone: browserTimeZone(),
                   });
                 }}
-                className="max-w-[140px]"
+                className="h-9 w-36"
               />
-              <p className="text-sm text-muted-foreground">
-                Local time. The email goes out at the start of that hour.
-              </p>
-            </div>
-          )}
+            </SettingRow>
+            <SettingRow
+              label="Days ahead"
+              htmlFor="daysAhead"
+              hint="How many days to check, from 1 to 7. For example, 2 means today and tomorrow."
+            >
+              <Input
+                id="daysAhead"
+                type="number"
+                min="1"
+                max="7"
+                inputMode="numeric"
+                value={daysAheadInput}
+                onChange={(e) => setDaysAheadInput(e.target.value)}
+                onBlur={commitDaysAhead}
+                onKeyDown={(e) => e.key === 'Enter' && commitDaysAhead()}
+                className="h-9 w-20"
+              />
+            </SettingRow>
+          </div>
         </CardContent>
       </Card>
 
@@ -554,15 +552,18 @@ export function SettingsClient({
             even with no showers near. Ridge soaring sites keep the usual limit.{' '}
             <Link
               to="/guide/how-a-day-is-rated#big-mountains"
-              className="underline underline-offset-2"
+              className="font-medium text-primary hover:underline"
             >
               How it works
             </Link>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="mountain-margins-switch">Wider margins in big mountains</Label>
+        <CardContent>
+          <SettingRow
+            label="Wider margins in big mountains"
+            htmlFor="mountain-margins-switch"
+            hint="When it is off, every site gets the usual rules. These margins hold back some days that most pilots fly."
+          >
             <Switch
               id="mountain-margins-switch"
               checked={settings.mountainMargins}
@@ -574,11 +575,7 @@ export function SettingsClient({
                 });
               }}
             />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            When it is off, every site gets the usual rules. These margins hold back some days
-            that most pilots fly.
-          </p>
+          </SettingRow>
         </CardContent>
       </Card>
 
@@ -608,10 +605,10 @@ export function SettingsClient({
                     {!areaAlertsOn && (
                       <p className="text-sm text-muted-foreground">
                         Alerts are off for this area. Its sites send no alerts and are left out of
-                        the morning digest.
+                        the morning email.
                       </p>
                     )}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {areaSites.map((site) => renderSite(site, areaAlertsOn))}
                     </div>
                   </section>
@@ -629,14 +626,13 @@ export function SettingsClient({
           <CardDescription>
             Ideas still being tested, shown at the foot of site pages. They never change a
             day&apos;s rating.{' '}
-            <Link to="/guide/experiments" className="underline underline-offset-2">
+            <Link to="/guide/experiments" className="font-medium text-primary hover:underline">
               What each one is and how it tested
             </Link>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="experiments">Show experiments</Label>
+          <SettingRow label="Show experiments" htmlFor="experiments">
             <Switch
               id="experiments"
               checked={settings.experiments}
@@ -645,24 +641,7 @@ export function SettingsClient({
                 save('experiments', { intent: 'toggleExperiments', enabled: String(checked) });
               }}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Card */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <Bell className="mt-0.5 h-5 w-5 text-muted-foreground" />
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">How Notifications Work</p>
-              <p>
-                SoarCast checks your sites each morning at your digest time and again at 6 PM, in
-                your local time. You&apos;ll get a push notification for each site with a go day in
-                the notification window.
-              </p>
-            </div>
-          </div>
+          </SettingRow>
         </CardContent>
       </Card>
     </div>

@@ -1,4 +1,4 @@
-import { data, Form, Link, redirect, useActionData, useLoaderData } from 'react-router';
+import { data, Form, redirect, useActionData, useLoaderData } from 'react-router';
 import { and, eq } from 'drizzle-orm';
 import type { Route } from './+types/_auth.sites.custom.$id.edit';
 import { getDb } from '~/app/lib/db.server';
@@ -24,7 +24,7 @@ import {
 } from '~/lib/custom-sites';
 import { CustomSiteForm } from '@/components/custom-site-form';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { BackLink } from '@/components/site-page';
 
 export function meta({ data }: Route.MetaArgs) {
   return [{ title: data ? `Edit ${data.initial.name} | SoarCast` : 'Site Not Found | SoarCast' }];
@@ -140,13 +140,12 @@ export default function EditCustomSitePage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link to={siteHref}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to {initial.name}
-        </Link>
-      </Button>
-      <h1 className="text-3xl font-bold">Edit {initial.name}</h1>
+      <div className="space-y-2">
+        <BackLink to={siteHref}>{initial.name}</BackLink>
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+          Edit {initial.name}
+        </h1>
+      </div>
       <CustomSiteForm
         initial={initial}
         measuredTerrain={measuredTerrain}

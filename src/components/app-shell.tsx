@@ -116,8 +116,11 @@ function initials(user: { name?: string | null; email?: string | null }): string
 function UserMenu() {
   const user = useUser();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   if (!user) {
+    // The sign-in page is where the button would go
+    if (pathname === '/login') return null;
     return (
       <Button onClick={() => navigate('/login')} size="sm">
         Sign in

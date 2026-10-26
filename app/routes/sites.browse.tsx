@@ -24,7 +24,7 @@ const DEFAULT_RADIUS_KM = 1300;
 
 export function meta() {
   return [
-    { title: 'Browse Launch Sites | SoarCast' },
+    { title: 'Browse sites | SoarCast' },
     {
       name: 'description',
       content: 'Discover paragliding and hang gliding launch sites worldwide.',

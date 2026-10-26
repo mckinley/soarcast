@@ -39,9 +39,10 @@ function FitPoints({ points }: { points: PlanningMapPoint[] }) {
   const signature = points.map((p) => p.key).join(',');
   useEffect(() => {
     if (points.length === 0) return;
+    // Without animation, so the map opens on the points instead of flying to them
     map.fitBounds(
       points.map((p) => [p.latitude, p.longitude] as [number, number]),
-      { padding: [24, 24], maxZoom: 8 },
+      { padding: [24, 24], maxZoom: 8, animate: false },
     );
   }, [signature, map]);
   return null;
