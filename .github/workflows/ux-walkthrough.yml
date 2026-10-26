@@ -20,7 +20,8 @@ concurrency:
 
 jobs:
   walkthrough:
-    runs-on: ubuntu-latest
+    # Playwright's install-deps doesn't support ubuntu-latest (26.04) at this version
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
