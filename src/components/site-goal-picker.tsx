@@ -138,13 +138,19 @@ export function SiteTerrainSelect({
 /** The goal line on a site page: what makes a day a go here, and a way to change it. */
 export function SiteGoalLine({ target, goal }: { target?: GoalTarget; goal: SiteGoal }) {
   return (
-    <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-3">
-      <span className="font-medium">Worth going when</span>
-      {target ? <SiteGoalSelect target={target} goal={goal} /> : <span>{GOAL_LABEL[goal]}</span>}
-      <span className="text-muted-foreground">
+    <div className="space-y-1 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="font-medium">Worth going when</span>
+        {target ? (
+          <SiteGoalSelect target={target} goal={goal} />
+        ) : (
+          <span className="font-semibold">{GOAL_LABEL[goal]}</span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
         {GOAL_HINT[goal]}
         {!target && ' Add the site to Favorites to change it.'}
-      </span>
+      </p>
     </div>
   );
 }

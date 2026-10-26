@@ -12,8 +12,8 @@ covers:
   - src/lib/verdict-display.ts
   - src/lib/weather-profile.ts
   - src/components/site-goal-picker.tsx
-  - src/components/windgram/flyability-summary.tsx
-  - src/components/xc-snapshot-panel.tsx
+  - src/components/site-forecast.tsx
+  - src/lib/day-numbers.ts
   - src/components/settings-client.tsx
   - app/routes/api.notifications.check.tsx
 ---
@@ -29,7 +29,7 @@ SoarCast rates a day in two steps. First it checks each hour to see if you can l
 | Marginal    | No {{windowHours}} hours in a row pass every check. But at least one hour does, or {{windowHours}} hours in a row have nothing that rules them out. Fly with care.                       |
 | Not flyable | No part of the day is flyable.                                                                                                                                                           |
 
-A day shows its word with the flight and the time, such as "Go: thermals 12:00-16:00". Below that, it says what limits the rest of the day.
+On a site page, a day shows its word with the flight and the time, such as Go and "Thermals 12:00-16:00". Below that, a list says what limits the rest of the day. Alerts write it as "Go: thermals 12:00-16:00".
 
 Push alerts only go out for days that are a Go. You can turn alerts off for one site, or for a whole [area](/guide/favorites-and-areas).
 
@@ -177,6 +177,22 @@ Two more risks are shown with the day. Neither one makes a day Not flyable.
 
 - **Overdevelopment** is the risk that thermal clouds grow into showers or storms. It is higher when the air holds a lot of storm energy, when cloud base is low and in the afternoon. A day with a high risk can't be an XC day.
 - **Wind shear** is wind speed changing fast with height. It can make the air rough. SoarCast rates it from None to High.
+
+## The day's numbers
+
+Next to the day's words, a site page shows the numbers behind them.
+
+| Number          | What it shows                                                                   |
+| --------------- | ------------------------------------------------------------------------------- |
+| Wind on launch  | The average wind at launch height, where it comes from, and the strongest gust. |
+| Thermals        | How fast the strongest thermals climb, in m/s.                                  |
+| Top of lift     | How high the best thermals reach, above sea level and above launch.             |
+| Cloud base      | Where cumulus clouds form, above sea level.                                     |
+| Wind at 1,500 m | The wind about 1,500 m above sea level, where many flights go.                  |
+| Chance of rain  | The highest chance of rain in any hour.                                         |
+| Freezing level  | The height where the air drops below 0 °C.                                      |
+
+All of them cover the launch window. On a day with no window, they cover the daylight hours. Wind, cloud base and the freezing level are averages. Thermals, the top of lift, gusts and rain are the highest in those hours.
 
 ## What the rating can't know
 

@@ -161,7 +161,7 @@ SoarCast checks Syncing Pilots again every {{flownRefreshHours}} hours. Flown da
 
 ### Up now
 
-When tracked pilots are flying near a launch, its site page says so at the top. The "Up now" card counts the pilots in the air within {{upNowAirKm}} km right now and says how high the highest one is above launch. It also counts pilots standing on launch, and how many launched there today. When nobody is up but someone flew today, the card reads "Flown today" and says when the last pilot landed.
+When tracked pilots are flying near a launch, its site page says so under the forecast. The "Up now" card counts the pilots in the air within {{upNowAirKm}} km right now and says how high the highest one is above launch. It also counts pilots standing on launch, and how many launched there today. When nobody is up but someone flew today, the card reads "Flown today" and says when the last pilot landed.
 
 SoarCast asks Syncing Pilots each time the page opens. It gets counts only, as with flown days. A pilot counts as in the air while the tracker sent a position in the last half hour or so, high enough above the ground. Pilots in the air near the launch may have taken off somewhere else.
 
@@ -203,15 +203,15 @@ The measure is a rough guide. A launch on the edge of a big range can come out a
 
 ### Finding a site
 
-Browse Sites finds a site by its name or by another name pilots use for it. Accents, dashes and spaces don't matter, so "penon" finds "El Peñón". A search for a town also lists the sites near it. Town names come from [GeoNames](https://www.geonames.org), through Open-Meteo's place search.
+Browse sites finds a site by its name or by another name pilots use for it. Accents, dashes and spaces don't matter, so "penon" finds "El Peñón". A search for a town also lists the sites near it. Town names come from [GeoNames](https://www.geonames.org), through Open-Meteo's place search.
 
-The sites most pilots fly come first. Browse Sites shows how many pilots [Syncing Pilots](https://syncingpilots.com) tracked flying from each site in the last year. Like [flown days](#flown-days), this only counts pilots who share a live tracker.
+The sites most pilots fly come first. Browse sites shows how many pilots [Syncing Pilots](https://syncingpilots.com) tracked flying from each site in the last year. Like [flown days](#flown-days), this only counts pilots who share a live tracker.
 
 Pilots write these pages, so details can be missing, old or wrong. Check the site's rules and ask the local club before flying. To fix a site, edit it on Paragliding Earth. SoarCast picks up the change within a day, or within {{siteRefreshDays}} days for a site in Favorites.
 
 ### Launches found from flights
 
-Some busy launches are missing from Paragliding Earth. SoarCast finds them from the flights [Syncing Pilots](https://syncingpilots.com) tracked. A spot where at least 5 different pilots took off in the last two years becomes a launch, unless a listed site already covers it. Browse Sites marks these launches "Found from flights". SoarCast looks for new ones every week.
+Some busy launches are missing from Paragliding Earth. SoarCast finds them from the flights [Syncing Pilots](https://syncingpilots.com) tracked. A spot where at least 5 different pilots took off in the last two years becomes a launch, unless a listed site already covers it. Browse sites marks these launches "Found from flights". SoarCast looks for new ones every week.
 
 - The name comes from [OpenStreetMap](https://www.openstreetmap.org). It is the peak or hill the launch is on, or else a listed site or town nearby.
 - The wind directions are the directions pilots took off in. Pilots take off into the wind, so this is a good guess. It can miss a direction that works but is rarely flown.
@@ -219,7 +219,7 @@ Some busy launches are missing from Paragliding Earth. SoarCast finds them from 
 
 ### Takeoffs from OpenStreetMap
 
-[OpenStreetMap](https://www.openstreetmap.org) is a world map anyone can edit. Pilots and flying clubs map takeoffs there too. A mapped takeoff becomes a launch when no listed site covers it and it has a name and the directions it faces. Browse Sites marks these launches "From OpenStreetMap". SoarCast checks OpenStreetMap every week.
+[OpenStreetMap](https://www.openstreetmap.org) is a world map anyone can edit. Pilots and flying clubs map takeoffs there too. A mapped takeoff becomes a launch when no listed site covers it and it has a name and the directions it faces. Browse sites marks these launches "From OpenStreetMap". SoarCast checks OpenStreetMap every week.
 
 - The wind directions are the ones mapped in OpenStreetMap. Check them with local pilots.
 - A closed or private takeoff, or one only for hang gliders, is left out. A takeoff with no directions is left out too, since SoarCast can't rate it.
@@ -227,7 +227,7 @@ Some busy launches are missing from Paragliding Earth. SoarCast finds them from 
 
 ### Launches pilots shared
 
-A pilot who adds a [private site](#private-sites) can share it with other pilots. Anyone can then find it in Browse Sites and add it to Favorites. Browse Sites marks these launches "Shared by a pilot".
+A pilot who adds a [private site](#private-sites) can share it with other pilots. Anyone can then find it in Browse sites and add it to Favorites. Browse sites marks these launches "Shared by a pilot".
 
 - Other pilots see the launch's name, place, height, wind directions and what it gives. The pilot's notes, wind limit and goal stay private.
 - The wind directions are the ones the pilot set. Check them with local pilots.

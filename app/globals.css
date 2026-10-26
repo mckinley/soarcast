@@ -8,8 +8,21 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-go: var(--go);
+  --color-go-foreground: var(--go-foreground);
+  --color-flyable: var(--flyable);
+  --color-flyable-foreground: var(--flyable-foreground);
+  --color-flyable-border: var(--flyable-border);
+  --color-marginal: var(--marginal);
+  --color-marginal-foreground: var(--marginal-foreground);
+  --color-marginal-border: var(--marginal-border);
+  --color-nofly: var(--nofly);
+  --color-nofly-foreground: var(--nofly-foreground);
+  --color-nofly-border: var(--nofly-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,73 +61,102 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* SoarCast's look: a cool off-white ground, white cards, deep ink and one
+   sky-blue accent for what can be tapped. Strong color is kept for the day
+   words below. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+  --background: #f4f6f9;
+  --foreground: #0e1a2b;
+  --card: #ffffff;
+  --card-foreground: #0e1a2b;
+  --popover: #ffffff;
+  --popover-foreground: #0e1a2b;
+  --primary: #1f63d6;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f6;
+  --secondary-foreground: #0e1a2b;
+  --muted: #eef2f6;
+  --muted-foreground: #586579;
+  --accent: #e8f0fc;
+  --accent-foreground: #0e1a2b;
+  --destructive: #dc2626;
+  --border: #e2e7ee;
+  --input: #d5dce6;
+  --ring: #1f63d6;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e1a2b;
+  --sidebar-primary: #1f63d6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f0fc;
+  --sidebar-accent-foreground: #0e1a2b;
+  --sidebar-border: #e2e7ee;
+  --sidebar-ring: #1f63d6;
+
+  /* The day words: Go solid, Flyable outlined, Marginal soft amber, Not flyable
+     flat. They differ in lightness, not only in hue. */
+  --go: #15803d;
+  --go-foreground: #ffffff;
+  --flyable: #ecfdf3;
+  --flyable-foreground: #14532d;
+  --flyable-border: #6ccb93;
+  --marginal: #fef3c7;
+  --marginal-foreground: #713f06;
+  --marginal-border: #edb840;
+  --nofly: #eef2f6;
+  --nofly-foreground: #556275;
+  --nofly-border: #c3ccd8;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #0b1320;
+  --foreground: #e8eef6;
+  --card: #131d2e;
+  --card-foreground: #e8eef6;
+  --popover: #131d2e;
+  --popover-foreground: #e8eef6;
+  --primary: #6fa3ff;
+  --primary-foreground: #0b1320;
+  --secondary: #1b2740;
+  --secondary-foreground: #e8eef6;
+  --muted: #1b2740;
+  --muted-foreground: #9aa8bc;
+  --accent: #1c2b47;
+  --accent-foreground: #e8eef6;
+  --destructive: #f87171;
+  --border: rgb(255 255 255 / 9%);
+  --input: rgb(255 255 255 / 15%);
+  --ring: #6fa3ff;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #131d2e;
+  --sidebar-foreground: #e8eef6;
+  --sidebar-primary: #6fa3ff;
+  --sidebar-primary-foreground: #0b1320;
+  --sidebar-accent: #1c2b47;
+  --sidebar-accent-foreground: #e8eef6;
+  --sidebar-border: rgb(255 255 255 / 9%);
+  --sidebar-ring: #6fa3ff;
+
+  --go: #15803d;
+  --go-foreground: #ffffff;
+  --flyable: #10301f;
+  --flyable-foreground: #9ce8b8;
+  --flyable-border: #2f7a4d;
+  --marginal: #3a2a0a;
+  --marginal-foreground: #fcd78a;
+  --marginal-border: #a07818;
+  --nofly: #1b2740;
+  --nofly-foreground: #9aa8bc;
+  --nofly-border: #3a4a66;
 }
 
 @layer base {
@@ -123,6 +165,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
   }
 }
 

@@ -1,11 +1,11 @@
 {
   "name": "SoarCast",
   "short_name": "SoarCast",
-  "description": "Paragliding XC forecast monitor for tracking flying conditions",
+  "description": "Which days you can fly at each launch, and when",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "background_color": "#f4f6f9",
+  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -31,17 +31,17 @@
     {
       "name": "Dashboard",
       "url": "/dashboard",
-      "description": "View all flying sites"
+      "description": "The week at saved sites"
     },
     {
-      "name": "Browse Sites",
+      "name": "Browse sites",
       "url": "/sites/browse",
-      "description": "Explore launch sites"
+      "description": "Find launch sites"
     },
     {
-      "name": "Notifications",
+      "name": "Settings",
       "url": "/settings",
-      "description": "Configure notification preferences"
+      "description": "Alerts and saved sites"
     }
   ]
 }

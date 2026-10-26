@@ -3,6 +3,7 @@
 // names relative to the site's own today.
 
 import type { DayScore, FlightType } from '@/types';
+import { sledReasonText } from '@/lib/forecast-engine';
 
 /**
  * go: flyable and gives the flight the pilot's goal asks for. flyable: safe
@@ -28,27 +29,34 @@ export const STATUS_WORD: Record<DayStatus, string> = {
   no: 'Not flyable',
 };
 
-/** Solid badge for a day. */
+// One look for each day word on every screen (colors in app/globals.css): Go
+// solid green, Flyable pale green with an outline, Marginal soft amber with an
+// outline, Not flyable flat grey. They differ in lightness, not only in hue.
+
+/** Badge for a day. */
 export const STATUS_BADGE: Record<DayStatus, string> = {
-  go: 'bg-green-600 text-white',
-  flyable: 'bg-green-100 text-green-900 dark:bg-green-900/60 dark:text-green-100',
-  marginal: 'bg-amber-400 text-gray-900',
-  no: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  go: 'bg-go text-go-foreground',
+  flyable: 'bg-flyable text-flyable-foreground ring-1 ring-inset ring-flyable-border',
+  marginal: 'bg-marginal text-marginal-foreground ring-1 ring-inset ring-marginal-border',
+  no: 'bg-nofly text-nofly-foreground',
 };
 
-/** Soft cell background for a day, for grids. */
+/** A day's cell in a grid or a day picker. */
 export const STATUS_CELL: Record<DayStatus, string> = {
-  go: 'bg-green-500/30 text-green-950 dark:text-green-100 hover:bg-green-500/40',
-  flyable: 'bg-green-500/10 text-green-800 dark:text-green-300 hover:bg-green-500/20',
-  marginal: 'bg-amber-400/20 text-amber-900 dark:text-amber-300 hover:bg-amber-400/30',
-  no: 'bg-muted/60 text-muted-foreground hover:bg-muted',
+  go: 'bg-go text-go-foreground hover:brightness-110',
+  flyable:
+    'bg-flyable text-flyable-foreground ring-[1.5px] ring-inset ring-flyable-border hover:brightness-[0.97] dark:hover:brightness-125',
+  marginal:
+    'bg-marginal text-marginal-foreground ring-[1.5px] ring-inset ring-marginal-border hover:brightness-[0.97] dark:hover:brightness-125',
+  no: 'bg-nofly text-nofly-foreground hover:brightness-[0.97] dark:hover:brightness-125',
 };
 
+/** A small swatch or dot for a day. */
 export const STATUS_DOT: Record<DayStatus, string> = {
-  go: 'bg-green-600',
-  flyable: 'bg-green-300 dark:bg-green-800',
-  marginal: 'bg-amber-400',
-  no: 'bg-slate-300 dark:bg-slate-600',
+  go: 'bg-go',
+  flyable: 'bg-flyable-border',
+  marginal: 'bg-marginal-border',
+  no: 'bg-nofly-border',
 };
 
 export const FLIGHT_WORD: Record<FlightType, string> = {
@@ -85,6 +93,56 @@ export function dayHeadline(day: HeadlineDay): string {
   if (status === 'marginal') return `Marginal ${day.flyableWindow ?? ''}`.trim();
   const flight = day.flight ? `${FLIGHT_PHRASE[day.flight]} ` : '';
   return `${STATUS_WORD[status]}: ${flight}${flightTime(day) ?? ''}`.trim();
+}
+
+/**
+ * What goes beside the day's word: "Thermals 12:00-16:00" on a flyable day,
+ * "16:00-19:00, fly with care" on a marginal one, what stops it otherwise.
+ */
+export function dayTitle(day: DayScore): string {
+  const status = dayStatus(day);
+  if (status === 'no') return shortReason(day) ?? 'No flyable hours';
+  if (status === 'marginal')
+    return `${day.flyableWindow ?? ''}, fly with care`.replace(/^, f/, 'F');
+  const flight = day.flight ? `${FLIGHT_WORD[day.flight]} ` : '';
+  return `${flight}${flightTime(day) ?? ''}`.trim();
+}
+
+/**
+ * The day in a sentence or two, after its word and title: when it is safe to
+ * launch, and how the flight goes. Null on a day that isn't flyable, whose
+ * reasons say it all.
+ */
+export function daySentence(day: DayScore): string | null {
+  const status = dayStatus(day);
+  if (status === 'no') return null;
+  const parts: string[] = [];
+  if (status !== 'marginal' && day.flyableWindow && flightTime(day) !== day.flyableWindow) {
+    parts.push(`Safe to launch ${day.flyableWindow}.`);
+  }
+  // The title of a marginal day gives its launch window, not the flight's hours
+  const when = status === 'marginal' && day.flightWindow ? ` ${day.flightWindow}` : '';
+  const climb = day.wStar ? ` climb about ${day.wStar.toFixed(1)} m/s` : '';
+  const height =
+    day.topOfLiftAboveLaunch && day.topOfLiftAboveLaunch > 0
+      ? ` to ${day.topOfLiftAboveLaunch.toLocaleString('en-US')} m above launch`
+      : '';
+  switch (day.flight) {
+    case 'xc':
+    case 'thermal':
+      if (day.flight === 'xc') parts.push('An XC day.');
+      if (climb || height) parts.push(`Thermals${when}${climb}${height}.`);
+      break;
+    case 'ridge':
+      parts.push(`Ridge soaring${when} in wind onto the launch.`);
+      break;
+    case 'sled': {
+      const why = day.sled && sledReasonText(day.sled, (m) => `${m.toLocaleString('en-US')} m`);
+      if (why) parts.push(`A sled ride: ${why}.`);
+      break;
+    }
+  }
+  return parts.length > 0 ? parts.join(' ') : null;
 }
 
 /** The word for a small cell: the flight on a flyable day, else the status. */
@@ -143,6 +201,11 @@ export function dayName(date: string, today: string): string {
   );
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
+  return weekdayShort(date);
+}
+
+/** "Wed" for a YYYY-MM-DD date. */
+export function weekdayShort(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
     weekday: 'short',
     timeZone: 'UTC',
@@ -153,6 +216,22 @@ export function dayName(date: string, today: string): string {
 export function shortDate(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
     month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** "Today", "Tomorrow" or "Fri Oct 30", for `date` relative to the site's `today`. */
+export function dayLabel(date: string, today: string): string {
+  const name = dayName(date, today);
+  return name === 'Today' || name === 'Tomorrow' ? name : `${name} ${shortDate(date)}`;
+}
+
+/** "Friday, October 30" for a YYYY-MM-DD date. */
+export function longDate(date: string): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
     day: 'numeric',
     timeZone: 'UTC',
   });

@@ -42,8 +42,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#3b82f6" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#131d2e" media="(prefers-color-scheme: dark)" />
         <script dangerouslySetInnerHTML={{ __html: 'var __name=(fn)=>fn' }} />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.svg" />
@@ -54,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased">
         {data?.staging && (
-          <div className="pointer-events-none fixed bottom-2 left-2 z-50 rounded-md bg-amber-400 px-2 py-1 text-xs font-medium text-black shadow">
+          <div className="pointer-events-none fixed bottom-20 left-2 z-50 rounded-md md:bottom-2 bg-amber-400 px-2 py-1 text-xs font-medium text-black shadow">
             Staging · fake data
           </div>
         )}

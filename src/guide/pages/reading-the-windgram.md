@@ -8,11 +8,12 @@ covers:
   - src/components/windgram/windgram-legend.tsx
   - src/components/windgram/lapse-rate-utils.ts
   - src/components/windgram/wind-barb-utils.ts
-  - src/components/windgram/windgram-interactive.tsx
-  - src/components/windgram-section.tsx
+  - src/components/site-forecast.tsx
 ---
 
-Each site page has a windgram. It shows the air above the site for one day, from the ground up, hour by hour. Pick a day with the buttons above it. On a phone, you can also swipe to change days.
+Each site page has a windgram. It shows the air above the site for one day, from the ground up, hour by hour. It shows the day picked in the row of days at the top of the page. On a phone, you can also swipe the chart to change days.
+
+The full key is under "All colors and symbols", below the chart.
 
 Hover over the chart, or tap it, to see the exact numbers at any hour and height.
 

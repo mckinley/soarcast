@@ -77,7 +77,7 @@ export function TypicalWeekLine({
         ? 'a worse week than usual'
         : 'about a usual week';
   return (
-    <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+    <p className="flex items-start gap-1.5 text-xs text-muted-foreground md:max-w-sm">
       <CalendarRange className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>
         This week: {weekGoDays === 1 ? '1 go day' : `${weekGoDays} go days`}. A typical week here at

@@ -14,7 +14,7 @@ SoarCast groups saved sites into areas by where they are. An area is a place you
 
 ## Saving a site
 
-There are two ways to save a site. Add a listed site to Favorites from its page or from Browse Sites. Or add a private site for a launch that isn't listed. Both kinds go into areas the same way.
+There are two ways to save a site. Add a listed site to Favorites from its page or from Browse sites. Or add a private site for a launch that isn't listed. Both kinds go into areas the same way.
 
 ## How a site gets its area
 
@@ -35,7 +35,11 @@ A site stays in its area until you move it. An area with no sites left goes away
 
 ## The dashboard
 
-The dashboard shows a button for each area at the top. Tap one to see its sites. When all your sites are in one area, there is just that one button. To split them, move a site to a new area in Settings.
+The dashboard is called This week. It shows a button for each area at the top. Tap one to see its sites. When all your sites are in one area, there is just that one button. To split them, move a site to a new area in Settings.
+
+Under the buttons, Best days ahead picks up to three Go days in the area this week. Each one names the best site that day, its flight and the hours. When the week has no Go day, the heading reads "No go days this week" and the best flyable days show instead.
+
+Below that, each site has a row with one colored box a day. A box gives the flight and its hours, or what stops the day. A bell marks a day an alert goes out for. A trophy marks a day with a comp on at the site. Tap a box to open the site.
 
 All areas shows one row per area. Each day in a row shows the area's best site that day. So an area is a Go on any day one of its sites is.
 

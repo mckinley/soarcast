@@ -18,17 +18,18 @@ import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
 import { keepsMountainMargins } from '~/app/lib/mountain-margins.server';
 import { MountainMarginsNote } from '@/components/mountain-margins-note';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
-import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
+import { SiteForecast, ForecastUnavailable } from '@/components/site-forecast';
+import { FactRow, SiteHeader, SiteSection, heightText } from '@/components/site-page';
+import { LiveNow } from '@/components/live-now';
+import { ForecastTrackRecord } from '@/components/forecast-track-record';
+import { countryName } from '~/lib/comps';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { SiteNotes } from '@/components/site-notes';
 import { SiteSourceCredit } from '@/components/data-credits';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
-import { OrientationBadges } from '@/components/orientation-badges';
-import { WindDirectionBadges } from '@/components/wind-direction-badges';
-import { ElevationDisplay } from '@/components/elevation-display';
 import {
   searchSites,
   getSiteById,
@@ -57,9 +58,7 @@ import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
 import { upNowAt } from '~/app/lib/up-now.server';
 import { ognNowAt } from '~/app/lib/ogn.server';
-import { UpNowCard } from '@/components/up-now';
 import { windNowAt } from '~/app/lib/wind-now.server';
-import { WindNowCard } from '@/components/wind-now';
 import { flownHere } from '~/lib/flown-days';
 import {
   howSureExperiment,
@@ -566,12 +565,12 @@ function FavoriteButton({
 
   if (!isAuthenticated) {
     return (
-      <Link to="/login">
-        <Button variant="outline" size="sm">
-          <Heart className="mr-2 h-4 w-4" />
-          Sign in to favorite
-        </Button>
-      </Link>
+      <Button variant="outline" asChild>
+        <Link to="/login" aria-label="Sign in to add to Favorites">
+          <Heart className="size-4" />
+          <span className="hidden sm:inline">Add to Favorites</span>
+        </Link>
+      </Button>
     );
   }
 
@@ -587,16 +586,25 @@ function FavoriteButton({
         <Button
           type="submit"
           variant={optimisticFavorited ? 'default' : 'outline'}
-          size="sm"
           disabled={fetcher.state !== 'idle'}
+          aria-label={optimisticFavorited ? 'In Favorites. Remove it' : 'Add to Favorites'}
         >
-          <Heart className={`mr-2 h-4 w-4 ${optimisticFavorited ? 'fill-current' : ''}`} />
-          {optimisticFavorited ? 'Favorited' : 'Add to Favorites'}
+          <Heart className={`size-4 ${optimisticFavorited ? 'fill-current' : ''}`} />
+          <span className="hidden sm:inline">
+            {optimisticFavorited ? 'In Favorites' : 'Add to Favorites'}
+          </span>
         </Button>
       </fetcher.Form>
-      {favoriteError && <p className="text-xs text-red-500">{favoriteError}</p>}
+      {favoriteError && <p className="text-xs text-destructive">{favoriteError}</p>}
     </div>
   );
+}
+
+/** "N, S, SW" for the directions rated `rating` (2 best, 1 also works). */
+function directionsRated(orientations: Record<string, number>, rating: number): string[] {
+  return Object.entries(orientations)
+    .filter(([, r]) => r === rating)
+    .map(([dir]) => dir);
 }
 
 export default function SiteDetailPage() {
@@ -636,212 +644,178 @@ export default function SiteDetailPage() {
       flownByMonth={flownByMonth}
     />
   );
+  const kind = ownKind ?? listedKind;
+  const place = [site.region, countryName(site.countryCode)].filter(Boolean).join(', ');
+  const orientations = getOrientations(site);
+  const best = directionsRated(orientations, 2);
+  const alsoWorks = directionsRated(orientations, 1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <RecentSiteTracker site={{ id: site.id, name: site.name, slug: site.slug }} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <Link to="/sites/browse">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Browse
-          </Button>
-        </Link>
-        <FavoriteButton
-          pgsitesId={pgsitesId}
-          initialIsFavorited={isFavorited}
-          isAuthenticated={isAuthenticated}
+      <div className="space-y-5">
+        <SiteHeader
+          back={{ to: '/sites/browse', label: 'Browse sites' }}
+          title={site.name}
+          facts={[
+            place,
+            site.altitude ? `${site.altitude.toLocaleString('en-US')} m` : null,
+            kind ? SITE_KIND_LABEL[kind] : null,
+            `Wind limit ${customMaxWind ?? siteMaxWind} km/h`,
+          ]}
+          actions={
+            <FavoriteButton
+              pgsitesId={pgsitesId}
+              initialIsFavorited={isFavorited}
+              isAuthenticated={isAuthenticated}
+            />
+          }
         />
-      </div>
 
-      {/* Site name */}
-      <div>
-        <h1 className="text-3xl font-bold">{site.name}</h1>
-        {(site.region || site.countryCode) && (
-          <p className="text-lg text-muted-foreground mt-1">
-            {site.region ? `${site.region}, ` : ''}
-            {site.countryCode || ''}
-          </p>
+        {forecastError || !scores || !today ? (
+          <ForecastUnavailable />
+        ) : (
+          <SiteForecast
+            site={engineSite}
+            scores={scores}
+            today={today}
+            goalTarget={goalTarget}
+            comps={comps}
+            typicalWeek={season?.typicalWeek ?? null}
+          />
         )}
       </div>
 
-      <Suspense fallback={null}>
-        <Await resolve={upNow} errorElement={null}>
-          {(u) => (
-            <UpNowCard
-              up={u.sp}
-              ogn={u.ogn}
-              launchAltitude={site.altitude ?? null}
-              timeZone={u.timeZone}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <LiveNow upNow={upNow} windNow={windNow} launchAltitude={site.altitude ?? null} />
 
-      <Suspense fallback={null}>
-        <Await resolve={windNow} errorElement={null}>
-          {(w) =>
-            w ? (
-              <WindNowCard
-                stations={w.stations}
-                checkedAt={w.checkedAt}
-                launchAltitude={site.altitude ?? null}
-              />
-            ) : null
-          }
-        </Await>
-      </Suspense>
-
-      {/* Forecast section with windgram and scoring */}
-      {forecastError || !scores || !today ? (
-        <ForecastUnavailable />
-      ) : (
-        <SiteDetailClient
-          site={engineSite}
-          scores={scores}
-          today={today}
-          goalTarget={goalTarget}
-          comps={comps}
-          typicalWeek={season?.typicalWeek ?? null}
-        />
-      )}
-
-      <Suspense fallback={seasonCard(null)}>
-        <Await resolve={flown} errorElement={seasonCard(null)}>
-          {(f) => (
-            <>
-              {seasonCard(flownByMonthToShow(f))}
-              <FlownHereCard flown={f} goal={engineSite.goal ?? 'soar'} />
-            </>
-          )}
-        </Await>
-      </Suspense>
-
-      {xc && <XcFlightsCard xc={xc} today={compsToday} />}
-
-      <SiteCompsCard comps={comps} today={compsToday} />
-
-      {/* Location & Details — always visible */}
-      <Card className="p-4 sm:p-6">
-        <h2 className="text-lg font-semibold mb-4">Location &amp; Details</h2>
-        <div className="space-y-6">
-          <div className="space-y-3 text-sm">
-            {site.altitude && (
-              <div>
-                <ElevationDisplay elevationMeters={site.altitude} label="Takeoff" />
-              </div>
+      <SiteSection title="Over the year">
+        <Suspense fallback={seasonCard(null)}>
+          <Await resolve={flown} errorElement={seasonCard(null)}>
+            {(f) => (
+              <>
+                {seasonCard(flownByMonthToShow(f))}
+                <FlownHereCard flown={f} goal={engineSite.goal ?? 'soar'} />
+              </>
             )}
-            {site.landingAltitude && (
-              <div>
-                <ElevationDisplay elevationMeters={site.landingAltitude} label="Landing" />
-              </div>
-            )}
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              <span className="font-medium">What it gives:</span>
-              {goalTarget ? (
-                <SiteKindSelect target={goalTarget} kind={ownKind} listedKind={listedKind} />
-              ) : (
-                <span className="text-muted-foreground">
-                  {listedKind
-                    ? `${SITE_KIND_LABEL[listedKind]}, as listed on Paragliding Earth`
-                    : 'Not tagged on Paragliding Earth, so SoarCast goes by the weather'}
-                </span>
-              )}
-            </div>
-            {(site.isParagliding || site.isHanggliding) && (
-              <div>
-                <span className="font-medium">Flying Types:</span>{' '}
-                <span className="text-muted-foreground">
-                  {[site.isParagliding && 'paragliding', site.isHanggliding && 'hanggliding']
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
-              </div>
-            )}
-            {(() => {
-              const orientations = getOrientations(site);
-              return Object.values(orientations).some((r: number) => r >= 1) ? (
-                <div>
-                  <div className="font-medium mb-2">Orientations:</div>
-                  <OrientationBadges orientations={orientations} />
-                </div>
-              ) : null;
-            })()}
-            {(() => {
-              const idealDirs = getIdealWindDirections(site);
-              return idealDirs.length > 0 ? (
-                <div>
-                  <div className="font-medium mb-2">Ideal Wind Directions:</div>
-                  <WindDirectionBadges directions={idealDirs} />
-                  {site.origin !== 'pge' && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {WIND_SOURCE[site.origin]} Check them with local pilots.
-                    </p>
+          </Await>
+        </Suspense>
+        {today && (
+          <ForecastTrackRecord latitude={site.latitude} longitude={site.longitude} today={today} />
+        )}
+        {xc && <XcFlightsCard xc={xc} today={compsToday} />}
+        <SiteCompsCard comps={comps} today={compsToday} />
+      </SiteSection>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold tracking-tight">About this site</h2>
+        <Card className="gap-0 p-5 md:p-7">
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="space-y-6">
+              <dl>
+                {site.altitude ? (
+                  <FactRow label="Takeoff">{heightText(site.altitude)}</FactRow>
+                ) : null}
+                {site.landingAltitude ? (
+                  <FactRow label="Landing">{heightText(site.landingAltitude)}</FactRow>
+                ) : null}
+                <FactRow label="What it gives">
+                  {goalTarget ? (
+                    <SiteKindSelect target={goalTarget} kind={ownKind} listedKind={listedKind} />
+                  ) : listedKind ? (
+                    `${SITE_KIND_LABEL[listedKind]}, as listed`
+                  ) : (
+                    <span className="text-muted-foreground">
+                      Not tagged, so SoarCast goes by the weather
+                    </span>
                   )}
+                </FactRow>
+                {(best.length > 0 || alsoWorks.length > 0) && (
+                  <FactRow label="Good wind from">
+                    {best.length > 0 && <span className="font-medium">{best.join(', ')}</span>}
+                    {alsoWorks.length > 0 && (
+                      <span className="block text-muted-foreground">
+                        Also works: {alsoWorks.join(', ')}
+                      </span>
+                    )}
+                    {site.origin !== 'pge' && (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {WIND_SOURCE[site.origin]} Check them with local pilots.
+                      </span>
+                    )}
+                  </FactRow>
+                )}
+                <FactRow label="Wind limit">
+                  {customMaxWind ? (
+                    <>
+                      {customMaxWind} km/h{' '}
+                      <span className="text-muted-foreground">
+                        (set in Settings, usual here {siteMaxWind} km/h)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {siteMaxWind} km/h
+                      {!site.maxWindSpeed && (
+                        <span className="text-muted-foreground"> (the usual limit)</span>
+                      )}
+                    </>
+                  )}
+                </FactRow>
+                {ground && (
+                  <FactRow label="Terrain">
+                    {TERRAIN_LABEL[ground]}
+                    <MountainMarginsNote
+                      ground={ground}
+                      rated={engineSite.terrain === 'mountains'}
+                      ridge={engineSite.kind === 'ridge'}
+                      signedIn={isAuthenticated}
+                    />
+                  </FactRow>
+                )}
+                {(site.isParagliding || site.isHanggliding) && (
+                  <FactRow label="Flying">
+                    {[site.isParagliding && 'Paragliding', site.isHanggliding && 'hang gliding']
+                      .filter(Boolean)
+                      .join(', ')}
+                  </FactRow>
+                )}
+                <FactRow label="Position">
+                  <span className="tabular-nums">
+                    {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)}
+                  </span>
+                </FactRow>
+              </dl>
+
+              {site.description && (
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-semibold">From the site guide</h3>
+                  <SiteNotes text={site.description} className="text-sm text-muted-foreground" />
                 </div>
-              ) : null;
-            })()}
-            {ground && (
-              <div>
-                <span className="font-medium">Terrain:</span>{' '}
-                <span className="text-muted-foreground">
-                  {TERRAIN_LABEL[ground]}
-                  <MountainMarginsNote
-                    ground={ground}
-                    rated={engineSite.terrain === 'mountains'}
-                    ridge={engineSite.kind === 'ridge'}
-                    signedIn={isAuthenticated}
+              )}
+
+              {site.landingLatitude && site.landingLongitude && site.landingDescription && (
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-semibold">Landing</h3>
+                  <SiteNotes
+                    text={site.landingDescription}
+                    className="text-sm text-muted-foreground"
                   />
-                </span>
-              </div>
-            )}
-            <div>
-              <span className="font-medium">Max Wind Speed:</span>{' '}
-              {customMaxWind ? (
-                <span className="text-muted-foreground">
-                  {customMaxWind} km/h <span className="text-xs">(set in Settings)</span>
-                  <span className="text-xs ml-1 opacity-60">· usual here: {siteMaxWind} km/h</span>
-                </span>
-              ) : (
-                <span className="text-muted-foreground">
-                  {siteMaxWind} km/h
-                  {!site.maxWindSpeed && <span className="text-xs"> (the usual limit here)</span>}
-                </span>
+                </div>
               )}
             </div>
-            <div className="text-xs text-muted-foreground">
-              Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°
+
+            <div className="space-y-3">
+              <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
+              <SiteSourceCredit
+                pgeLink={site.pgeLink}
+                origin={site.origin}
+                sourceUrl={site.sourceUrl}
+              />
             </div>
           </div>
-
-          {site.description && (
-            <div>
-              <h3 className="font-semibold mb-2">Site Description</h3>
-              <SiteNotes text={site.description} className="text-sm text-muted-foreground" />
-            </div>
-          )}
-
-          {site.landingLatitude && site.landingLongitude && site.landingDescription && (
-            <div>
-              <h3 className="font-semibold mb-2">Landing Information</h3>
-              <SiteNotes text={site.landingDescription} className="text-sm text-muted-foreground" />
-            </div>
-          )}
-
-          <div>
-            <h3 className="text-sm font-medium mb-2">Location Map</h3>
-            <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
-          </div>
-
-          <SiteSourceCredit
-            pgeLink={site.pgeLink}
-            origin={site.origin}
-            sourceUrl={site.sourceUrl}
-          />
-        </div>
-      </Card>
+        </Card>
+      </section>
 
       {(howSure || windsOnFlownDays || terrain) && (
         <ExperimentsSection>

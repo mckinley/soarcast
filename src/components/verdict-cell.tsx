@@ -3,7 +3,14 @@ import type { DayScore } from '@/types';
 import { Bell, Trophy } from 'lucide-react';
 import { verdictSummary } from '@/lib/forecast-engine';
 import type { Comp } from '@/lib/comps';
-import { STATUS_CELL, cellDetail, cellLabel, dayStatus } from '@/lib/verdict-display';
+import {
+  STATUS_CELL,
+  STATUS_WORD,
+  cellDetail,
+  cellLabel,
+  dayStatus,
+  shortReason,
+} from '@/lib/verdict-display';
 
 interface VerdictCellProps {
   score: DayScore | null;
@@ -16,7 +23,10 @@ interface VerdictCellProps {
   where?: string;
 }
 
-/** One site on one day: the flight it gives and when, or what stops it. Green is a go for the pilot's goal. */
+const base =
+  'relative flex h-[52px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-lg text-center leading-tight transition md:h-[58px] md:px-1';
+
+/** One site on one day: the flight it gives and when, or what stops it. Solid green is a go for the pilot's goal. */
 export function VerdictCell({
   score,
   showNotification = false,
@@ -26,33 +36,44 @@ export function VerdictCell({
 }: VerdictCellProps) {
   if (!score) {
     return (
-      <div className="flex h-16 items-center justify-center border border-dashed border-muted-foreground/20 rounded text-xs text-muted-foreground">
+      <div
+        className={`${base} border border-dashed border-border text-[11px] text-muted-foreground`}
+      >
         No data
       </div>
     );
   }
 
-  const detail = where ?? cellDetail(score);
+  // A day that isn't flyable says what stops it: the grey already says Not flyable
+  const status = dayStatus(score);
+  const label = status === 'no' ? (shortReason(score) ?? STATUS_WORD.no) : cellLabel(score);
+  const detail = where ?? (status === 'no' ? null : cellDetail(score));
   const summary = where ? `${where}: ${verdictSummary(score)}` : verdictSummary(score);
   const title = comp ? `${summary} Comp on: ${comp.name}.` : summary;
-  const className = `relative flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-transparent px-1 text-center transition-all hover:border-primary/50 ${STATUS_CELL[dayStatus(score)]}`;
+  const className = `${base} ${STATUS_CELL[status]}`;
 
   const content = (
     <>
       {showNotification && (
-        <div className="absolute top-1 right-1">
-          <Bell className="h-3.5 w-3.5 text-primary fill-primary" />
-        </div>
+        <Bell
+          className="absolute top-1 right-1 size-3 fill-current opacity-80"
+          aria-label="Alert day"
+        />
       )}
       {comp && (
-        <div className="absolute top-1 left-1">
-          <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+        <span className="absolute top-1 left-1">
+          <Trophy className="size-3" aria-hidden />
           <span className="sr-only">Comp on: {comp.name}</span>
-        </div>
+        </span>
       )}
-      <div className="text-xs font-semibold leading-tight">{cellLabel(score)}</div>
+      <span className="w-full text-[10.5px] font-semibold tracking-[-0.01em] md:text-[13px] md:tracking-normal">
+        {status === 'no' && label !== STATUS_WORD.no && (
+          <span className="sr-only">{STATUS_WORD.no}: </span>
+        )}
+        {label}
+      </span>
       {detail && (
-        <div className="w-full truncate text-[11px] leading-tight opacity-80">{detail}</div>
+        <span className="w-full truncate text-[10px] opacity-90 md:text-xs">{detail}</span>
       )}
     </>
   );

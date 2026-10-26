@@ -70,7 +70,7 @@ export function CompRow({
   );
 }
 
-/** For the site's day card: a comp on today, else one on later this week. */
+/** Under a site's week: a comp on today, else one on later this week. */
 export function CompDayNotice({ comps, today }: { comps: Comp[]; today: string }) {
   const onToday = compsOn(comps, today);
   const thisWeek =
@@ -79,7 +79,7 @@ export function CompDayNotice({ comps, today }: { comps: Comp[]; today: string }
   if (shown.length === 0) return null;
 
   return (
-    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+    <div className="flex items-start gap-2.5 rounded-xl border border-marginal-border bg-marginal p-3.5 text-sm text-marginal-foreground">
       <Trophy className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0 space-y-1">
         {shown.map((comp) => (

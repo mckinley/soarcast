@@ -11,11 +11,14 @@ import { pgsitesSlug } from '~/lib/pgsites-client';
 import { defaultWindLimit, evaluateDays, launchProfileFromSite } from '~/lib/forecast-engine';
 import { siteTerrain, TERRAIN_LABEL } from '~/lib/site-terrain';
 import { getAtmosphericProfile, profileToday, setProfileDb } from '~/lib/weather-profile';
-import { SiteDetailClient, ForecastUnavailable } from '@/components/site-detail-client';
+import { SiteForecast, ForecastUnavailable } from '@/components/site-forecast';
+import { FactRow, SiteHeader, SiteSection, heightText } from '@/components/site-page';
+import { LiveNow } from '@/components/live-now';
+import { ForecastTrackRecord } from '@/components/forecast-track-record';
+import { SITE_KIND_LABEL } from '~/lib/site-goals';
 import { MapDisplayWrapper } from '@/components/map-display-wrapper';
 import { RecentSiteTracker } from '@/components/recent-site-tracker';
 import { DirectionLegend, LaunchDirectionPicker } from '@/components/launch-direction-picker';
-import { ElevationDisplay } from '@/components/elevation-display';
 import { SiteKindSelect } from '@/components/site-goal-picker';
 import { SiteCompsCard } from '@/components/site-comps';
 import { compsAtSite } from '~/app/lib/comps.server';
@@ -24,9 +27,7 @@ import { SeasonCard } from '@/components/season-card';
 import { flownDaysAt } from '~/app/lib/flown-days.server';
 import { upNowAt } from '~/app/lib/up-now.server';
 import { ognNowAt } from '~/app/lib/ogn.server';
-import { UpNowCard } from '@/components/up-now';
 import { windNowAt } from '~/app/lib/wind-now.server';
-import { WindNowCard } from '@/components/wind-now';
 import { flownHere } from '~/lib/flown-days';
 import {
   howSureExperiment,
@@ -43,7 +44,7 @@ import { nogaFlightsAt } from '~/app/lib/noga.server';
 import { XcFlightsCard } from '@/components/xc-flights';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Lock, Pencil } from 'lucide-react';
+import { Lock, Pencil } from 'lucide-react';
 import type { DayScore } from '~/types';
 
 export function meta({ data }: Route.MetaArgs) {
@@ -193,174 +194,154 @@ export default function CustomSiteDetailPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <RecentSiteTracker site={{ id: site.id, name: site.name, slug: `custom/${site.id}` }} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <Link to="/dashboard">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/sites/custom/${site.id}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Link>
-        </Button>
-      </div>
-
-      {/* Site name */}
-      <div>
-        <h1 className="text-3xl font-bold">{site.name}</h1>
-        <p className="text-muted-foreground mt-1 inline-flex items-center gap-1.5">
-          <Lock className="h-4 w-4" />
-          {sharedSlug ? (
-            <span>
-              Private site. Other pilots can find it as a{' '}
-              <Link to={`/sites/${sharedSlug}`} className="underline underline-offset-2">
-                shared launch
+      <div className="space-y-5">
+        <SiteHeader
+          back={{ to: '/dashboard', label: 'Dashboard' }}
+          title={site.name}
+          facts={[
+            <span key="private" className="inline-flex items-center gap-1">
+              <Lock className="size-3.5" />
+              Private
+            </span>,
+            site.elevation > 0 ? `${site.elevation.toLocaleString('en-US')} m` : null,
+            site.kind ? SITE_KIND_LABEL[site.kind] : null,
+            `Wind limit ${site.maxWindSpeed} km/h`,
+          ]}
+          actions={
+            <Button variant="outline" asChild>
+              <Link to={`/sites/custom/${site.id}/edit`} aria-label="Edit this site">
+                <Pencil className="size-4" />
+                <span className="hidden sm:inline">Edit</span>
               </Link>
-              . Notes, the wind limit and the goal stay private.
-            </span>
-          ) : (
-            'Private site. Only you can see it.'
-          )}
-        </p>
+            </Button>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            {sharedSlug ? (
+              <>
+                Other pilots can find it as a{' '}
+                <Link to={`/sites/${sharedSlug}`} className="underline underline-offset-2">
+                  shared launch
+                </Link>
+                . Notes, the wind limit and the goal stay private.
+              </>
+            ) : (
+              'Only you can see it.'
+            )}
+          </p>
+        </SiteHeader>
+
+        {forecastError || !scores || !today ? (
+          <ForecastUnavailable />
+        ) : (
+          <SiteForecast
+            site={site}
+            scores={scores}
+            today={today}
+            goalTarget={{ siteId: site.id, source: 'custom' }}
+            comps={comps}
+            typicalWeek={season?.typicalWeek ?? null}
+          />
+        )}
       </div>
 
-      <Suspense fallback={null}>
-        <Await resolve={upNow} errorElement={null}>
-          {(u) => (
-            <UpNowCard
-              up={u.sp}
-              ogn={u.ogn}
-              launchAltitude={site.elevation ?? null}
-              timeZone={u.timeZone}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <LiveNow upNow={upNow} windNow={windNow} launchAltitude={site.elevation ?? null} />
 
-      <Suspense fallback={null}>
-        <Await resolve={windNow} errorElement={null}>
-          {(w) =>
-            w ? (
-              <WindNowCard
-                stations={w.stations}
-                checkedAt={w.checkedAt}
-                launchAltitude={site.elevation ?? null}
-              />
-            ) : null
-          }
-        </Await>
-      </Suspense>
-
-      {/* Forecast section with windgram and scoring */}
-      {forecastError || !scores || !today ? (
-        <ForecastUnavailable />
-      ) : (
-        <SiteDetailClient
-          site={site}
-          scores={scores}
-          today={today}
-          goalTarget={{ siteId: site.id, source: 'custom' }}
-          comps={comps}
-          typicalWeek={season?.typicalWeek ?? null}
-        />
-      )}
-
-      <Suspense fallback={seasonCard(null)}>
-        <Await resolve={flown} errorElement={seasonCard(null)}>
-          {(f) => (
-            <>
-              {seasonCard(flownByMonthToShow(f))}
-              <FlownHereCard flown={f} goal={site.goal ?? 'launch'} />
-            </>
-          )}
-        </Await>
-      </Suspense>
-
-      {xc && <XcFlightsCard xc={xc} today={compsToday} />}
-
-      <SiteCompsCard comps={comps} today={compsToday} />
-
-      {/* Location & Details — always visible */}
-      <Card className="p-4 sm:p-6">
-        <h2 className="text-lg font-semibold mb-4">Location &amp; Details</h2>
-        <div className="space-y-3 text-sm">
-          {site.elevation > 0 && (
-            <div>
-              <ElevationDisplay elevationMeters={site.elevation} label="Takeoff" />
-            </div>
-          )}
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="font-medium">What it gives:</span>
-            <SiteKindSelect
-              target={{ siteId: site.id, source: 'custom' }}
-              kind={site.kind ?? null}
-            />
-          </div>
-          <div>
-            <div className="font-medium mb-2">Launch directions:</div>
-            {site.idealWindDirections.length > 0 || (site.okWindDirections ?? []).length > 0 ? (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <LaunchDirectionPicker
-                  ratings={Object.fromEntries([
-                    ...(site.okWindDirections ?? []).map((d) => [d, 1 as const]),
-                    ...site.idealWindDirections.map((d) => [d, 2 as const]),
-                  ])}
-                  className="w-36 h-36"
-                />
-                <DirectionLegend />
-              </div>
-            ) : (
-              <p className="text-muted-foreground">
-                None set, so any wind direction counts as working.{' '}
-                <Link to={`/sites/custom/${site.id}/edit`} className="underline">
-                  Set them
-                </Link>
-              </p>
+      <SiteSection title="Over the year">
+        <Suspense fallback={seasonCard(null)}>
+          <Await resolve={flown} errorElement={seasonCard(null)}>
+            {(f) => (
+              <>
+                {seasonCard(flownByMonthToShow(f))}
+                <FlownHereCard flown={f} goal={site.goal ?? 'launch'} />
+              </>
             )}
-          </div>
-          {site.notes && (
-            <div>
-              <div className="font-medium mb-1">Notes:</div>
-              <p className="text-muted-foreground whitespace-pre-line">{site.notes}</p>
+          </Await>
+        </Suspense>
+        {today && (
+          <ForecastTrackRecord latitude={site.latitude} longitude={site.longitude} today={today} />
+        )}
+        {xc && <XcFlightsCard xc={xc} today={compsToday} />}
+        <SiteCompsCard comps={comps} today={compsToday} />
+      </SiteSection>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold tracking-tight">About this site</h2>
+        <Card className="gap-0 p-5 md:p-7">
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="space-y-6">
+              <dl>
+                {site.elevation > 0 && (
+                  <FactRow label="Takeoff">{heightText(site.elevation)}</FactRow>
+                )}
+                <FactRow label="What it gives">
+                  <SiteKindSelect
+                    target={{ siteId: site.id, source: 'custom' }}
+                    kind={site.kind ?? null}
+                  />
+                </FactRow>
+                <FactRow label="Wind limit">
+                  {site.maxWindSpeed} km/h
+                  {usualWindLimit && (
+                    <span className="text-muted-foreground"> (the usual limit)</span>
+                  )}
+                </FactRow>
+                {ground && (
+                  <FactRow label="Terrain">
+                    {TERRAIN_LABEL[ground]}
+                    <MountainMarginsNote
+                      ground={ground}
+                      rated={site.terrain === 'mountains'}
+                      ridge={site.kind === 'ridge'}
+                      signedIn
+                    />
+                  </FactRow>
+                )}
+                <FactRow label="Position">
+                  <span className="tabular-nums">
+                    {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)}
+                  </span>
+                </FactRow>
+              </dl>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Launch directions</h3>
+                {site.idealWindDirections.length > 0 || (site.okWindDirections ?? []).length > 0 ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <LaunchDirectionPicker
+                      ratings={Object.fromEntries([
+                        ...(site.okWindDirections ?? []).map((d) => [d, 1 as const]),
+                        ...site.idealWindDirections.map((d) => [d, 2 as const]),
+                      ])}
+                      className="h-36 w-36"
+                    />
+                    <DirectionLegend />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    None set, so any wind direction counts as working.{' '}
+                    <Link to={`/sites/custom/${site.id}/edit`} className="underline">
+                      Set them
+                    </Link>
+                  </p>
+                )}
+              </div>
+
+              {site.notes && (
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-semibold">Notes</h3>
+                  <p className="text-sm whitespace-pre-line text-muted-foreground">{site.notes}</p>
+                </div>
+              )}
             </div>
-          )}
-          {ground && (
-            <div>
-              <span className="font-medium">Terrain:</span>{' '}
-              <span className="text-muted-foreground">
-                {TERRAIN_LABEL[ground]}
-                <MountainMarginsNote
-                  ground={ground}
-                  rated={site.terrain === 'mountains'}
-                  ridge={site.kind === 'ridge'}
-                  signedIn
-                />
-              </span>
-            </div>
-          )}
-          <div>
-            <span className="font-medium">Max Wind Speed:</span>{' '}
-            <span className="text-muted-foreground">
-              {site.maxWindSpeed} km/h
-              {usualWindLimit && <span className="text-xs"> (the usual limit here)</span>}
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Location: {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}°
-          </div>
-          <div>
-            <h3 className="text-sm font-medium mb-2">Location Map</h3>
+
             <MapDisplayWrapper latitude={site.latitude} longitude={site.longitude} />
           </div>
-        </div>
-      </Card>
+        </Card>
+      </section>
 
       {(howSure || windsOnFlownDays || terrain) && (
         <ExperimentsSection>

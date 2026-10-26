@@ -3,24 +3,25 @@
 import * as React from 'react';
 import { Link, useLocation, useNavigate, useRouteLoaderData } from 'react-router';
 import {
-  Cloud,
   LayoutDashboard,
-  Menu,
   Sun,
   Moon,
   LogOut,
+  LogIn,
   Compass,
   CalendarRange,
   BookOpen,
+  Menu,
   Settings as SettingsIcon,
   ShieldCheck,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { loader as rootLoader } from '~/app/root';
 import { isAdmin } from '~/lib/admin';
+import { Logo } from '@/components/logo';
 
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,29 +31,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-} from '@/components/ui/sidebar';
 
-type NavItem = { title: string; href: string; icon: typeof Cloud };
+type NavItem = { title: string; short?: string; href: string; icon: typeof LayoutDashboard };
 
-/** The places pilots go to plan flying, at the top of the menu. */
+/** The places pilots go to plan flying: the top bar on a computer, the tab bar on a phone. */
 const mainNav: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Planning', href: '/planning', icon: CalendarRange },
-  { title: 'Browse Sites', href: '/sites/browse', icon: Compass },
+  { title: 'Browse sites', short: 'Sites', href: '/sites/browse', icon: Compass },
 ];
 
-/** Help and settings, quieter at the bottom of the menu. */
+/** Help and settings, quieter: small on the right of the top bar, under More on a phone. */
 const footerNav: NavItem[] = [
   { title: 'Guide', href: '/guide', icon: BookOpen },
   { title: 'Settings', href: '/settings', icon: SettingsIcon },
@@ -60,61 +49,59 @@ const footerNav: NavItem[] = [
 
 const adminNav: NavItem = { title: 'Admin', href: '/admin', icon: ShieldCheck };
 
-/** The footer menu, with Admin for admins. */
+function useUser() {
+  // The root loader already looked up who is signed in
+  return useRouteLoaderData<typeof rootLoader>('root')?.user ?? null;
+}
+
+/** The quieter menu, with Admin for admins. */
 function useFooterNav(): NavItem[] {
-  const user = useRouteLoaderData<typeof rootLoader>('root')?.user ?? null;
+  const user = useUser();
   return isAdmin(user) ? [...footerNav, adminNav] : footerNav;
 }
 
 /** Whether a nav item is the current section: its page or a page under it. */
 function isCurrent(pathname: string, href: string): boolean {
+  // A private site belongs with the dashboard; every other site page with Browse sites
+  const ownSite = pathname.startsWith('/sites/custom');
+  if (href === '/sites/browse') return pathname.startsWith('/sites') && !ownSite;
+  if (href === '/dashboard' && ownSite) return true;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+function useMounted() {
   const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return mounted;
+}
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon" className="h-9 w-9">
-        <Sun className="h-4 w-4" />
-        <span className="sr-only">Toggle theme</span>
-      </Button>
-    );
-  }
-
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useMounted();
+  const dark = mounted && resolvedTheme === 'dark';
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="h-9 w-9"
+      onClick={() => setTheme(dark ? 'light' : 'dark')}
+      className="size-9 text-muted-foreground hover:text-foreground"
     >
-      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      <span className="sr-only">Toggle theme</span>
+      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      <span className="sr-only">{dark ? 'Light colors' : 'Dark colors'}</span>
     </Button>
   );
 }
 
-function UserMenu() {
-  // The root loader already looked up who is signed in
-  const user = useRouteLoaderData<typeof rootLoader>('root')?.user ?? null;
-  const navigate = useNavigate();
+async function signOut() {
+  // Loaded on demand: only signing out needs the auth client in the browser
+  const { authClient } = await import('~/app/lib/auth-client');
+  await authClient.signOut();
+  // A full load, so every loader sees the signed-out state
+  window.location.assign('/');
+}
 
-  if (!user) {
-    return (
-      <Button onClick={() => navigate('/login')} variant="default" size="sm">
-        Sign In
-      </Button>
-    );
-  }
-
-  const userInitials =
+function initials(user: { name?: string | null; email?: string | null }): string {
+  return (
     user.name
       ?.split(' ')
       .map((n: string) => n[0])
@@ -122,44 +109,52 @@ function UserMenu() {
       .toUpperCase()
       .slice(0, 2) ||
     user.email?.[0]?.toUpperCase() ||
-    '?';
+    '?'
+  );
+}
 
-  const handleSignOut = async () => {
-    // Loaded on demand: only signing out needs the auth client in the browser
-    const { authClient } = await import('~/app/lib/auth-client');
-    await authClient.signOut();
-    // A full load, so every loader sees the signed-out state
-    window.location.assign('/');
-  };
+function UserMenu() {
+  const user = useUser();
+  const navigate = useNavigate();
+
+  if (!user) {
+    return (
+      <Button onClick={() => navigate('/login')} size="sm">
+        Sign in
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
-            <AvatarFallback>{userInitials}</AvatarFallback>
+        <Button variant="ghost" className="relative size-9 rounded-full p-0">
+          <Avatar className="size-9">
+            <AvatarImage src={user.image || undefined} alt={user.name || 'Account'} />
+            <AvatarFallback className="bg-accent font-semibold text-primary">
+              {initials(user)}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm leading-none font-medium">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/settings" className="cursor-pointer">
-            <SettingsIcon className="mr-2 h-4 w-4" />
+            <SettingsIcon className="mr-2 size-4" />
             Settings
           </Link>
         </DropdownMenuItem>
         {isAdmin(user) && (
           <DropdownMenuItem asChild>
             <Link to="/admin" className="cursor-pointer">
-              <ShieldCheck className="mr-2 h-4 w-4" />
+              <ShieldCheck className="mr-2 size-4" />
               Admin
             </Link>
           </DropdownMenuItem>
@@ -167,178 +162,175 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"
-          onClick={handleSignOut}
+          onClick={signOut}
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          <LogOut className="mr-2 size-4" />
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-/** The logo, which goes home: the dashboard when signed in, else the welcome page. */
-function HomeLink({ onClick }: { onClick?: () => void }) {
+/** The top bar: the logo (home: the dashboard when signed in), the main places, then help and the account. */
+function TopBar() {
+  const { pathname } = useLocation();
+  const footerItems = useFooterNav();
   return (
-    <Link to="/" onClick={onClick} className="flex w-fit items-center gap-2 rounded-md">
-      <Cloud className="h-6 w-6" />
-      <span className="text-lg font-semibold">SoarCast</span>
-    </Link>
-  );
-}
-
-function SidebarNav({
-  items,
-  pathname,
-  quiet,
-}: {
-  items: NavItem[];
-  pathname: string;
-  quiet?: boolean;
-}) {
-  return (
-    <SidebarMenu>
-      {items.map((item) => (
-        <SidebarMenuItem key={item.href}>
-          <SidebarMenuButton
-            asChild
-            size={quiet ? 'sm' : 'default'}
-            isActive={isCurrent(pathname, item.href)}
-            className={
-              quiet ? 'text-muted-foreground data-[active=true]:text-foreground' : undefined
-            }
-          >
-            <Link to={item.href}>
-              <item.icon className="h-4 w-4" />
-              <span>{item.title}</span>
+    <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-4 md:gap-6 md:px-6">
+        <Link to="/" className="rounded-md" aria-label="SoarCast home">
+          <Logo />
+        </Link>
+        <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+          {mainNav.map((item) => {
+            const current = isCurrent(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                aria-current={current ? 'page' : undefined}
+                className={`rounded-lg px-3 py-2 text-[15px] font-medium transition-colors ${
+                  current ? 'bg-accent text-primary' : 'text-foreground hover:bg-accent/70'
+                }`}
+              >
+                {item.title}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="flex-1" />
+        <nav aria-label="Help and settings" className="hidden items-center gap-1 md:flex">
+          {footerItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              aria-current={isCurrent(pathname, item.href) ? 'page' : undefined}
+              className={`rounded-lg px-2.5 py-2 text-sm transition-colors hover:text-foreground ${
+                isCurrent(pathname, item.href) ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              {item.title}
             </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+          ))}
+          <ThemeToggle />
+        </nav>
+        <UserMenu />
+      </div>
+    </header>
   );
 }
 
-function AppSidebar() {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const footerItems = useFooterNav();
-
-  return (
-    <Sidebar>
-      <SidebarHeader className="border-b px-6 py-4">
-        <HomeLink />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarNav items={mainNav} pathname={pathname} />
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="border-t">
-        <SidebarNav items={footerItems} pathname={pathname} quiet />
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
-
-function MobileNavLink({
-  item,
-  current,
-  onClick,
-  quiet,
-}: {
-  item: NavItem;
-  current: boolean;
-  onClick: () => void;
-  quiet?: boolean;
-}) {
-  // Footer items stay full height for tapping, but in a quieter color
-  const tone = current ? 'bg-accent text-foreground' : quiet ? 'text-muted-foreground' : '';
-  return (
-    <Link
-      to={item.href}
-      onClick={onClick}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent ${tone}`}
-    >
-      <item.icon className="h-4 w-4" />
-      <span>{item.title}</span>
-    </Link>
-  );
-}
-
-function MobileNav() {
+/** More, on a phone: the Guide, Settings, colors and signing in or out. */
+function MoreSheet({ current }: { current: boolean }) {
   const [open, setOpen] = React.useState(false);
-  const location = useLocation();
-  const pathname = location.pathname;
+  const { pathname } = useLocation();
   const footerItems = useFooterNav();
+  const user = useUser();
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useMounted();
+  const dark = mounted && resolvedTheme === 'dark';
+  const row =
+    'flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-[15px] transition-colors hover:bg-accent';
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle navigation</span>
-        </Button>
+        <button type="button" className={tabClass(current || open)}>
+          <Menu className="size-[22px]" />
+          More
+        </button>
       </SheetTrigger>
-      <SheetContent side="left" className="flex w-64 flex-col gap-0 p-0">
-        <div className="border-b px-6 py-4">
-          <HomeLink onClick={() => setOpen(false)} />
-        </div>
-        <nav className="flex flex-1 flex-col gap-1 p-4">
-          {mainNav.map((item) => (
-            <MobileNavLink
-              key={item.href}
-              item={item}
-              current={isCurrent(pathname, item.href)}
-              onClick={() => setOpen(false)}
-            />
-          ))}
-        </nav>
-        <nav className="flex flex-col gap-1 border-t p-4">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl bg-card px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        <SheetTitle className="px-3 pt-1 text-sm font-medium text-muted-foreground">
+          More
+        </SheetTitle>
+        <nav className="flex flex-col">
           {footerItems.map((item) => (
-            <MobileNavLink
+            <Link
               key={item.href}
-              item={item}
-              current={isCurrent(pathname, item.href)}
+              to={item.href}
               onClick={() => setOpen(false)}
-              quiet
-            />
+              className={`${row} ${isCurrent(pathname, item.href) ? 'bg-accent text-primary' : ''}`}
+            >
+              <item.icon className="size-5 text-muted-foreground" />
+              {item.title}
+            </Link>
           ))}
+          <button type="button" onClick={() => setTheme(dark ? 'light' : 'dark')} className={row}>
+            {dark ? (
+              <Sun className="size-5 text-muted-foreground" />
+            ) : (
+              <Moon className="size-5 text-muted-foreground" />
+            )}
+            {dark ? 'Light colors' : 'Dark colors'}
+          </button>
+          {user ? (
+            <button type="button" onClick={signOut} className={`${row} text-destructive`}>
+              <LogOut className="size-5" />
+              Sign out
+            </button>
+          ) : (
+            <Link to="/login" onClick={() => setOpen(false)} className={row}>
+              <LogIn className="size-5 text-muted-foreground" />
+              Sign in
+            </Link>
+          )}
         </nav>
       </SheetContent>
     </Sheet>
   );
 }
 
+function tabClass(current: boolean) {
+  return `flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors ${
+    current ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+  }`;
+}
+
+/** The tab bar at the bottom of a phone's screen. */
+function TabBar() {
+  const { pathname } = useLocation();
+  const footerItems = useFooterNav();
+  const inMore = footerItems.some((item) => isCurrent(pathname, item.href));
+  return (
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card/95 px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+    >
+      {mainNav.map((item) => {
+        const current = isCurrent(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            aria-current={current ? 'page' : undefined}
+            className={tabClass(current)}
+          >
+            <item.icon className="size-[22px]" />
+            {item.short ?? item.title}
+          </Link>
+        );
+      })}
+      <MoreSheet current={inMore} />
+    </nav>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <AppSidebar />
-        </div>
-
-        {/* Main Content. min-w-0 lets it shrink below its widest child (the
-            windgram, wide tables), which otherwise pushes the page past the
-            phone's edge where the sidebar wrapper clips it. */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* Header */}
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
-            <MobileNav />
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </header>
-
-          {/* Page Content */}
-          <main className="flex-1 p-4 md:p-6">{children}</main>
-        </div>
-      </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col">
+      <TopBar />
+      {/* min-w-0 lets the page shrink below its widest child (the windgram,
+          wide tables), which otherwise pushes it past the phone's edge. The
+          bottom padding keeps the end of the page clear of the tab bar. */}
+      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-5 pb-28 md:px-6 md:pt-8 md:pb-16">
+        {children}
+      </main>
+      <TabBar />
+    </div>
   );
 }
