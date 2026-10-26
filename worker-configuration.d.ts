@@ -23,6 +23,8 @@ interface Env {
   DEV_AUTH?: string;
   /** 'staging' on the staging copy: the badge, noindex, no Google or GitHub sign-in. */
   APP_ENV?: string;
+  /** The shared staging password (src/lib/staging-gate.ts), also sent to pgsites' staging copy; staging only. */
+  STAGING_PASSWORD?: string;
   /** Another pgsites than production (src/lib/pgsites-client.ts); staging's. */
   PGSITES_URL?: string;
   /** That pgsites' Worker, called directly; staging only. */

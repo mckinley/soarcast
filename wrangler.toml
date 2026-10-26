@@ -59,7 +59,7 @@ binding = "CF_VERSION_METADATA"
 
 
 # Staging (docs/staging.md, pjmgmt's staging standard): a private copy with
-# fake data at staging.soarcast.mckinleyaviation.com, behind Cloudflare Access,
+# fake data at staging.soarcast.mckinleyaviation.com, behind the staging password,
 # deployed by the Staging workflow (scripts/staging.mjs). Its own Worker and
 # database; no email, no crons, no Syncing Pilots. It reads pgsites' staging
 # copy over a service binding, so it never touches pgsites' production data.
@@ -75,6 +75,8 @@ BETTER_AUTH_URL = "https://staging.soarcast.mckinleyaviation.com"
 PGSITES_URL = "https://staging.pgsites.mckinleyaviation.com"
 DEV_AUTH = "true"
 APP_ENV = "staging"
+# pjmgmt: allow-secret. The shared staging password (pjmgmt staging standard): it keeps strangers out of fake data, so it is config, not a secret.
+STAGING_PASSWORD = "k3c8-w6vz-xekj-su76"
 
 # scripts/staging.mjs fills in the id at deploy time
 [[env.staging.d1_databases]]
@@ -86,8 +88,8 @@ migrations_dir = "migrations"
 [env.staging.triggers]
 crons = []
 
-# pgsites' staging Worker, called directly (src/lib/pgsites-client.ts), so
-# Cloudflare Access in front of its hostname never stands in the way
+# pgsites' staging Worker, called directly with the staging password
+# (src/lib/pgsites-client.ts)
 [[env.staging.services]]
 binding = "PGSITES"
 service = "paragliding-sites-staging"

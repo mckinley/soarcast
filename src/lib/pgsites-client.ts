@@ -1,4 +1,5 @@
 import type { PgsitesSyncRun } from './health';
+import { STAGING_HEADER } from './staging-gate';
 import { siteSlug } from './site-slug';
 
 const PRODUCTION_URL = 'https://pgsites.mckinleyaviation.com';
@@ -7,7 +8,7 @@ const PRODUCTION_URL = 'https://pgsites.mckinleyaviation.com';
  * Which pgsites answers: production over the internet, unless the Worker's
  * env names another one. The staging copy (docs/staging.md) sets PGSITES_URL
  * to pgsites' staging site and binds its Worker as PGSITES, which it calls
- * directly, since Cloudflare Access stands in front of that hostname.
+ * directly, sending the staging password that site asks every request for.
  *
  * Kept on globalThis: worker.ts and the server build it imports each bundle
  * their own copy of this module, and the build's copy must see what worker.ts set.
@@ -25,14 +26,32 @@ const store = globalThis as { [TARGET]?: PgsitesTarget };
 const pgsites = (): PgsitesTarget => store[TARGET] ?? PRODUCTION;
 
 /** Points this Worker's pgsites calls where its env says (worker.ts, on every request). */
-export function configurePgsites(env: { PGSITES_URL?: string; PGSITES?: Fetcher }): void {
+export function configurePgsites(env: {
+  PGSITES_URL?: string;
+  PGSITES?: Fetcher;
+  STAGING_PASSWORD?: string;
+}): void {
   const binding = env.PGSITES;
+  const password = env.STAGING_PASSWORD;
   store[TARGET] = {
     baseUrl: env.PGSITES_URL || PRODUCTION_URL,
     fetch: binding
-      ? (input, init) => binding.fetch(input, init)
+      ? (input, init) => binding.fetch(input, password ? withPassword(input, init, password) : init)
       : (input, init) => fetch(input, init),
   };
+}
+
+/** The same request, with the staging password pgsites' staging copy asks for. */
+function withPassword(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  password: string,
+): RequestInit {
+  const headers = new Headers(
+    init?.headers ?? (input instanceof Request ? input.headers : undefined),
+  );
+  headers.set(STAGING_HEADER, password);
+  return { ...init, headers };
 }
 
 /** Where pgsites got a site (PgSite.source). 'pilot': a private site its pilot shared. */

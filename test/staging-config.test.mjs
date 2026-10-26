@@ -6,7 +6,7 @@
 // scripts/automations/templates/staging/staging-config.test.mjs).
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { unstable_readConfig } from 'wrangler';
 
@@ -80,4 +80,12 @@ test('turns on /dev/login for staging only', () => {
   assert.equal(staging.vars?.APP_ENV, 'staging');
   assert.equal(prod.vars?.DEV_AUTH, undefined);
   assert.equal(prod.vars?.APP_ENV, undefined);
+});
+
+test('asks for the staging password before the app answers', () => {
+  // staging-gate.ts, called at the top of the Worker's fetch handler
+  const entry = readFileSync(resolve(root, prod.main), 'utf8');
+  assert.match(entry, /\bstagingGate\(/, `${prod.main} calls stagingGate`);
+  assert.ok(staging.vars?.STAGING_PASSWORD, 'env.staging sets STAGING_PASSWORD');
+  assert.equal(prod.vars?.STAGING_PASSWORD, undefined);
 });

@@ -24,6 +24,7 @@ import {
 import { logErrorsAsText } from './src/lib/error-text';
 import { configurePgsites } from './src/lib/pgsites-client';
 import { canonicalRedirect } from './src/lib/canonical-url';
+import { stagingGate } from './src/lib/staging-gate';
 import {
   HEALTH_REPORT_KEY,
   healthState,
@@ -138,6 +139,9 @@ async function notifyHealthChange(env: Env, healthy: boolean, report: HealthRepo
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // Staging only (docs/staging.md): the shared staging password comes first
+    const gate = await stagingGate(request, env);
+    if (gate) return gate;
     // One page, one address (pjmgmt's canonical-urls standard): /Sites/ is /sites
     const moved = canonicalRedirect(request);
     if (moved) return moved;

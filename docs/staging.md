@@ -7,7 +7,7 @@ It's optional. Changes normally go straight to `main` and production. Use stagin
 ## Using it
 
 1. Deploy a branch there. Every push to a pull request does it, and so does Actions → **Staging** → **Run workflow** on any branch (`.github/workflows/staging.yml`). It takes a few minutes. There is one staging site, so the most recent deploy is what it shows.
-2. Open the site. Cloudflare Access asks for your email and sends you a one-time code.
+2. Open the site and enter the staging password: `STAGING_PASSWORD` in `env.staging` of `wrangler.toml`, the same for every app of the owner's. Give it to anyone you want to let in. The browser remembers it for 30 days. A script or agent sends it as an `X-Staging-Password` header, or with basic auth under any user name.
 3. On `/login`, click **Sign in as a test user**. That goes to `/dev/login`, where you pick one of these:
 
 | Test user | What they have |
@@ -41,9 +41,10 @@ Everything is defined by `env.staging` in `wrangler.toml`, and `test/staging-con
 - **Its own database:** `soarcast-staging-db`. `scripts/staging.mjs` fills in its id at deploy time and refuses any database or Worker whose name doesn't end in `-staging`.
 - **Its own hostname**, a Workers custom domain with its own certificate. No workers.dev or preview URLs.
 - **Its own secrets:** a random `BETTER_AUTH_SECRET`, given on the first deploy, and a `PGSITES_API_KEY` that only pgsites staging accepts.
-- **pgsites' staging copy**, over the `PGSITES` service binding to `paragliding-sites-staging` (`configurePgsites` in `src/lib/pgsites-client.ts`). A service binding goes straight to that Worker, so Access in front of its hostname never turns the call away. The guard fails on a binding to any Worker not named `-staging`.
+- **pgsites' staging copy**, over the `PGSITES` service binding to `paragliding-sites-staging` (`configurePgsites` in `src/lib/pgsites-client.ts`). A service binding goes straight to that Worker, and each call carries the staging password that site asks for. The guard fails on a binding to any Worker not named `-staging`.
 - **No email binding, no crons, no Syncing Pilots binding.**
 - **No `/dev/login` in production:** only staging sets `DEV_AUTH` and `APP_ENV`.
+- **Behind a password:** `src/lib/staging-gate.ts` answers any request without the staging password with a password form (or a 401 for a script) before the app runs. It's a plain var in `wrangler.toml`: it keeps strangers and crawlers out of fake data, and isn't a secret.
 - **Kept out of search results:** every page is sent with `X-Robots-Tag: noindex`, and pages show a "Staging · fake data" badge.
 
 Production still deploys only from `main`, through `deploy.yml`.
@@ -52,7 +53,7 @@ Production still deploys only from `main`, through `deploy.yml`.
 
 **Done on 2026-10-24.**
 
-1. **Access, before the first deploy**, so the site is never public: `staging.soarcast.mckinleyaviation.com` is in the Zero Trust → Access application "McKinley staging" (allow: the owner's email, one-time PIN).
+1. **Password:** nothing to set up. `STAGING_PASSWORD` in `env.staging` keeps the site private from the first deploy. (Until 2026-10-26 a Cloudflare Access application did this, which kept agents out and needed every hostname and person listed.)
 2. **The pgsites key:** one random key, set as `PGSITES_API_KEY` on `soarcast-staging` and as `API_KEY` on `paragliding-sites-staging`, and never written down. To change it, pipe a new one into both:
 
    ```sh
