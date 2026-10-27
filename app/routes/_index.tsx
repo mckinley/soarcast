@@ -136,7 +136,7 @@ export default function LandingPage() {
     <div className="space-y-16 md:space-y-20 md:pt-6">
       <section className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
         <div className="space-y-6">
-          <h1 className="text-[40px] leading-[1.05] font-bold tracking-tight md:text-6xl">
+          <h1 className="text-[36px] leading-[1.08] font-semibold tracking-tight md:text-5xl">
             Know which days you can fly.
           </h1>
           <p className="max-w-xl text-lg leading-relaxed text-muted-foreground md:text-xl">
@@ -145,7 +145,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button size="lg" asChild className="h-12 px-6 text-base">
-              <Link to="/sites/browse">Find a launch</Link>
+              <Link to="/sites">Find a launch</Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base">
               <Link to="/login">Sign in</Link>

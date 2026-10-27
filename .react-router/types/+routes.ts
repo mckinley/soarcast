@@ -56,6 +56,9 @@ type Pages = {
   "/guide": {
     params: {};
   };
+  "/sites": {
+    params: {};
+  };
   "/sites/browse": {
     params: {};
   };
@@ -120,7 +123,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/admin/health" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/sitemap.xml" | "/guide" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/dev/login" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/admin" | "/admin/users" | "/login" | "/year";
+    page: "/" | "/api/notifications/subscribe" | "/api/notifications/check" | "/api/airspace/:z/:x/:y" | "/api/forecasts/refresh" | "/api/weather/profile" | "/api/admin/health" | "/api/track-record" | "/sites/custom/:id" | "/api/flown-days" | "/api/sites/near" | "/sitemap.xml" | "/guide" | "/sites" | "/sites/browse" | "/api/terrain" | "/auth/signin" | "/guide/:slug" | "/sites/:slug" | "/api/auth/*" | "/api/health" | "/dev/login" | "/planning" | "/sites/custom/:id/edit" | "/sites/custom/new" | "/dashboard" | "/settings" | "/admin" | "/admin/users" | "/login" | "/year";
   };
   "routes/api.notifications.subscribe.tsx": {
     id: "routes/api.notifications.subscribe";
@@ -169,6 +172,10 @@ type RouteFiles = {
   "routes/guide._index.tsx": {
     id: "routes/guide._index";
     page: "/guide";
+  };
+  "routes/sites._index.tsx": {
+    id: "routes/sites._index";
+    page: "/sites";
   };
   "routes/sites.browse.tsx": {
     id: "routes/sites.browse";
@@ -266,6 +273,7 @@ type RouteModules = {
   "routes/api.sites.near": typeof import("./app/routes/api.sites.near.tsx");
   "routes/sitemap[.]xml": typeof import("./app/routes/sitemap[.]xml.tsx");
   "routes/guide._index": typeof import("./app/routes/guide._index.tsx");
+  "routes/sites._index": typeof import("./app/routes/sites._index.tsx");
   "routes/sites.browse": typeof import("./app/routes/sites.browse.tsx");
   "routes/api.terrain": typeof import("./app/routes/api.terrain.tsx");
   "routes/auth.signin": typeof import("./app/routes/auth.signin.tsx");

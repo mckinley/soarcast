@@ -503,8 +503,8 @@ export function CustomSiteForm({
           Share with other pilots
         </label>
         <p className="text-xs text-muted-foreground">
-          Other pilots can then find this launch in Browse sites and follow it. They see its name,
-          place, height, wind directions and what it gives. Notes, the wind limit and the goal stay
+          Other pilots can then find this launch in Sites and follow it. They see its name, place,
+          height, wind directions and what it gives. Notes, the wind limit and the goal stay
           private.
         </p>
         {shownErrors.share && <p className="text-sm text-red-500">{shownErrors.share}</p>}

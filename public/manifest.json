@@ -29,13 +29,13 @@
   "categories": ["weather", "sports", "productivity"],
   "shortcuts": [
     {
-      "name": "Dashboard",
+      "name": "Forecast",
       "url": "/dashboard",
       "description": "The week at saved sites"
     },
     {
-      "name": "Browse sites",
-      "url": "/sites/browse",
+      "name": "Sites",
+      "url": "/sites",
       "description": "Find launch sites"
     },
     {

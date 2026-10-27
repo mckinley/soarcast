@@ -18,7 +18,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const paths = [
     '/',
     '/planning',
-    '/sites/browse',
+    '/sites',
     '/guide',
     ...guidePages().map((page) => `/guide/${page.slug}`),
     ...sites.map((site) => `/sites/${launchSiteSlug(site)}`).sort(),

@@ -52,20 +52,22 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Small, even corners: a tool, not a toy. Cards are 6px, controls 4px. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
 }
 
 /* SoarCast's look: a cool off-white ground, white cards, deep ink and one
    sky-blue accent for what can be tapped. Strong color is kept for the day
    words below. */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.25rem;
   --background: #f4f6f9;
   --foreground: #0e1a2b;
   --card: #ffffff;
@@ -178,4 +180,13 @@
    stacking inside each map, so sheets, dialogs and menus (z-50) draw above it. */
 .leaflet-container {
   isolation: isolate;
+}
+
+/* A small label over data: number tiles and list headings. */
+@utility label-caps {
+  font-size: 11px;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }

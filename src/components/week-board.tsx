@@ -100,8 +100,8 @@ export function WeekBoard({
 /** What the cells' colors mean: a go is set by each site's goal. */
 export function StatusLegend() {
   const items: Array<[keyof typeof STATUS_DOT, string]> = [
-    ['go', 'Go: the flight you want there'],
-    ['flyable', 'Flyable: safe, but less than that'],
+    ['go', 'Go: safe, and worth going for'],
+    ['flyable', 'Flyable: safe, but a lesser flight, like a sled ride'],
     ['marginal', 'Marginal: fly with care'],
     ['no', 'Not flyable: says what stops it'],
   ];

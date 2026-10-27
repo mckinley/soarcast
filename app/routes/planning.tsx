@@ -665,7 +665,7 @@ function FilterChips<T extends string>({
             key={key}
             to={planningHref(query, { [name]: key })}
             preventScrollReset
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+            className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
               active
                 ? 'border-foreground bg-foreground text-background'
                 : 'bg-background hover:bg-accent'
@@ -906,9 +906,9 @@ function RankedList({ rows, month }: { rows: PlaceRow[]; month: string }) {
             </div>
             {share != null ? (
               <div className="flex items-center gap-2 pl-7 sm:w-64 sm:pl-0">
-                <div className="h-2.5 flex-1 rounded-full bg-muted" aria-hidden>
+                <div className="h-2 flex-1 rounded-[2px] bg-muted" aria-hidden>
                   <div
-                    className="h-full rounded-full bg-go"
+                    className="h-full rounded-[2px] bg-go"
                     style={{ width: `${Math.round(share * 100)}%` }}
                   />
                 </div>
@@ -1050,7 +1050,7 @@ function SaveArea({
         <Link to="/login" className="underline">
           Sign in
         </Link>{' '}
-        to save this area to Favorites and see its week on the dashboard.
+        to save this area to Favorites and see its week in Forecast.
       </p>
     );
   }
@@ -1059,7 +1059,7 @@ function SaveArea({
       <p className="text-sm text-muted-foreground">
         {areaId ? 'Saved.' : 'In Favorites.'}{' '}
         <Link to={dashboard(areaId ?? save.savedIn)} className="underline">
-          See this week on the dashboard
+          See its week in Forecast
         </Link>
       </p>
     );
@@ -1114,7 +1114,7 @@ export default function PlanningPage() {
     <div className="space-y-6">
       <header className="space-y-4">
         <div>
-          <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
             Planning
           </h1>
           <p className="mt-1.5 max-w-2xl text-muted-foreground">

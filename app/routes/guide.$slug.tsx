@@ -44,7 +44,7 @@ export default function GuidePageRoute() {
         <ChevronLeft className="h-4 w-4" />
         Guide
       </Link>
-      <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+      <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
         {page.title}
       </h1>
       <div

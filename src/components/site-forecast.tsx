@@ -269,7 +269,7 @@ function DayWords({ day }: { day: DayScore }) {
       <p className="text-sm font-semibold text-primary">{longDate(day.date)}</p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-[15px] font-bold ${STATUS_BADGE[status]}`}
+          className={`inline-flex items-center rounded-sm px-2.5 py-1 text-[15px] font-bold ${STATUS_BADGE[status]}`}
         >
           {STATUS_WORD[status]}
         </span>
@@ -278,7 +278,7 @@ function DayWords({ day }: { day: DayScore }) {
       {sentence && <p className="text-[15px] leading-relaxed">{sentence}</p>}
       {day.reasons.length > 0 && (
         <div className="space-y-2 pt-1">
-          <h3 className="text-sm font-semibold text-muted-foreground">{REASONS_HEADING[status]}</h3>
+          <h3 className="label-caps text-muted-foreground">{REASONS_HEADING[status]}</h3>
           <ul className="space-y-1.5">
             {day.reasons.map((reason) => (
               <li key={reason} className="flex gap-2.5 text-sm leading-snug">
@@ -309,8 +309,8 @@ function Num({
   sub?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-muted px-3.5 py-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex min-w-0 flex-col gap-1 rounded-md border bg-muted/60 px-3.5 py-3">
+      <span className="label-caps text-muted-foreground">{label}</span>
       {value === null ? (
         <Skeleton className="my-1 h-5 w-20 bg-border" />
       ) : (

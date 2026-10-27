@@ -62,7 +62,7 @@ function SuggestedSites({ sites }: { sites: SuggestedSite[] }) {
   );
 }
 
-/** One chip per area, and All areas: the dashboard shows one at a time. */
+/** One chip per area, and All areas: Forecast shows one at a time. */
 function AreaChips({ areas, shown }: { areas: DashboardArea[]; shown: ShownArea }) {
   // One area still shows, so the pilot sees where areas live and can split it
   const several = areas.length > 1;
@@ -79,7 +79,7 @@ function AreaChips({ areas, shown }: { areas: DashboardArea[]; shown: ShownArea 
             key={chip.key}
             to={`?area=${encodeURIComponent(chip.key)}`}
             preventScrollReset
-            className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
               active
                 ? 'border-foreground bg-foreground text-background'
                 : 'border-input bg-card hover:bg-accent'
@@ -148,7 +148,7 @@ function BestDaysAhead({
 
   return (
     <section aria-label={heading} className="space-y-3">
-      <h2 className="text-sm font-semibold text-muted-foreground">{heading}</h2>
+      <h2 className="label-caps text-muted-foreground">{heading}</h2>
       {shown.length === 0 ? (
         <p className="rounded-2xl border bg-card px-5 py-4 text-sm text-muted-foreground">
           Nothing is flyable at these sites in the next 7 days.
@@ -175,7 +175,7 @@ function BestDaysAhead({
                 <span className="truncate text-lg font-semibold">{day.site.site.name}</span>
                 <span className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[status]}`}
+                    className={`shrink-0 rounded-sm px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[status]}`}
                   >
                     {STATUS_WORD[status]}
                   </span>
@@ -244,10 +244,12 @@ export function DashboardClient({
     return (
       <div className="mx-auto flex max-w-md flex-col gap-6 py-10 md:py-16">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Welcome to SoarCast</h1>
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+            Welcome to SoarCast
+          </h1>
           <p className="text-muted-foreground">
-            Save the launches you fly. The dashboard then shows which days this week are good at
-            each one, and when. If a launch isn&apos;t listed, add it as a private site.
+            Save the launches you fly. Forecast then shows which days this week are good at each
+            one, and when. If a launch isn&apos;t listed, add it as a private site.
           </p>
         </div>
         {suggestions.length > 0 && (
@@ -260,7 +262,7 @@ export function DashboardClient({
         )}
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button size="lg" asChild>
-            <Link to="/sites/browse">Browse sites</Link>
+            <Link to="/sites">Find a site</Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
             <Link to="/sites/custom/new">
@@ -344,7 +346,12 @@ export function DashboardClient({
     <div className="space-y-6 md:space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-3">
-          <h1 className="text-3xl font-bold md:text-4xl">This week</h1>
+          <div>
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+              Forecast
+            </h1>
+            <p className="mt-1 text-[15px] text-muted-foreground">The next 7 days at saved sites</p>
+          </div>
           {areas.length > 0 && <AreaChips areas={areas} shown={shown} />}
         </div>
         <AddPrivateSite className="hidden md:inline-flex" />

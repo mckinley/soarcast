@@ -142,17 +142,17 @@ export function SitesBrowseClient({
     const q = searchValue.trim();
     if (!q) {
       // Clear search — go back to map browsing
-      startTransition(() => navigate('/sites/browse'));
+      startTransition(() => navigate('/sites'));
       return;
     }
     const params = new URLSearchParams(urlSearchParams);
     params.set('q', q);
-    startTransition(() => navigate(`/sites/browse?${params}`));
+    startTransition(() => navigate(`/sites?${params}`));
   };
 
   const clearSearch = () => {
     setSearchValue('');
-    startTransition(() => navigate('/sites/browse'));
+    startTransition(() => navigate('/sites'));
   };
 
   const toggleOrientation = (o: string) =>
@@ -166,7 +166,9 @@ export function SitesBrowseClient({
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Browse sites</h1>
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+            Sites
+          </h1>
           <p className="text-[15px] text-muted-foreground">
             Find a launch by name or town, or move the map.
           </p>
@@ -323,7 +325,7 @@ export function SitesBrowseClient({
 
           {/* Loading indicator overlay */}
           {isLoading && (
-            <div className="absolute top-3 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full border bg-card/95 px-3 py-1.5 text-sm shadow-sm">
+            <div className="absolute top-3 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-md border bg-card/95 px-3 py-1.5 text-sm shadow-sm">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading sites…
             </div>

@@ -268,7 +268,7 @@ export function SeasonCard({
         </li>
         <li className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-sm ${FLYABLE_FILL}`} />
-          Flyable, but less than that
+          Flyable: safe, but a lesser flight
         </li>
         {season.spread.some(Boolean) && (
           <li className="flex items-center gap-1.5">

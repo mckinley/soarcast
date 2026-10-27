@@ -27,7 +27,9 @@ export default function AdminLayout() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Admin</h1>
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+          Admin
+        </h1>
         <nav className="mt-4 flex gap-1 border-b">
           {sections.map((s) => (
             <NavLink

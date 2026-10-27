@@ -422,7 +422,9 @@ export function SettingsClient({
   return (
     <div className="max-w-3xl space-y-6">
       <header>
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">Settings</h1>
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+          Settings
+        </h1>
         <p className="mt-1.5 text-muted-foreground">
           When SoarCast alerts you, and how it rates each favorite site.
         </p>
@@ -584,7 +586,7 @@ export function SettingsClient({
         <CardHeader>
           <CardTitle>Favorites</CardTitle>
           <CardDescription>
-            Sites are grouped into areas by where they are. The dashboard shows one area at a time.
+            Sites are grouped into areas by where they are. Forecast shows one area at a time.
             Rename an area, join two, or move a site to another area. For each site, set what it
             gives, what makes a day worth going there, and whether to alert you about it.
           </CardDescription>

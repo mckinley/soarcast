@@ -1,6 +1,6 @@
 ---
 title: Favorites and areas
-summary: How saved sites are grouped into areas, and which area the dashboard shows.
+summary: How saved sites are grouped into areas, and which area Forecast shows.
 order: 4
 covers:
   - src/lib/site-areas.ts
@@ -10,11 +10,11 @@ covers:
   - app/routes/_auth.dashboard.tsx
 ---
 
-SoarCast groups saved sites into areas by where they are. An area is a place you fly, like home or a trip. On any day you are in one place, so the dashboard shows one area at a time.
+SoarCast groups saved sites into areas by where they are. An area is a place you fly, like home or a trip. On any day you are in one place, so Forecast shows one area at a time.
 
 ## Saving a site
 
-There are two ways to save a site. Add a listed site to Favorites from its page or from Browse sites. Or add a private site for a launch that isn't listed. Both kinds go into areas the same way.
+There are two ways to save a site. Add a listed site to Favorites from its page or from the Sites page. Or add a private site for a launch that isn't listed. Both kinds go into areas the same way.
 
 ## How a site gets its area
 
@@ -24,7 +24,7 @@ A new area takes the name of the flying area on [Planning](/planning) that it fa
 
 ## Changing areas
 
-In [Settings](/settings), under Favorites, sites are listed by area. There you can:
+[Settings](/settings) opens from your picture at the top right of each page. Under Favorites, it lists sites by area. There you can:
 
 - Rename an area, for example to "Home".
 - Move a site to another area, or to a new area of its own.
@@ -33,9 +33,9 @@ In [Settings](/settings), under Favorites, sites are listed by area. There you c
 
 A site stays in its area until you move it. An area with no sites left goes away.
 
-## The dashboard
+## Forecast
 
-The dashboard is called This week. It shows a button for each area at the top. Tap one to see its sites. When all your sites are in one area, there is just that one button. To split them, move a site to a new area in Settings.
+Forecast is the first page after you sign in. It shows the next 7 days at your saved sites, with a button for each area at the top. Tap one to see its sites. When all your sites are in one area, there is just that one button. To split them, move a site to a new area in Settings.
 
 Under the buttons, Best days ahead picks up to three Go days in the area this week. Each one names the best site that day, its flight and the hours. When the week has no Go day, the heading reads "No go days this week" and the best flyable days show instead.
 
@@ -43,9 +43,9 @@ Below that, each site has a row with one colored box a day. A box gives the flig
 
 All areas shows one row per area. Each day in a row shows the area's best site that day. So an area is a Go on any day one of its sites is.
 
-The dashboard opens on the area nearest to you. SoarCast guesses where you are from your internet connection, without asking for your location. The guess is often right to within tens of km. It can be far off on a VPN or some mobile networks. SoarCast uses it only to pick the area and to list sites near you, and doesn't keep it.
+Forecast opens on the area nearest to you. SoarCast guesses where you are from your internet connection, without asking for your location. The guess is often right to within tens of km. It can be far off on a VPN or some mobile networks. SoarCast uses it only to pick the area and to list sites near you, and doesn't keep it.
 
-When no saved site is within {{areaJoinKm}} km of you, the dashboard also lists a few listed sites near you.
+When no saved site is within {{areaJoinKm}} km of you, Forecast also lists a few listed sites near you.
 
 ## Saving a flying area from Planning
 

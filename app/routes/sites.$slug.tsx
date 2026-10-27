@@ -657,7 +657,7 @@ export default function SiteDetailPage() {
 
       <div className="space-y-5">
         <SiteHeader
-          back={{ to: '/sites/browse', label: 'Browse sites' }}
+          back={{ to: '/sites', label: 'Sites' }}
           title={site.name}
           facts={[
             place,

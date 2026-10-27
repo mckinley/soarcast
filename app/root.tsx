@@ -102,14 +102,14 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       <TooltipProvider>
         <AppShell>
           <div className="flex flex-col items-center py-16 text-center">
-            <h1 className="text-3xl font-bold">{message}</h1>
+            <h1 className="text-[26px] font-semibold tracking-tight">{message}</h1>
             <p className="mt-2 max-w-md text-muted-foreground">{details}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to="/dashboard" className={buttonVariants()}>
-                Dashboard
+                Forecast
               </Link>
-              <Link to="/sites/browse" className={buttonVariants({ variant: 'outline' })}>
-                Browse sites
+              <Link to="/sites" className={buttonVariants({ variant: 'outline' })}>
+                Sites
               </Link>
             </div>
             {stack && (

@@ -32,9 +32,9 @@ export default function SignInPage({ loaderData }: Route.ComponentProps) {
       <div className="w-full max-w-sm space-y-7 rounded-2xl border bg-card px-6 py-8 md:px-8">
         <div className="space-y-3 text-center">
           <LogoMark className="mx-auto size-11" />
-          <h1 className="text-2xl font-bold tracking-tight">Sign in to SoarCast</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Sign in to SoarCast</h1>
           <p className="text-[15px] text-muted-foreground">
-            Save sites, see their week on the dashboard and get alerts on go days.
+            Save sites, see their week at a glance and get alerts on go days.
           </p>
         </div>
 

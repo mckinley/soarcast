@@ -34,7 +34,7 @@ test.describe('Mobile Responsive - Landing Page', () => {
 
     // Verify key elements are visible
     await expect(page.getByRole('heading', { name: /soarcast/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /browse sites/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sites', exact: true })).toBeVisible();
   });
 
   test('should have readable fonts on mobile', async ({ page }) => {
@@ -104,12 +104,12 @@ test.describe('Mobile Responsive - Navigation', () => {
       .click();
 
     // Nav items should be visible
-    await expect(page.getByRole('link', { name: /dashboard/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /browse sites/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Forecast', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sites', exact: true })).toBeVisible();
 
     // Close by clicking a link
-    await page.getByRole('link', { name: /browse sites/i }).click();
-    await expect(page).toHaveURL(/\/sites\/browse/);
+    await page.getByRole('link', { name: 'Sites', exact: true }).click();
+    await expect(page).toHaveURL(/\/sites$/);
   });
 
   test('should have touch-friendly tap targets (44px minimum)', async ({ page }) => {
@@ -133,10 +133,10 @@ test.describe('Mobile Responsive - Navigation', () => {
   });
 });
 
-test.describe('Mobile Responsive - Browse Sites Page', () => {
+test.describe('Mobile Responsive - Sites Page', () => {
   test('should render browse page without horizontal scroll', async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
-    await page.goto('/sites/browse');
+    await page.goto('/sites');
 
     // Check no horizontal scroll
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -149,7 +149,7 @@ test.describe('Mobile Responsive - Browse Sites Page', () => {
 
   test('should handle filter panel on mobile', async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
-    await page.goto('/sites/browse');
+    await page.goto('/sites');
 
     // Filter button should be visible
     const filterButton = page.getByRole('button', { name: /filter/i });
@@ -163,7 +163,7 @@ test.describe('Mobile Responsive - Browse Sites Page', () => {
 
   test('should display site cards in mobile-friendly layout', async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
-    await page.goto('/sites/browse');
+    await page.goto('/sites');
 
     // Wait for sites to load
     await page

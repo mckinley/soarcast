@@ -37,7 +37,7 @@ export function SiteHeader({
       <BackLink to={back.to}>{back.label}</BackLink>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1.5">
-          <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
             {title}
           </h1>
           {shown.length > 0 && (

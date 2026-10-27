@@ -83,7 +83,7 @@ export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDig
             maxWidth: '480px',
             margin: '16px auto',
             backgroundColor: '#ffffff',
-            borderRadius: '12px',
+            borderRadius: '6px',
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
@@ -159,7 +159,7 @@ export function MorningDigestEmail({ date, sites, appUrl = APP_URL }: MorningDig
               style={{
                 backgroundColor: '#0ea5e9',
                 color: '#ffffff',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 padding: '10px 24px',
                 fontSize: '14px',
                 fontWeight: '600',

@@ -142,7 +142,7 @@ export default function EditCustomSitePage() {
     <div className="max-w-3xl space-y-6">
       <div className="space-y-2">
         <BackLink to={siteHref}>{initial.name}</BackLink>
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
           Edit {initial.name}
         </h1>
       </div>

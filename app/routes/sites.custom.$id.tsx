@@ -199,7 +199,7 @@ export default function CustomSiteDetailPage() {
 
       <div className="space-y-5">
         <SiteHeader
-          back={{ to: '/dashboard', label: 'Dashboard' }}
+          back={{ to: '/dashboard', label: 'Forecast' }}
           title={site.name}
           facts={[
             <span key="private" className="inline-flex items-center gap-1">

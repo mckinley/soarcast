@@ -19,7 +19,9 @@ export default function GuideIndex() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight md:text-4xl">Guide</h1>
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
+          Guide
+        </h1>
         <p className="mt-1.5 text-muted-foreground">
           How SoarCast works and where its data comes from.
         </p>

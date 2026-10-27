@@ -35,7 +35,7 @@ export interface SiteForecastData {
   areaId: string | null;
 }
 
-/** An area the dashboard can show: chips at the top switch between them. */
+/** An area Forecast can show: chips at the top switch between them. */
 export interface DashboardArea {
   id: string;
   name: string;
@@ -61,7 +61,7 @@ export interface NearYou {
 const FORECAST_CONCURRENCY = 4;
 
 export function meta() {
-  return [{ title: 'Dashboard | SoarCast' }];
+  return [{ title: 'Forecast | SoarCast' }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
